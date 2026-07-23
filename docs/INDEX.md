@@ -2,6 +2,8 @@
 
 这里是项目文档入口。README 负责项目概览和快速开始；更完整的配置、部署、功能说明和排障内容从这里进入。
 
+> PP02 开发任务先从 [PP02 项目总入口](PROJECT_CONTROL.md) 进入；该入口负责当前 Work、需求、路线图、决策、阻塞和 Runbook 导航，不替代下方产品文档。
+
 ## 按场景选择
 
 | 我想要 | 先看 | 继续看 |
@@ -63,6 +65,7 @@
 
 | 文档 | 内容 |
 | --- | --- |
+| [PP02 项目总入口](PROJECT_CONTROL.md) | PP02 项目身份、当前 Work 和唯一台账导航 |
 | [API 规格](architecture/api_spec.json) | FastAPI OpenAPI 规格产物 |
 | [贡献指南](CONTRIBUTING.md) | Issue、PR、测试、文档同步和协作要求 |
 
