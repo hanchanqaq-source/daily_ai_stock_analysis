@@ -11,7 +11,7 @@
 | 官方基线 Commit | `b36c721415560e48115ad4444d5af2125fc53f5c` |
 | License | MIT |
 | 当前 Work | `WORK-001｜官方稳定版干净底座建立` |
-| Work 总体状态 | `Waiting for User`（正式 CI 权限修复已进入 Draft PR 阶段；等待本次 CI 复核与合并决定） |
+| Work 总体状态 | `Waiting for User`（云端 Plan、Build、Test、CI、Judge 已完成；等待 Windows 实机验收） |
 
 PP02 是新的股票专用项目。旧股票基金混合仓库只读冻结；基金业务属于 PP03，不进入本仓库。
 
@@ -34,11 +34,11 @@ PP02 是新的股票专用项目。旧股票基金混合仓库只读冻结；基
 | Plan | 完成 | 已确认角色、边界、稳定 Tag、Commit、License 和建仓方案 |
 | Build | 完成 | 远端保留官方完整历史，并在官方基线之上发布 PP02 管理层 |
 | Test | 完成 | 云端依赖、后端门禁、Web lint/build、启动和健康检查均通过；Windows 另行验收 |
-| CI | 复核中 | 验证运行 `29984211231` 已完整通过；正式权限修复将在本次 Draft PR 中重新执行全部门禁 |
-| Judge | 等待 | 底座质量已验证；等待正式权限修复 PR 的 CI 结论及用户合并决定 |
+| CI | 完成 | 正式 PR #2 的运行 `29986024984` 全部应执行门禁通过；Web gate 因无前端改动而正确跳过 |
+| Judge | 通过 | PR #2 已按授权合并到 `main`，合并提交 `a6bdfb55827080e196c2103292aaedfadc224dc7`；业务代码零修改 |
 | Windows验收 | 待验收 | 必须在 Windows 实机验证安装、启动与 Web 界面 |
 
-正式权限修复合入并完成 Windows 实机验收前，不得进入 Work 2。
+Windows 实机验收完成前，不得进入 Work 2。
 
 状态口径：本文件是 Work 总体状态和阶段汇总真源；`ROADMAP.md` 是子步骤状态真源。状态变化必须在同一改动中同步，冲突时不得宣称完成，先按验证证据校正。
 

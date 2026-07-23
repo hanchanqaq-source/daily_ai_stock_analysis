@@ -9,6 +9,8 @@
 | WORK-001-AUTH-001 | 2026-07-22 | 授权建立私有仓库 `hanchanqaq-source/daily_ai_stock_analysis`，保留官方历史并执行首次导入和推送 | 新 PP02 必须与旧混合项目隔离 | Work 1.3、Work 1.4.1；不包含合并 PR 或发布 Release |
 | WORK-001-AUTH-002 | 2026-07-23 | 授权正式修复 `main` 的 CI 权限并更新 Work 1 台账；创建 Draft PR，CI 通过后等待用户确认是否合并 | 验证 PR #1 已证明缺少 `pull-requests: read` 是唯一权限根因，最小只读修复可使完整 CI 成功 | Work 1.6；允许正式分支、提交、推送和 Draft PR，不包含合并或 Release |
 
+| WORK-001-AUTH-003 | 2026-07-23 | 授权将 PR #2 转为 Ready 并合并到 `main`；合并后复核 `main` 并更新最终进度，不发布 Release | 正式 CI 权限修复已通过完整 CI，需要完成合并与台账收口 | Work 1.6；已合并为 `a6bdfb55827080e196c2103292aaedfadc224dc7`，Release 未发布 |
+
 ## 记录规则
 
 - 新功能或范围变化先执行三选一，用户选择后再追加一行。

@@ -71,5 +71,5 @@
 | 根因 | `dorny/paths-filter@v3` 在 Pull Request 事件中需要读取 PR 文件列表，但工作流未声明 `pull-requests: read`，导致 `Resource not accessible by integration` |
 | 已验证修复 | 在已关闭、未合并的 Draft PR #1 中增加顶层只读权限 `contents: read` 与 `pull-requests: read`；运行 `29984211231` 完整成功 |
 | 正式处理 | 用户已授权从最新 `main` 创建正式修复分支，永久加入同一最小权限并同步 Work 1 台账 |
-| 当前状态 | 等待正式修复 Draft PR 的新一轮 CI；CI 通过后等待用户决定是否合并，不自动合并、不发布 Release |
-| 解除条件 | 正式修复 PR 经 CI 验证并由用户授权合并；合并后复核 `main` 权限原文与提交状态 |
+| 当前状态 | 已解除；正式 PR #2 的 CI 运行 `29986024984` 成功，并已按用户授权合并到 `main` |
+| 解除证据 | PR #2 已合并为 `a6bdfb55827080e196c2103292aaedfadc224dc7`；`main` 已包含 `contents: read` 与 `pull-requests: read`；仅剩 Windows 实机验收 |
