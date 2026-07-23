@@ -7,6 +7,7 @@
 | WORK-001-DECISION-001 | 2026-07-22 | 采用方案 A：继续以官方稳定 `v3.27.0` 建立纯净底座；不整体跟随未发布 `main` | 稳定基线风险最低，同时保留后续精选补丁空间 | Work 1.2、Work 1.4；两项上游修复留作后续候选 |
 | WORK-001-DECISION-002 | 2026-07-22 | 在根目录建立项目级 `AGENTS.md` 统一规则机制，并连接唯一项目台账 | 降低换聊天或换 Agent 后串错项目、越权或重复建台账的风险 | Work 1.4.2～1.4.4 |
 | WORK-001-AUTH-001 | 2026-07-22 | 授权建立私有仓库 `hanchanqaq-source/daily_ai_stock_analysis`，保留官方历史并执行首次导入和推送 | 新 PP02 必须与旧混合项目隔离 | Work 1.3、Work 1.4.1；不包含合并 PR 或发布 Release |
+| WORK-001-AUTH-002 | 2026-07-23 | 授权正式修复 `main` 的 CI 权限并更新 Work 1 台账；创建 Draft PR，CI 通过后等待用户确认是否合并 | 验证 PR #1 已证明缺少 `pull-requests: read` 是唯一权限根因，最小只读修复可使完整 CI 成功 | Work 1.6；允许正式分支、提交、推送和 Draft PR，不包含合并或 Release |
 
 ## 记录规则
 
