@@ -11,7 +11,7 @@
 | 官方基线 Commit | `b36c721415560e48115ad4444d5af2125fc53f5c` |
 | License | MIT |
 | 当前 Work | `WORK-001｜官方稳定版干净底座建立` |
-| Work 总体状态 | `Blocked`（Work 1.4 已完成；GitHub CI 需要 Draft PR 触发） |
+| Work 总体状态 | `Waiting for User`（正式 CI 权限修复已进入 Draft PR 阶段；等待本次 CI 复核与合并决定） |
 
 PP02 是新的股票专用项目。旧股票基金混合仓库只读冻结；基金业务属于 PP03，不进入本仓库。
 
@@ -34,11 +34,11 @@ PP02 是新的股票专用项目。旧股票基金混合仓库只读冻结；基
 | Plan | 完成 | 已确认角色、边界、稳定 Tag、Commit、License 和建仓方案 |
 | Build | 完成 | 远端保留官方完整历史，并在官方基线之上发布 PP02 管理层 |
 | Test | 完成 | 云端依赖、后端门禁、Web lint/build、启动和健康检查均通过；Windows 另行验收 |
-| CI | 未执行 | 官方阻断 CI 仅由 Pull Request 触发；当前授权不覆盖为 CI 创建 Draft PR |
-| Judge | 不通过 | Build 与云端 Test 通过，但缺少 GitHub CI 结果，Work 1 暂不能完成 |
+| CI | 复核中 | 验证运行 `29984211231` 已完整通过；正式权限修复将在本次 Draft PR 中重新执行全部门禁 |
+| Judge | 等待 | 底座质量已验证；等待正式权限修复 PR 的 CI 结论及用户合并决定 |
 | Windows验收 | 待验收 | 必须在 Windows 实机验证安装、启动与 Web 界面 |
 
-未完成 Work 1 前，不得进入 Work 2。
+正式权限修复合入并完成 Windows 实机验收前，不得进入 Work 2。
 
 状态口径：本文件是 Work 总体状态和阶段汇总真源；`ROADMAP.md` 是子步骤状态真源。状态变化必须在同一改动中同步，冲突时不得宣称完成，先按验证证据校正。
 
@@ -57,6 +57,7 @@ PP02 是新的股票专用项目。旧股票基金混合仓库只读冻结；基
 | AI 协作资产检查 | 通过；在准确提交树归档中执行 `scripts/check_ai_assets.py` 成功 |
 | 新会话规则识别 | 通过；无 Work 启动标记的独立会话正确默认为 `PROJECT_CONTROL`，并识别项目、边界、流程、三选一、授权门和唯一台账 |
 | 远端提交链 | 通过；首轮校正后的管理层提交为 `14be9288…`，官方 `b36c7214…` 是当前 `HEAD` 的可追溯祖先；PP02 仅增加管理层提交 |
+| Work 1 CI 验证 | 通过；Draft PR #1 的运行 `29984211231` 中 Change Detection、AI governance、backend gate 和 Docker build 均成功，Web gate 因无前端改动而按有效路径判断跳过；PR 已关闭且未合并 |
 
 未配置股票列表、AI 模型密钥和通知渠道时会产生预期告警；Work 1 未使用真实密钥、付费服务、通知或交易能力。
 
