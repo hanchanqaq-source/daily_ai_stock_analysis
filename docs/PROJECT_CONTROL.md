@@ -11,7 +11,7 @@
 | 官方基线 Commit | `b36c721415560e48115ad4444d5af2125fc53f5c` |
 | License | MIT |
 | 当前 Work | `WORK-001｜官方稳定版干净底座建立` |
-| Work 总体状态 | `Blocked`（官方历史已导入；目标仓库基线 Tag 与远端 CI 尚待完成） |
+| Work 总体状态 | `Blocked`（Work 1.4 已完成；GitHub CI 需要 Draft PR 触发） |
 
 PP02 是新的股票专用项目。旧股票基金混合仓库只读冻结；基金业务属于 PP03，不进入本仓库。
 
@@ -32,10 +32,10 @@ PP02 是新的股票专用项目。旧股票基金混合仓库只读冻结；基
 | 阶段 | 状态 | 当前内容 |
 | --- | --- | --- |
 | Plan | 完成 | 已确认角色、边界、稳定 Tag、Commit、License 和建仓方案 |
-| Build | 进行中 | 远端 `main` 已准确落到官方基线并保留完整历史；PP02 管理层待发布，目标仓库基线 Tag 待建立 |
+| Build | 完成 | 远端保留官方完整历史，并在官方基线之上发布 PP02 管理层 |
 | Test | 完成 | 云端依赖、后端门禁、Web lint/build、启动和健康检查均通过；Windows 另行验收 |
-| CI | 未执行 | 本地官方 CI 门禁通过；等待 PP02 管理层发布后检查 GitHub Actions |
-| Judge | 等待 | Work 1 尚未达到判定条件 |
+| CI | 未执行 | 官方阻断 CI 仅由 Pull Request 触发；当前授权不覆盖为 CI 创建 Draft PR |
+| Judge | 不通过 | Build 与云端 Test 通过，但缺少 GitHub CI 结果，Work 1 暂不能完成 |
 | Windows验收 | 待验收 | 必须在 Windows 实机验证安装、启动与 Web 界面 |
 
 未完成 Work 1 前，不得进入 Work 2。
@@ -52,10 +52,11 @@ PP02 是新的股票专用项目。旧股票基金混合仓库只读冻结；基
 | 后端官方门禁 `./scripts/ci_gate.sh` | 通过；`4671 passed`、`4 deselected`、`416 subtests passed` |
 | Web 依赖、lint、build | 通过；Node `24.14.0`、npm `11.9.0`、Vite 生产构建成功 |
 | 后端与 Web 启动 | 通过；`GET /api/health` 返回 HTTP 200 和 `status=ok`，Web 根页面返回 HTTP 200 |
-| 业务代码差异 | 通过；相对官方 Tag 只存在 9 个批准的管理/文档文件差异 |
+| 业务代码差异 | 通过；远端相对官方 Commit 仅存在 8 个批准的管理/文档文件差异，业务目录零差异 |
 | License | 通过；MIT 文件与官方基线 SHA-256 一致 |
 | AI 协作资产检查 | 通过；在准确提交树归档中执行 `scripts/check_ai_assets.py` 成功 |
 | 新会话规则识别 | 通过；无 Work 启动标记的独立会话正确默认为 `PROJECT_CONTROL`，并识别项目、边界、流程、三选一、授权门和唯一台账 |
+| 远端提交链 | 通过；首轮校正后的管理层提交为 `14be9288…`，官方 `b36c7214…` 是当前 `HEAD` 的可追溯祖先；PP02 仅增加管理层提交 |
 
 未配置股票列表、AI 模型密钥和通知渠道时会产生预期告警；Work 1 未使用真实密钥、付费服务、通知或交易能力。
 

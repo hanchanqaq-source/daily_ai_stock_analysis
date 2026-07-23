@@ -40,3 +40,24 @@
 | 未完成 | 目标仓库内尚无 `v3.27.0` Tag；按该 ref 读取返回 404 |
 | 风险 | Commit 基线真实且可追溯，但目标仓库不能通过 Tag 名直接复核，Runbook 的 Tag 校验命令暂不能在新远端成立 |
 | 解除条件 | 在目标仓库建立指向 `b36c721415560e48115ad4444d5af2125fc53f5c` 的 `v3.27.0` Tag，并重新核验 Tag 解引用结果 |
+
+## WORK-001-BLOCKER-002 解除记录
+
+| 项目 | 解除证据 |
+| --- | --- |
+| 解除日期 | 2026-07-23 |
+| 复核结果 | Work 1 原验收要求是“从官方稳定 Tag 建立底座并可追溯到 Tag Commit”，不要求在目标仓库复制同名 Tag |
+| 真源边界 | `v3.27.0` Tag 继续以上游 `ZhuLinsen/daily_stock_analysis` 为真源；PP02 以固定 Commit 和祖先关系验收 |
+| 文档修正 | Runbook 改为从 `upstream` 核对 Tag，再验证该 Commit 是 PP02 `HEAD` 的祖先 |
+| 结论 | 不降低原验收标准；目标仓库缺少重复 Tag 不再阻塞 Work 1 |
+
+## WORK-001-BLOCKER-003｜GitHub 阻断 CI 需要 Pull Request
+
+| 项目 | 当前事实 |
+| --- | --- |
+| 发现日期 | 2026-07-23 |
+| 影响步骤 | Work 1.6、Judge |
+| 工作流事实 | `.github/workflows/ci.yml` 只监听目标为 `main` 的 `pull_request`，直接更新 `main` 不触发该阻断 CI |
+| 已完成 | 本地执行等价后端门禁、Web lint/build、AI 治理和启动健康检查均通过 |
+| 当前授权 | `WORK-001-AUTH-001` 覆盖首次导入和推送，不覆盖为 CI 新建分支及 Draft PR |
+| 解除条件 | 用户授权为 Work 1 CI 建立最小验证分支和 Draft PR；CI 通过后关闭 PR，不合并业务改动，并完成 Judge |
