@@ -4,10 +4,10 @@
 
 ## 当前结论
 
-`CANDIDATE_PERSISTENCE_CHECKPOINT_READY`
+`CANDIDATE_PERSISTED_LOCAL_VALIDATION_PASSED`
 
-该运行中状态表示正式来源已恢复且最低完整性硬门通过，可以创建候选持久化检查点；
-不表示分支已经创建、完整测试或 CI 通过，也不表示可合并、Windows 或真实数据通过。
+该运行中状态表示正式来源已恢复、最低完整性硬门通过、候选已建立远程检查点且
+本地完整验证通过；不表示 Draft PR CI、可合并、Windows 实机或真实数据通过。
 
 ## 基线与来源
 
@@ -26,21 +26,22 @@
 | 验证 | 当前结果 |
 | --- | --- |
 | 最低完整性硬门 | 通过：官方业务树、20 路径控制白名单、台账非回退、格式、AI 治理、安全和候选清单均已核验 |
-| Python | 未运行 |
-| Web | 未运行 |
-| Desktop | 未运行；Windows 实机 `NOT_VERIFIED_IN_CLOUD` |
-| AI 治理 | 未运行 |
-| 候选远程树 | 未创建 |
+| Python | 通过：官方 `./scripts/ci_gate.sh`；`4966 passed`、`4 deselected`、`45 warnings`、`487 subtests passed` |
+| Web | 通过：ESLint 与 TypeScript/Vite 生产构建成功；本地 Node `24.14.0` / npm `11.9.0` |
+| Desktop | 通过：Node 测试 `47 passed`；Windows/macOS 打包等待 CI，Windows 实机 `NOT_VERIFIED_IN_CLOUD` |
+| AI 治理 | 通过：`python scripts/check_ai_assets.py` |
+| 候选远程树 | 通过：初始本地/远程树均为 `c157f143640d056892ba5b1345e65a63eb86babd` |
+| 候选远程提交 | 初始 Commit `9a2588004ba3436faa2b61d489fc8eab564ccef4`；分支 `agent/pp02-v3.28.0-cloud-rebuild` |
 | Draft PR / CI | 未创建 / 未触发 |
 | 真实数据 | `NOT_PERFORMED` |
 
 ## 保护、阻塞与授权
 
 - 旧工作树及其 7 项变化保持原样，不属于候选。
-- 远程 `main` 尚未写入；原子持久化前必须再次核验固定 SHA。
+- 远程 `main` 未写入；原子持久化前已再次核验固定 SHA。
 - 当前阻塞：无。
 - 当前发布授权：独立分支、Commit、Draft PR、CI 和范围内修复。
 - 不包含：Ready、合并、修改/强推 `main`、Release、真实数据和下一业务 Work。
 - `SCOPE_DRIFT=FALSE`；超授权动作：无。
-- 下一动作：通过最低完整性硬门后立即建立候选持久化检查点，再运行完整验证。
+- 下一动作：追加本地验证证据 Commit，创建 Draft PR 并检查本次真实 Actions。
 - 下一 Work：未授权。

@@ -11,24 +11,29 @@ ROLE_LOCK=TRUE
 APPLICATION_BASE_VERSION=3.28.0
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-CURRENT_STAGE=Build / Candidate Persistence
-CURRENT_WORK=恢复性重建完整候选并建立远程持久化检查点
-ACTIVE_GOAL=以远程 main 固定 SHA 为父提交，通过 GitHub App 原子持久化完整候选
-CURRENT_STATUS=MINIMUM_INTEGRITY_GATE_PASSED_PERSISTENCE_PENDING
+CURRENT_STAGE=CI / Draft PR
+CURRENT_WORK=完整候选已持久化并通过本地验证，进入 Draft PR 与真实 CI
+ACTIVE_GOAL=创建以 main 为目标的 Draft PR 并核验本次 GitHub Actions
+CURRENT_STATUS=CANDIDATE_PERSISTED_LOCAL_VALIDATION_PASSED
 ACTIVE_BLOCKER=NONE
-NEXT_ACTION=再次核验远程 main 与目标分支后创建 Blob、Tree、Commit 和独立分支
+NEXT_ACTION=追加本地验证证据 Commit，创建 Draft PR 并检查真实 Actions
 AUTHORIZATION_REQUIRED=FALSE_WITHIN_CURRENT_WORK; READY/MERGE/MAIN/RELEASE/REAL_DATA_REQUIRE_NEW_AUTHORIZATION
 LAST_UPDATED=2026-07-26
 ```
 
 ## 状态边界
 
-- 远程 `main` 最近只读核验为
-  `f2253226c0974e3d241d496a1af8ede61c599b58`；原子持久化前必须再次核验。
+- 远程 `main` 在原子持久化前再次只读核验为
+  `f2253226c0974e3d241d496a1af8ede61c599b58`。
 - 官方固定底座为 `v3.28.0` /
   `905c339d80ad2daa6fd2bab3bb10267b23c7ac1c`。
 - 当前候选位于新的隔离重建目录；旧工作树及其 7 项未提交变化不属于候选。
 - 最低完整性硬门已通过：官方业务树、控制白名单、台账非回退、格式、AI 治理、
   安全扫描和候选清单均有本轮证据。
-- 完整测试、Draft PR 和本次候选 CI 尚未运行或触发，不得引用 Work 1 的历史结果代替。
+- GitHub App 已创建初始持久化 Commit
+  `9a2588004ba3436faa2b61d489fc8eab564ccef4` 和独立分支
+  `agent/pp02-v3.28.0-cloud-rebuild`；初始本地与远程树均为
+  `c157f143640d056892ba5b1345e65a63eb86babd`。
+- Python 官方完整门禁、Web lint/build、Desktop 测试、AI 治理、格式和范围检查均
+  已通过；Draft PR 和本次候选 CI 尚未创建或触发，不得引用 Work 1 历史结果代替。
 - Windows 实机与真实数据均为 `NOT_VERIFIED_IN_CLOUD`。

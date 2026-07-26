@@ -7,38 +7,46 @@
 - 已核验远程 `main`、官方 v3.28.0 Commit、目标分支不存在和框架附件。
 - 已在新的隔离目录从官方固定 Commit 建立完整业务树。
 - 已接入批准的 P000/P001 V1.5.6 控制 Overlay，并通过最低完整性硬门。
+- 已通过 GitHub App/Git Data 原子创建初始候选 Commit 和独立分支；远程 Commit
+  与本地候选树一致。
+- 已完成 Python、Web、Desktop、AI 治理、格式、白名单和安全范围的本轮本地验证。
 
 ## 修改范围
 
 - `.github/workflows/ci.yml`：重放 Work 1 已接受的最小只读权限。
 - `AGENTS.md`：官方规则不变，新增单一有标记的 PP02 控制 Overlay。
 - `_ai-dev/`、既有 PP02 控制台账、`docs/INDEX.md` 和 `docs/pp02/`。
-- 官方业务代码：计划为零差异，待最低完整性硬门确认。
+- 官方业务代码：相对官方 v3.28.0 零差异。
 
 ## 测试与 CI
 
 | 项目 | 当前结果 |
 | --- | --- |
 | 最低完整性硬门 | 通过：格式、AI 治理、官方业务树、20 路径白名单、历史非回退、安全扫描、文件清单和树对象已核验 |
-| Python 完整离线测试 | 未运行 |
-| Web lint / build | 未运行 |
-| Desktop | 未运行；Windows 实机为 `NOT_VERIFIED_IN_CLOUD` |
-| AI 治理 | 未运行 |
+| 候选持久化 | 通过：初始 Commit `9a2588004ba3436faa2b61d489fc8eab564ccef4`；分支 `agent/pp02-v3.28.0-cloud-rebuild`；本地/远程树 `c157f143640d056892ba5b1345e65a63eb86babd` |
+| Python 完整离线测试 | 通过：官方 `./scripts/ci_gate.sh`；`4966 passed`、`4 deselected`、`45 warnings`、`487 subtests passed` |
+| Web lint / build | 通过：ESLint 成功，TypeScript + Vite 生产构建成功；本地 Node `24.14.0` / npm `11.9.0`，CI Node 20 尚待验证 |
+| Desktop | 通过：`47 passed`；Windows/macOS 打包由 Draft PR CI 验证，Windows 实机仍为 `NOT_VERIFIED_IN_CLOUD` |
+| AI 治理 | 通过：`python scripts/check_ai_assets.py` |
+| 差异与安全 | 通过：格式、20 路径控制白名单、官方业务零差异、台账非回退、差异层密钥签名/真实数据/跨项目内容均无命中 |
 | Draft PR CI | 未触发 |
 
 ## 未验证项、阻塞与风险
 
-- 未验证：完整测试、远程候选树、Draft PR Actions、Windows 实机、真实数据。
+- 未验证：Draft PR Actions、Windows 实机、真实数据。
 - 当前阻塞：无。
-- 风险：状态文档不得提前把“未运行”写成“通过”；旧 Work 1 CI 不得复用。
+- 风险：本地 Web/Node 版本与 CI Node 20 不同，必须以本次 Draft PR Actions
+  补齐；旧 Work 1 CI 不得复用。
 
 ## Backlog 与清理
 
 - Backlog：R1–R7；见 `docs/pp02/REBUILD_ROADMAP.md`。
-- 清理：旧工作树保留原样；候选持久化前不删除新的重建目录。临时缓存仅在验证完成后清理。
+- 清理：旧工作树保持原样；新的重建目录必须保留到发布链路和回传完成。临时缓存
+  仅在验证完成后清理。
 
 ## Judge
 
-`IN_PROGRESS`——最低完整性门通过，尚未到达完整测试、Draft PR 与真实 CI Judge 门。
+`IN_PROGRESS`——候选已持久化且本地完整验证通过，尚待 Draft PR 真实 CI 和最终
+Judge。
 
 下一 Work：未授权，当前 Work 完成后停止并等待总控。
