@@ -29,14 +29,15 @@
 | Desktop | 通过：`47 passed`；Windows/macOS 打包由 Draft PR CI 验证，Windows 实机仍为 `NOT_VERIFIED_IN_CLOUD` |
 | AI 治理 | 通过：`python scripts/check_ai_assets.py` |
 | 差异与安全 | 通过：格式、20 路径控制白名单、官方业务零差异、台账非回退、差异层密钥签名/真实数据/跨项目内容均无命中 |
-| Draft PR CI | 未触发 |
+| Draft PR | `#3`，目标 `main`，保持 Draft，未转 Ready、未合并 |
+| Draft PR CI | 首轮 Run `30220968264` 通过：7 个 Job 全部 success；收口证据 Commit 只有在同一 PR 最终 Head CI 也通过后才可完成外部回传 |
 
 ## 未验证项、阻塞与风险
 
-- 未验证：Draft PR Actions、Windows 实机、真实数据。
+- 未验证：Windows 实机、真实数据。
 - 当前阻塞：无。
-- 风险：本地 Web/Node 版本与 CI Node 20 不同，必须以本次 Draft PR Actions
-  补齐；旧 Work 1 CI 不得复用。
+- 风险：Windows CI 验证冻结后端，不等于 Windows 实机安装验收；旧 Work 1 CI
+  不得复用。
 
 ## Backlog 与清理
 
@@ -46,7 +47,8 @@
 
 ## Judge
 
-`IN_PROGRESS`——候选已持久化且本地完整验证通过，尚待 Draft PR 真实 CI 和最终
-Judge。
+`PASS`——候选恢复、远程持久化、本地完整验证和本次 Draft PR 真实 CI 均通过；
+PR 必须保持 Draft，不构成 Ready 或合并授权。外部最终回传只在本收口证据 Commit
+的 Head CI 同样通过后发出。
 
 下一 Work：未授权，当前 Work 完成后停止并等待总控。

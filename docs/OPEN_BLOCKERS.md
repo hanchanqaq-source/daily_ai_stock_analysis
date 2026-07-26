@@ -3,9 +3,9 @@
 当前状态和当前 Active Blocker 以
 [`../_ai-dev/PROJECT_STATUS.md`](../_ai-dev/PROJECT_STATUS.md) 为唯一真源。下列
 `WORK-001` 项目均为追加式历史记录；其解除证据完整保留，不因本次
-`WORK-PP02-CLOUD-REBUILD-001` 启动而回退。当前 R0 已完成候选远程持久化和
-本地完整验证，没有新增已确认阻塞；“Draft PR/CI 尚未触发”是执行顺序中的预期
-状态，不登记为阻塞。
+`WORK-PP02-CLOUD-REBUILD-001` 启动而回退。当前 R0 已完成候选远程持久化、
+本地完整验证和 Draft PR 首轮真实 CI，没有新增已确认阻塞。Windows 实机与真实
+数据是明确未执行的授权外验收项，不回写成当前代码阻塞。
 
 ## WORK-001-BLOCKER-001｜远端完整历史尚未导入
 

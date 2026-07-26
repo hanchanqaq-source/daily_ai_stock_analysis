@@ -13,14 +13,16 @@
 
 ## 当前候选
 
-- 状态：GitHub App 原子持久化与本地完整验证均已通过，等待 Draft PR 真实 CI。
+- 状态：候选持久化、本地完整验证和 Draft PR 真实 CI 均已通过；等待总控决定。
 - 已完成：远程 `main`、官方 Tag/Commit、目标分支不存在和框架附件均已只读核验；
   已从官方固定 Commit 建立新的隔离候选；业务树、控制白名单、历史非回退、格式、
   AI 治理、安全和候选清单检查均通过；初始候选已持久化到独立分支，完整
-  Python/Web/Desktop 本地验证已通过。
-- 未完成：本地验证证据追加 Commit、Draft PR 和真实 GitHub Actions。
+  Python/Web/Desktop 本地验证已通过；Draft PR `#3` 的首轮 CI Run
+  `30220968264` 已 7/7 success。
+- 未完成：Windows 实机、真实数据以及任何 Ready/合并/Release；这些均不在当前
+  Work 授权内。
 - 当前阻塞：无。
-- 下一动作：追加本地验证证据，创建 Draft PR 并检查本次 Actions。
+- 下一动作：保持 PR 为 Draft，停止并等待总控。
 
 ## 必读文件
 
@@ -41,7 +43,11 @@
 - 初始持久化：分支 `agent/pp02-v3.28.0-cloud-rebuild`，Commit
   `9a2588004ba3436faa2b61d489fc8eab564ccef4`，本地/远程树
   `c157f143640d056892ba5b1345e65a63eb86babd`。
-- CI 状态：尚未触发；不得把旧 `main` 或 Work 1 的 CI 当作本候选 CI。
+- Draft PR：`#3` /
+  `https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/3`，保持草稿。
+- CI 状态：本候选 Run `30220968264` 的 Change Detection、AI governance、
+  backend、Docker、Web、Windows Futu 冻结和 macOS Desktop 包共 7 个 Job 全部
+  success；收口证据 Commit 的最终 Head CI 结果由外部回传报告记录。
 - 最后更新：2026-07-26。
 
 若本文件与 `PROJECT_STATUS.md` 冲突，立即报告差异并以可验证证据修正，不得自行扩大范围。

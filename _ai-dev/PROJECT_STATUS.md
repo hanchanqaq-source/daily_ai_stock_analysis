@@ -11,12 +11,12 @@ ROLE_LOCK=TRUE
 APPLICATION_BASE_VERSION=3.28.0
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-CURRENT_STAGE=CI / Draft PR
-CURRENT_WORK=完整候选已持久化并通过本地验证，进入 Draft PR 与真实 CI
-ACTIVE_GOAL=创建以 main 为目标的 Draft PR 并核验本次 GitHub Actions
-CURRENT_STATUS=CANDIDATE_PERSISTED_LOCAL_VALIDATION_PASSED
+CURRENT_STAGE=Judge / Waiting for Control
+CURRENT_WORK=候选恢复、持久化、Draft PR 与真实 CI 已完成
+ACTIVE_GOAL=保持已验证候选为 Draft，停止并等待总控决定
+CURRENT_STATUS=PP02_CLOUD_REBUILD_DRAFT_PR_CI_PASSED
 ACTIVE_BLOCKER=NONE
-NEXT_ACTION=追加本地验证证据 Commit，创建 Draft PR 并检查真实 Actions
+NEXT_ACTION=停止并等待总控；Ready、合并、main、Release 或下一 Work 均需新授权
 AUTHORIZATION_REQUIRED=FALSE_WITHIN_CURRENT_WORK; READY/MERGE/MAIN/RELEASE/REAL_DATA_REQUIRE_NEW_AUTHORIZATION
 LAST_UPDATED=2026-07-26
 ```
@@ -35,5 +35,8 @@ LAST_UPDATED=2026-07-26
   `agent/pp02-v3.28.0-cloud-rebuild`；初始本地与远程树均为
   `c157f143640d056892ba5b1345e65a63eb86babd`。
 - Python 官方完整门禁、Web lint/build、Desktop 测试、AI 治理、格式和范围检查均
-  已通过；Draft PR 和本次候选 CI 尚未创建或触发，不得引用 Work 1 历史结果代替。
+  已通过。
+- Draft PR `#3` 保持草稿；首轮真实 CI Run `30220968264` 的 7 个 Job 全部
+  `success`。收口证据提交必须由同一 PR Head 的后续 CI 再次通过，外部回传才可
+  给出最终 Judge。
 - Windows 实机与真实数据均为 `NOT_VERIFIED_IN_CLOUD`。

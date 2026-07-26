@@ -4,10 +4,11 @@
 
 ## 当前结论
 
-`CANDIDATE_PERSISTED_LOCAL_VALIDATION_PASSED`
+`PP02_CLOUD_REBUILD_DRAFT_PR_CI_PASSED`
 
-该运行中状态表示正式来源已恢复、最低完整性硬门通过、候选已建立远程检查点且
-本地完整验证通过；不表示 Draft PR CI、可合并、Windows 实机或真实数据通过。
+该状态表示正式来源已恢复、最低完整性硬门通过、候选已建立远程检查点、本地完整
+验证通过且 Draft PR 首轮真实 CI 通过；不表示 Ready、可合并、Windows 实机或
+真实数据通过。
 
 ## 基线与来源
 
@@ -32,7 +33,8 @@
 | AI 治理 | 通过：`python scripts/check_ai_assets.py` |
 | 候选远程树 | 通过：初始本地/远程树均为 `c157f143640d056892ba5b1345e65a63eb86babd` |
 | 候选远程提交 | 初始 Commit `9a2588004ba3436faa2b61d489fc8eab564ccef4`；分支 `agent/pp02-v3.28.0-cloud-rebuild` |
-| Draft PR / CI | 未创建 / 未触发 |
+| Draft PR | `#3` / `https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/3`；保持 Draft |
+| Draft PR CI | Run `30220968264`：Change Detection、AI governance、backend、Docker、Web、Windows Futu 冻结、macOS Desktop 包 7/7 success |
 | 真实数据 | `NOT_PERFORMED` |
 
 ## 保护、阻塞与授权
@@ -43,5 +45,6 @@
 - 当前发布授权：独立分支、Commit、Draft PR、CI 和范围内修复。
 - 不包含：Ready、合并、修改/强推 `main`、Release、真实数据和下一业务 Work。
 - `SCOPE_DRIFT=FALSE`；超授权动作：无。
-- 下一动作：追加本地验证证据 Commit，创建 Draft PR 并检查本次真实 Actions。
+- 下一动作：收口证据 Commit 的最终 Head CI 通过后停止，等待总控；不得转 Ready
+  或合并。
 - 下一 Work：未授权。
