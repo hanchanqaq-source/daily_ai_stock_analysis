@@ -2,7 +2,22 @@
 
 这里是项目文档入口。README 负责项目概览和快速开始；更完整的配置、部署、功能说明和排障内容从这里进入。
 
-> PP02 开发任务先从 [PP02 项目总入口](PROJECT_CONTROL.md) 进入；该入口负责当前 Work、需求、路线图、决策、阻塞和 Runbook 导航，不替代下方产品文档。
+> PP02 开发任务先从 [`_ai-dev/PROJECT_STATUS.md`](../_ai-dev/PROJECT_STATUS.md)
+> 读取唯一当前状态，再从 [PP02 项目总入口](PROJECT_CONTROL.md) 进入历史、需求、
+> 路线图、决策、阻塞和 Runbook 导航；这些控制文档不替代下方产品文档。
+
+## PP02 当前控制与 R0 重建
+
+| 文档 | 内容 |
+| --- | --- |
+| [当前状态](../_ai-dev/PROJECT_STATUS.md) | 唯一当前状态真源 |
+| [新聊天交接](../_ai-dev/AI_HANDOFF.md) | 候选状态、下一动作、授权和验收入口 |
+| [当前 Work 合同](../_ai-dev/WORK_TASK.md) | 目标、范围、非目标、Plan Challenge 和回传要求 |
+| [当前 Work 回传](../_ai-dev/WORK_RETURN.md) | 真实验证、CI、阻塞与 Judge |
+| [R0–R7 重建路线](pp02/REBUILD_ROADMAP.md) | 当前 R0 与后续未启动阶段 |
+| [官方基线](pp02/UPSTREAM_BASELINE.md) | 官方版本、Commit、来源和附件哈希 |
+| [旧功能清单](pp02/LEGACY_FEATURE_INVENTORY.md) | 迁移、重做、丢弃和待决策分类 |
+| [云端重建报告](pp02/PP02_CLOUD_REBUILD_BASELINE_REPORT.md) | R0 重建与验证证据 |
 
 ## 按场景选择
 

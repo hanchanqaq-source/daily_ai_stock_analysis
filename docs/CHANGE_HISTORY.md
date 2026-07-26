@@ -10,9 +10,11 @@
 | WORK-001-AUTH-002 | 2026-07-23 | 授权正式修复 `main` 的 CI 权限并更新 Work 1 台账；创建 Draft PR，CI 通过后等待用户确认是否合并 | 验证 PR #1 已证明缺少 `pull-requests: read` 是唯一权限根因，最小只读修复可使完整 CI 成功 | Work 1.6；允许正式分支、提交、推送和 Draft PR，不包含合并或 Release |
 
 | WORK-001-AUTH-003 | 2026-07-23 | 授权将 PR #2 转为 Ready 并合并到 `main`；合并后复核 `main` 并更新最终进度，不发布 Release | 正式 CI 权限修复已通过完整 CI，需要完成合并与台账收口 | Work 1.6；已合并为 `a6bdfb55827080e196c2103292aaedfadc224dc7`，Release 未发布 |
+| WORK-PP02-CLOUD-REBUILD-001-DECISION-001 | 2026-07-26 | Work 1 的 v3.27.0 管理底座作为历史保留；当前 R0 从官方 `v3.28.0` 固定提交重建，并叠加 P000/P001 V1.5.6 控制层 | 消除旧基线、旧状态真源和空白模板覆盖风险，同时保持官方业务树完整 | 当前 Work 只执行 R0；R1–R7 不启动 |
+| WORK-PP02-CLOUD-REBUILD-001-AUTH-001 | 2026-07-26 | 授权在同一 Work 内恢复性重建，并通过已连接的 GitHub App/Git Data API 创建原子 Commit、独立分支、Draft PR、检查真实 CI 和修复范围内问题 | 已验证候选未持久化，需要先建立可恢复的远程检查点再运行完整验证 | 不含 Ready、合并、改写 `main`、Release、真实数据或重复设备认证 |
 
 ## 记录规则
 
-- 新功能或范围变化先执行三选一，用户选择后再追加一行。
+- 新功能或范围变化先执行 Plan Challenge Gate，用户选择后再追加一行。
 - 授权记录必须写清目标、范围和未包含事项。
 - 技术实现细节不作为范围决策；重要故障与解除条件写入 `OPEN_BLOCKERS.md`。

@@ -1,5 +1,11 @@
 # PP02 当前阻塞
 
+当前状态和当前 Active Blocker 以
+[`../_ai-dev/PROJECT_STATUS.md`](../_ai-dev/PROJECT_STATUS.md) 为唯一真源。下列
+`WORK-001` 项目均为追加式历史记录；其解除证据完整保留，不因本次
+`WORK-PP02-CLOUD-REBUILD-001` 启动而回退。当前 R0 在候选持久化检查点前没有
+新增已确认阻塞；“Draft PR/CI 尚未触发”是执行顺序中的预期状态，不登记为阻塞。
+
 ## WORK-001-BLOCKER-001｜远端完整历史尚未导入
 
 | 项目 | 当前事实 |

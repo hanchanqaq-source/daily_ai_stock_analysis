@@ -2,7 +2,27 @@
 
 本文件记录 PP02 的最小操作入口。更完整的官方说明继续使用 [`full-guide.md`](full-guide.md)、[`DEPLOY.md`](DEPLOY.md) 和 [`FAQ.md`](FAQ.md)，不在这里复制第二套长教程。
 
-## 1. 身份核对
+## 0. 当前 v3.28.0 R0 操作入口
+
+当前唯一状态见 [`../_ai-dev/PROJECT_STATUS.md`](../_ai-dev/PROJECT_STATUS.md)，正式
+基线记录见 [`pp02/UPSTREAM_BASELINE.md`](pp02/UPSTREAM_BASELINE.md)。
+
+```bash
+git rev-parse HEAD
+git diff --check
+python scripts/check_ai_assets.py
+```
+
+R0 候选必须以官方 `v3.28.0` 固定 Commit
+`905c339d80ad2daa6fd2bab3bb10267b23c7ac1c` 为完整业务树，并只增加批准的 PP02
+控制层和 CI 最小只读权限。不得加载真实 `.env`、真实账号、真实数据库、通知或
+付费服务。先完成最低完整性硬门并持久化候选，再执行完整 Python、Web、Desktop、
+AI 治理和差异验证；Draft PR CI 未触发前必须明确写“未触发”。
+
+云端结果不能替代 Windows 实机结果；Windows 当前状态为
+`NOT_VERIFIED_IN_CLOUD`。本 Work 不执行 Ready、合并、修改 `main` 或 Release。
+
+## 1. 身份核对（Work 1 历史）
 
 开始操作前确认：
 
@@ -14,7 +34,7 @@ git status -sb
 
 预期仓库是 `hanchanqaq-source/daily_ai_stock_analysis`，并保留名为 `upstream` 的官方来源 `ZhuLinsen/daily_stock_analysis`。若指向旧混合仓库，立即停止写入。
 
-## 2. 原始基线核对
+## 2. 原始基线核对（Work 1 历史）
 
 ```bash
 git fetch upstream tag v3.27.0
@@ -86,7 +106,7 @@ python main.py --serve-only
 
 默认只在本机验证，通过 `http://127.0.0.1:8000` 打开。Work 1 不开放公网，不连接真实付费服务、通知或自动交易。
 
-## 6. Work 1 差异验收
+## 6. Work 1 差异验收（历史）
 
 ```bash
 git diff --name-status b36c721415560e48115ad4444d5af2125fc53f5c..HEAD
