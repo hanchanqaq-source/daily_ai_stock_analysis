@@ -273,6 +273,42 @@ class AnalysisApiContractTestCase(unittest.TestCase):
         finally:
             AnalysisTaskQueue._instance = original_queue_instance
 
+    def test_auto_notification_master_switch_blocks_market_review_delivery(self) -> None:
+        if trigger_market_review is None or analysis_endpoint_module is None:
+            self.skipTest("analysis endpoint helpers unavailable in this environment")
+
+        task_queue = MagicMock()
+        task_queue.submit_background_task.return_value = SimpleNamespace(
+            task_id="market-task-master-disabled"
+        )
+        request = analysis_endpoint_module.MarketReviewRequest(send_notification=True)
+        config = SimpleNamespace(
+            auto_notification_enabled=False,
+            trading_day_check_enabled=False,
+            report_language="zh",
+            market_review_region="cn",
+        )
+        lock_token = object()
+
+        with patch.object(
+            analysis_endpoint_module,
+            "_try_acquire_market_review_lock",
+            return_value=lock_token,
+        ), patch("api.v1.endpoints.analysis.get_task_queue", return_value=task_queue):
+            response = trigger_market_review(request=request, config=config)
+
+        self.assertFalse(response.send_notification)
+        background_task = task_queue.submit_background_task.call_args.args[0]
+        with patch.object(
+            analysis_endpoint_module,
+            "_run_market_review_background",
+            return_value={"result": "report"},
+        ) as run_background:
+            background_task()
+
+        run_background.assert_called_once()
+        self.assertFalse(run_background.call_args.args[0])
+
     def test_trigger_market_review_accepts_background_task(self) -> None:
         if trigger_market_review is None or analysis_endpoint_module is None:
             self.skipTest("analysis endpoint helpers unavailable in this environment")
@@ -2997,6 +3033,33 @@ class AnalysisApiContractTestCase(unittest.TestCase):
         self.assertEqual(ctx.exception.status_code, 400)
         self.assertEqual(ctx.exception.detail["message"], "请输入有效的股票代码或股票名称")
         queue_mock.assert_not_called()
+
+    def test_auto_notification_master_switch_blocks_async_analysis_delivery(self) -> None:
+        if trigger_analysis is None:
+            self.skipTest("fastapi is not installed in this test environment")
+
+        queue = MagicMock()
+        queue.submit_tasks_batch.return_value = ([], [])
+
+        with patch("api.v1.endpoints.analysis.get_task_queue", return_value=queue):
+            response = trigger_analysis(
+                request=SimpleNamespace(
+                    stock_code="AAPL.US",
+                    stock_codes=None,
+                    stock_name=None,
+                    original_query="AAPL.US",
+                    selection_source="manual",
+                    report_type="detailed",
+                    force_refresh=False,
+                    async_mode=True,
+                    notify=True,
+                    analysis_phase="auto",
+                ),
+                config=SimpleNamespace(auto_notification_enabled=False),
+            )
+
+        self.assertEqual(response.status_code, 202)
+        self.assertFalse(queue.submit_tasks_batch.call_args.kwargs["notify"])
 
     def test_trigger_analysis_accepts_us_suffix_code(self) -> None:
         if trigger_analysis is None:
