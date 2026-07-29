@@ -252,12 +252,17 @@ class AlertWorkerTestCase(unittest.TestCase):
         os.environ.pop("DATABASE_PATH", None)
         self.temp_dir.cleanup()
 
-    def _config(self, raw_rules: str = "") -> SimpleNamespace:
-        return SimpleNamespace(
-            agent_event_monitor_enabled=True,
-            agent_event_alert_rules_json=raw_rules,
-            trading_day_check_enabled=False,
-        )
+    def _config(self, raw_rules: str = "", **overrides) -> SimpleNamespace:
+        values = {
+            "agent_event_monitor_enabled": True,
+            "agent_event_alert_rules_json": raw_rules,
+            "trading_day_check_enabled": False,
+            # Existing alert tests exercise notification behavior explicitly.
+            # PP02-specific opt-out coverage overrides this to False below.
+            "auto_notification_enabled": True,
+        }
+        values.update(overrides)
+        return SimpleNamespace(**values)
 
     def _create_rule(self, **overrides) -> dict:
         payload = {
@@ -315,6 +320,28 @@ class AlertWorkerTestCase(unittest.TestCase):
         else:
             notifier.send_with_results.side_effect = list(results)
         return notifier
+
+    def test_auto_notification_master_switch_records_trigger_without_sending(self) -> None:
+        self._create_rule(target="600519")
+        notifier = self._notifier()
+        worker = AlertWorker(
+            config_provider=lambda: self._config(auto_notification_enabled=False),
+            service=self.service,
+            notifier=notifier,
+        )
+
+        with patch(
+            "src.agent.events.EventMonitor._get_realtime_quote",
+            new=AsyncMock(return_value=SimpleNamespace(price=1810.0)),
+        ):
+            stats = worker.run_once()
+
+        self.assertEqual(stats["triggered"], 1)
+        self.assertEqual(stats["recorded"], 1)
+        self.assertEqual(stats["notified"], 0)
+        self.assertEqual(stats["notification_attempts"], 0)
+        self.assertEqual(len(self._triggers(status="triggered")), 1)
+        notifier.send_with_results.assert_not_called()
 
     def test_p6_triggered_stock_alert_links_latest_active_decision_signal(self) -> None:
         self._create_rule(target="600519")
