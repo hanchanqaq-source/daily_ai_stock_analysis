@@ -1492,6 +1492,10 @@ test('desktop package and release workflow use the PP02 technical identity', () 
     path.resolve(__dirname, '..', '..', '..', 'scripts', 'verify-desktop-updater-artifacts.ps1'),
     'utf-8'
   );
+  const macosBuildScript = fs.readFileSync(
+    path.resolve(__dirname, '..', '..', '..', 'scripts', 'build-desktop-macos.sh'),
+    'utf-8'
+  );
 
   assert.equal(packageJson.name, 'pp02-ai-daily-stock-analysis-desktop');
   assert.equal(packageJson.build.appId, 'com.hanchanqaq.pp02.aidailystockanalysis');
@@ -1506,4 +1510,6 @@ test('desktop package and release workflow use the PP02 technical identity', () 
   assert.match(releaseWorkflow, /pp02-ai-daily-stock-analysis-windows-noinstall-/);
   assert.match(releaseWorkflow, /pp02-ai-daily-stock-analysis-macos-/);
   assert.match(updaterVerifier, /pp02-ai-daily-stock-analysis-windows-installer-/);
+  assert.match(macosBuildScript, /PP02 AI Daily Stock Analysis\.app/);
+  assert.doesNotMatch(macosBuildScript, /["/]Daily Stock Analysis\.app/);
 });

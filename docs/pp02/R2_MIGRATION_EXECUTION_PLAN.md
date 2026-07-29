@@ -52,6 +52,7 @@ Electron、Node test、GitHub Actions。
 - `.github/workflows/desktop-release.yml`
 - `.github/workflows/ci.yml`
 - `scripts/verify-desktop-updater-artifacts.ps1`
+- `scripts/build-desktop-macos.sh`
 - `docs/desktop-package.md`
 
 **验收：**
