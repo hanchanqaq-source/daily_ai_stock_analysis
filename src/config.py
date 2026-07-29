@@ -112,6 +112,19 @@ ANSPIRE_LLM_BASE_URL_DEFAULT = "https://open-gateway.anspire.cn/v6"
 ANSPIRE_LLM_MODEL_DEFAULT = "Doubao-Seed-2.0-lite"
 
 
+def should_send_automatic_notification(config: Any, requested: bool = True) -> bool:
+    """Return whether an automatic external notification may be delivered.
+
+    PP02 defaults the product-level switch off. The attribute fallback remains
+    True for legacy test doubles and compatibility callers that do not yet
+    expose the new field; real Config instances always define it.
+    """
+
+    return bool(requested) and bool(
+        getattr(config, "auto_notification_enabled", True)
+    )
+
+
 def _has_ntfy_topic_endpoint(value: Optional[str]) -> bool:
     """Return whether an ntfy URL points at a concrete topic endpoint."""
     raw_url = (value or "").strip()
@@ -951,6 +964,9 @@ class Config:
     notification_min_severity: str = ""
     notification_daily_digest_enabled: bool = False
 
+    # PP02 产品级自动通知总开关：默认关闭，显式启用后各发送入口才可继续判断。
+    auto_notification_enabled: bool = False
+
     # 单股推送模式：每分析完一只股票立即推送，而不是汇总后推送
     single_stock_notify: bool = False
 
@@ -1140,6 +1156,7 @@ class Config:
     _WEBUI_RUNTIME_ENV_FILE_PRIORITY_KEYS = frozenset(
         {
             "STOCK_LIST",
+            "AUTO_NOTIFICATION_ENABLED",
             "RUN_IMMEDIATELY",
             "SCHEDULE_ENABLED",
             "SCHEDULE_TIME",
@@ -1906,6 +1923,14 @@ class Config:
             notification_min_severity=(os.getenv('NOTIFICATION_MIN_SEVERITY') or '').strip().lower(),
             notification_daily_digest_enabled=parse_env_bool(
                 os.getenv('NOTIFICATION_DAILY_DIGEST_ENABLED'),
+                default=False,
+            ),
+            auto_notification_enabled=parse_env_bool(
+                cls._resolve_env_value(
+                    'AUTO_NOTIFICATION_ENABLED',
+                    default='false',
+                    prefer_env_file=True,
+                ),
                 default=False,
             ),
             single_stock_notify=os.getenv('SINGLE_STOCK_NOTIFY', 'false').lower() == 'true',

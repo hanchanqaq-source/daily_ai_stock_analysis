@@ -70,7 +70,7 @@ import uuid
 from datetime import date, datetime, timezone, timedelta
 
 from src.webui_frontend import prepare_webui_frontend_assets
-from src.config import get_config, Config
+from src.config import Config, get_config, should_send_automatic_notification
 from src.logging_config import setup_logging
 from src.brokers.futu.portfolio import FutuPortfolioError
 from data_provider.base import canonical_stock_code
@@ -795,6 +795,10 @@ def run_full_analysis(
             and not getattr(args, 'no_market_review', False)
             and not config.single_stock_notify
         )
+        send_automatic_notifications = should_send_automatic_notification(
+            config,
+            requested=not bool(getattr(args, "no_notify", False)),
+        )
 
         # 创建调度器
         save_context_snapshot = None
@@ -872,7 +876,7 @@ def run_full_analysis(
             results = pipeline.run(
                 stock_codes=stock_codes,
                 dry_run=args.dry_run,
-                send_notification=not args.no_notify,
+                send_notification=send_automatic_notifications,
                 merge_notification=merge_notification,
                 current_time=analysis_reference_time,
             )
@@ -932,7 +936,7 @@ def run_full_analysis(
                 if (
                     market_context_generated_during_stock
                     and not merge_notification
-                    and not args.no_notify
+                    and send_automatic_notifications
                     and pipeline.notifier.is_available()
                 ):
                     if pipeline.notifier.send(
@@ -956,7 +960,7 @@ def run_full_analysis(
                     notifier=pipeline.notifier,
                     analyzer=pipeline.analyzer,
                     search_service=pipeline.search_service,
-                    send_notification=not args.no_notify,
+                    send_notification=send_automatic_notifications,
                     merge_notification=merge_notification,
                     override_region=market_review_region,
                     query_id=query_id,
@@ -991,7 +995,7 @@ def run_full_analysis(
                 market_report = market_context_full_report or market_context_summary
 
         # Issue #190: 合并推送（个股+大盘复盘）
-        if merge_notification and (results or market_report) and not args.no_notify:
+        if merge_notification and (results or market_report) and send_automatic_notifications:
             parts = []
             if market_report:
                 parts.append(f"# 📈 大盘复盘\n\n{market_report}")
@@ -1054,7 +1058,7 @@ def run_full_analysis(
                 if doc_url:
                     logger.info(f"飞书云文档创建成功: {doc_url}")
                     # 可选：将文档链接也推送到群里
-                    if not args.no_notify:
+                    if send_automatic_notifications:
                         pipeline.notifier.send(
                             f"[{now.strftime('%Y-%m-%d %H:%M')}] 复盘文档创建成功: {doc_url}",
                             route_type="report",
@@ -1429,7 +1433,10 @@ def main() -> int:
         else:
             os.environ.pop(RUNTIME_SCHEDULER_RUN_IMMEDIATELY_ENV, None)
         runtime_scheduler_args = {
-            "no_notify": bool(getattr(args, "no_notify", False)),
+            "no_notify": not should_send_automatic_notification(
+                config,
+                requested=not bool(getattr(args, "no_notify", False)),
+            ),
             "no_market_review": bool(getattr(args, "no_market_review", False)),
             "dry_run": bool(getattr(args, "dry_run", False)),
             "force_run": bool(getattr(args, "force_run", False)),
@@ -1515,7 +1522,10 @@ def main() -> int:
                 notifier=notifier,
                 analyzer=analyzer,
                 search_service=search_service,
-                send_notification=not args.no_notify,
+                send_notification=should_send_automatic_notification(
+                    config,
+                    requested=not bool(getattr(args, "no_notify", False)),
+                ),
                 override_region=effective_region,
                 trigger_source="cli",
             )

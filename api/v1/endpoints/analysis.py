@@ -56,7 +56,7 @@ from api.v1.schemas.history import (
 from api.v1.schemas.run_flow import RunFlowSnapshot
 from data_provider.base import canonical_stock_code, normalize_stock_code
 from src.data.stock_index_loader import resolve_index_stock_code
-from src.config import Config
+from src.config import Config, should_send_automatic_notification
 from src.core.market_review_lock import (
     MarketReviewExecutionLock as _MarketReviewExecutionLock,
     market_review_lock_path,
@@ -142,6 +142,10 @@ def _run_market_review_background(
     from src.core.market_review import run_market_review
 
     runtime_config = config or get_config_dep()
+    effective_send_notification = should_send_automatic_notification(
+        runtime_config,
+        requested=send_notification,
+    )
     try:
         notifier, analyzer, search_service = _build_market_review_runtime(runtime_config)
         review_kwargs = {
@@ -149,7 +153,7 @@ def _run_market_review_background(
             "analyzer": analyzer,
             "search_service": search_service,
             "config": runtime_config,
-            "send_notification": send_notification,
+            "send_notification": effective_send_notification,
             "override_region": effective_region,
             "return_structured": True,
             "trigger_source": "api",
@@ -336,6 +340,11 @@ def trigger_analysis(
     if not stock_codes:
         raise api_error(400, "validation_error", "股票代码不能为空或仅包含空白字符")
 
+    effective_send_notification = should_send_automatic_notification(
+        config,
+        requested=getattr(request, "notify", True),
+    )
+
     # Sync mode only supports single-stock analysis.
     if not request.async_mode:
         if len(stock_codes) > 1:
@@ -344,15 +353,25 @@ def trigger_analysis(
                 "validation_error",
                 "同步模式仅支持单只股票分析，请使用 async_mode=true 进行批量分析",
             )
-        return _handle_sync_analysis(stock_codes[0], request)
+        return _handle_sync_analysis(
+            stock_codes[0],
+            request,
+            send_notification=effective_send_notification,
+        )
 
     # Async mode submits one task per stock.
-    return _handle_async_analysis_batch(stock_codes, request)
+    return _handle_async_analysis_batch(
+        stock_codes,
+        request,
+        send_notification=effective_send_notification,
+    )
 
 
 def _handle_async_analysis_batch(
     stock_codes: list,
-    request: AnalyzeRequest
+    request: AnalyzeRequest,
+    *,
+    send_notification: Optional[bool] = None,
 ) -> JSONResponse:
     """
     Handle asynchronous analysis requests, including batch submission.
@@ -368,7 +387,11 @@ def _handle_async_analysis_batch(
     stock_name = request.stock_name if is_single else None
     original_query = request.original_query if (is_single or preserve_batch_metadata) else None
     selection_source = request.selection_source if (is_single or preserve_batch_metadata) else None
-    notify = getattr(request, "notify", True)
+    notify = (
+        getattr(request, "notify", True)
+        if send_notification is None
+        else bool(send_notification)
+    )
     skills = getattr(request, "skills", None)
     analysis_phase = request.analysis_phase
     report_language = normalize_report_language(getattr(request, "report_language", None), default="")
@@ -452,7 +475,9 @@ def _handle_async_analysis_batch(
 
 def _handle_sync_analysis(
     stock_code: str,
-    request: AnalyzeRequest
+    request: AnalyzeRequest,
+    *,
+    send_notification: Optional[bool] = None,
 ) -> AnalysisResultResponse:
     """
     处理同步分析请求
@@ -471,7 +496,11 @@ def _handle_sync_analysis(
             report_type=request.report_type,
             force_refresh=request.force_refresh,
             query_id=query_id,
-            send_notification=getattr(request, "notify", True),
+            send_notification=(
+                getattr(request, "notify", True)
+                if send_notification is None
+                else bool(send_notification)
+            ),
             skills=getattr(request, "skills", None),
             analysis_phase=request.analysis_phase,
             report_language=getattr(request, "report_language", None),
@@ -538,6 +567,10 @@ def trigger_market_review(
     request = request or MarketReviewRequest()
 
     runtime_config = _with_request_report_language(config, request.report_language)
+    effective_send_notification = should_send_automatic_notification(
+        runtime_config,
+        requested=request.send_notification,
+    )
     effective_region = request.region or (
         normalize_market_review_region_lenient(runtime_config.market_review_region) or "cn"
     )
@@ -553,11 +586,11 @@ def trigger_market_review(
             "task_id=%s region=%s send_notification=%s",
             task_id,
             effective_region,
-            request.send_notification,
+            effective_send_notification,
         )
         task = get_task_queue().submit_background_task(
             lambda: _run_market_review_background(
-                request.send_notification,
+                effective_send_notification,
                 effective_region=effective_region,
                 lock_token=lock_token,
                 config=runtime_config,
@@ -576,7 +609,7 @@ def trigger_market_review(
     return MarketReviewAccepted(
         status="accepted",
         message="大盘复盘任务已提交，完成后会保存报告并按配置推送通知",
-        send_notification=request.send_notification,
+        send_notification=effective_send_notification,
         region=effective_region,
         task_id=task.task_id,
         trace_id=_get_task_trace_id(task),

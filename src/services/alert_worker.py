@@ -26,6 +26,7 @@ from src.analysis_context_pack_overview import (
     ANALYSIS_CONTEXT_PACK_OVERVIEW_KEY,
     extract_analysis_context_pack_overview,
 )
+from src.config import should_send_automatic_notification
 from src.core.trading_calendar import build_market_phase_context, get_market_for_stock
 from src.market_phase_summary import (
     format_public_phase_pack_excerpt,
@@ -133,6 +134,7 @@ class AlertWorker:
             logger.debug("[AlertWorker] Event monitor disabled; skipping")
             return stats
 
+        automatic_notifications_enabled = should_send_automatic_notification(config)
         self._prune_fingerprints()
         runtime_rules = self._load_runtime_rules(config)
         stats["loaded"] = len(runtime_rules)
@@ -175,6 +177,12 @@ class AlertWorker:
 
             if record_status == "triggered":
                 stats["triggered"] += 1
+                if not automatic_notifications_enabled:
+                    logger.info(
+                        "[AlertWorker] Notification suppressed by PP02 master switch: rule=%s",
+                        runtime_rule.key,
+                    )
+                    continue
                 if runtime_rule.source == "db":
                     cooldown_decision = self._check_db_cooldown(runtime_rule, trigger_id)
                     if cooldown_decision.suppressed:

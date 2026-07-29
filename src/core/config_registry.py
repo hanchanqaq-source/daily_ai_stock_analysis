@@ -2523,6 +2523,31 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "validation": {},
         "display_order": 48,
     },
+    "AUTO_NOTIFICATION_ENABLED": {
+        "title": "PP02 自动通知总开关",
+        "description": "默认关闭。启用后，分析、市场复盘、运行时调度与告警才允许向外部渠道自动发送；手动测试通知保持独立。",
+        "category": "notification",
+        "data_type": "boolean",
+        "ui_control": "switch",
+        "is_sensitive": False,
+        "is_required": False,
+        "is_editable": True,
+        "default_value": "false",
+        "options": [],
+        "validation": {},
+        "display_order": 49,
+        "examples": [
+            "AUTO_NOTIFICATION_ENABLED=false",
+            "AUTO_NOTIFICATION_ENABLED=true",
+        ],
+        "docs": [
+            {
+                "label": "PP02 通知安全说明",
+                "href": "https://github.com/hanchanqaq-source/daily_ai_stock_analysis/blob/main/docs/notifications.md",
+            },
+        ],
+        "warning_codes": [],
+    },
     "SINGLE_STOCK_NOTIFY": {
         "title": "Single Stock Notify",
         "description": "Push immediately after each single stock analysis instead of batching all results together.",
