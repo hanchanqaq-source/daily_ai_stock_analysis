@@ -50,6 +50,7 @@ Electron、Node test、GitHub Actions。
 - `apps/dsa-desktop/main.js`
 - `apps/dsa-desktop/tests/main.test.js`
 - `.github/workflows/desktop-release.yml`
+- `.github/workflows/ci.yml`
 - `scripts/verify-desktop-updater-artifacts.ps1`
 - `docs/desktop-package.md`
 
