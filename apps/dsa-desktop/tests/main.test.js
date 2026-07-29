@@ -1464,3 +1464,46 @@ test('stopBackend uses taskkill on Windows and clears after backend exit', async
   ]);
   assert.equal(mainModule.__getBackendProcessForTest(), null);
 });
+
+test('desktop release identity targets the PP02 repository', (t) => {
+  const mainModule = loadMainModule(t);
+
+  assert.equal(mainModule.GITHUB_OWNER, 'hanchanqaq-source');
+  assert.equal(mainModule.GITHUB_REPO, 'daily_ai_stock_analysis');
+  assert.equal(
+    mainModule.RELEASES_PAGE_URL,
+    'https://github.com/hanchanqaq-source/daily_ai_stock_analysis/releases'
+  );
+  assert.equal(
+    mainModule.LATEST_RELEASE_API_URL,
+    'https://api.github.com/repos/hanchanqaq-source/daily_ai_stock_analysis/releases/latest'
+  );
+});
+
+test('desktop package and release workflow use the PP02 technical identity', () => {
+  const packageJson = JSON.parse(
+    fs.readFileSync(path.resolve(__dirname, '..', 'package.json'), 'utf-8')
+  );
+  const releaseWorkflow = fs.readFileSync(
+    path.resolve(__dirname, '..', '..', '..', '.github', 'workflows', 'desktop-release.yml'),
+    'utf-8'
+  );
+  const updaterVerifier = fs.readFileSync(
+    path.resolve(__dirname, '..', '..', '..', 'scripts', 'verify-desktop-updater-artifacts.ps1'),
+    'utf-8'
+  );
+
+  assert.equal(packageJson.name, 'pp02-ai-daily-stock-analysis-desktop');
+  assert.equal(packageJson.build.appId, 'com.hanchanqaq.pp02.aidailystockanalysis');
+  assert.equal(packageJson.build.productName, 'PP02 AI Daily Stock Analysis');
+  assert.equal(packageJson.build.win.publish[0].owner, 'hanchanqaq-source');
+  assert.equal(packageJson.build.win.publish[0].repo, 'daily_ai_stock_analysis');
+  assert.equal(
+    packageJson.build.win.artifactName,
+    'pp02-ai-daily-stock-analysis-windows-installer-v${version}.${ext}'
+  );
+  assert.match(releaseWorkflow, /pp02-ai-daily-stock-analysis-windows-installer-/);
+  assert.match(releaseWorkflow, /pp02-ai-daily-stock-analysis-windows-noinstall-/);
+  assert.match(releaseWorkflow, /pp02-ai-daily-stock-analysis-macos-/);
+  assert.match(updaterVerifier, /pp02-ai-daily-stock-analysis-windows-installer-/);
+});

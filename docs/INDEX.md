@@ -91,3 +91,8 @@
 | [英文文档索引](INDEX_EN.md) | English documentation index |
 | [英文 README](README_EN.md) | English project overview and quick start |
 | [繁中 README](README_CHT.md) | 繁體中文項目概覽與快速開始 |
+
+## PP02 R1/R2 迁移入口
+
+- [R1 需求与旧功能迁移确认](pp02/R1_REQUIREMENTS_MIGRATION_CONFIRMATION.md)
+- [R2 迁移实施计划](pp02/R2_MIGRATION_EXECUTION_PLAN.md)

@@ -11,32 +11,36 @@ ROLE_LOCK=TRUE
 APPLICATION_BASE_VERSION=3.28.0
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-CURRENT_STAGE=Judge / Waiting for Control
-CURRENT_WORK=候选恢复、持久化、Draft PR 与真实 CI 已完成
-ACTIVE_GOAL=保持已验证候选为 Draft，停止并等待总控决定
-CURRENT_STATUS=PP02_CLOUD_REBUILD_DRAFT_PR_CI_PASSED
+CURRENT_STAGE=R3.1 / PP02 identity and update source
+CURRENT_WORK=R1范围已确认，R2实施计划已形成，正在执行首个R3切片
+ACTIVE_GOAL=切断官方Release运行时引用并建立PP02桌面身份
+CURRENT_STATUS=R2_MIGRATION_CANDIDATE_PLAN_COMPLETE_R3_1_IN_PROGRESS
 ACTIVE_BLOCKER=NONE
-NEXT_ACTION=停止并等待总控；Ready、合并、main、Release 或下一 Work 均需新授权
-AUTHORIZATION_REQUIRED=FALSE_WITHIN_CURRENT_WORK; READY/MERGE/MAIN/RELEASE/REAL_DATA_REQUIRE_NEW_AUTHORIZATION
-LAST_UPDATED=2026-07-26
+NEXT_ACTION=测试先行完成PP02桌面身份与更新源，运行Draft PR最终Head CI
+AUTHORIZATION_REQUIRED=FALSE_WITHIN_R3_1; READY/MERGE/MAIN/RELEASE/REAL_DATA_REQUIRE_NEW_AUTHORIZATION
+LAST_UPDATED=2026-07-29
 ```
 
-## 状态边界
+## 已验证基线
 
-- 远程 `main` 在原子持久化前再次只读核验为
-  `f2253226c0974e3d241d496a1af8ede61c599b58`。
-- 官方固定底座为 `v3.28.0` /
+- 官方底座：`v3.28.0` /
   `905c339d80ad2daa6fd2bab3bb10267b23c7ac1c`。
-- 当前候选位于新的隔离重建目录；旧工作树及其 7 项未提交变化不属于候选。
-- 最低完整性硬门已通过：官方业务树、控制白名单、台账非回退、格式、AI 治理、
-  安全扫描和候选清单均有本轮证据。
-- GitHub App 已创建初始持久化 Commit
-  `9a2588004ba3436faa2b61d489fc8eab564ccef4` 和独立分支
-  `agent/pp02-v3.28.0-cloud-rebuild`；初始本地与远程树均为
-  `c157f143640d056892ba5b1345e65a63eb86babd`。
-- Python 官方完整门禁、Web lint/build、Desktop 测试、AI 治理、格式和范围检查均
-  已通过。
-- Draft PR `#3` 保持草稿；首轮真实 CI Run `30220968264` 的 7 个 Job 全部
-  `success`。收口证据提交必须由同一 PR Head 的后续 CI 再次通过，外部回传才可
-  给出最终 Judge。
-- Windows 实机与真实数据均为 `NOT_VERIFIED_IN_CLOUD`。
+- Draft PR：`#3`，分支 `agent/pp02-v3.28.0-cloud-rebuild`，保持 Draft。
+- R0 最终 Head `1327e402ac9d88e711ca4ef8de174118f427ad0e` 的 GitHub Actions
+  Run `30221540882` 为 7/7 success。
+- 远程 `main` 未因 R1/R2 改动。
+
+## R1/R2 当前裁决
+
+- R1：需求、保留/调整/不迁移分类和冲突处理已确认。
+- PP02 保持单用户；旧用户档案、切换、隔离和用户级备份全部不迁移。
+- 官方账户/组合事件账本是持仓唯一事实源。
+- R2：迁移拆为 R3.1–R3.7；首个切片是 PP02 身份与更新源。
+- Windows 实机验收为 `Deferred`，不把 D 盘目录缺失登记为云端阻塞。
+
+## 当前保护边界
+
+- PR #3 不转 Ready、不合并、不发布 Release。
+- 不接触真实 `.env`、Token、API Key、Webhook 或真实数据库。
+- 不迁移基金、多用户或旧平行持仓表。
+- R3.1 只允许 Desktop 身份、Release/更新源、产物名、对应测试和文档。

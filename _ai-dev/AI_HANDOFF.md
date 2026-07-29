@@ -51,3 +51,12 @@
 - 最后更新：2026-07-26。
 
 若本文件与 `PROJECT_STATUS.md` 冲突，立即报告差异并以可验证证据修正，不得自行扩大范围。
+
+## 2026-07-29 R1/R2 追加交接
+
+- 用户要求继续同一 Work1，不创建新聊天或新 Work。
+- R1 已完成；最终裁决是官方单用户模式，旧用户档案、切换、隔离和用户级备份全部不迁移。
+- R2 已完成；实施顺序见
+  `docs/pp02/R2_MIGRATION_EXECUTION_PLAN.md`。
+- 当前 Active Goal 是 R3.1 PP02 Desktop 身份与更新源。
+- Windows 实机为 Deferred；PR #3 继续保持 Draft。
