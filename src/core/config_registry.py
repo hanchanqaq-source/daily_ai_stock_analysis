@@ -2524,8 +2524,9 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "display_order": 48,
     },
     "AUTO_NOTIFICATION_ENABLED": {
-        "title": "PP02 自动通知总开关",
-        "description": "默认关闭。启用后，分析、市场复盘、运行时调度与告警才允许向外部渠道自动发送；手动测试通知保持独立。",
+        "title": "Automatic Notification Master Switch",
+        "description": "Off by default. Automatic analysis, market review, scheduler, and alert delivery require this switch; manual notification tests stay independent.",
+        "help_key": "settings.notification.AUTO_NOTIFICATION_ENABLED",
         "category": "notification",
         "data_type": "boolean",
         "ui_control": "switch",

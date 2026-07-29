@@ -1128,6 +1128,18 @@ const settingsHelpZhCN: SettingsHelpMap = {
   // ------------------------------------------------------------------
   // Notification routing
   // ------------------------------------------------------------------
+  'settings.notification.AUTO_NOTIFICATION_ENABLED': {
+    title: '自动通知总开关',
+    summary: '决定分析和告警是否可以向外部渠道自动发送，默认关闭。',
+    usage: '只有显式开启后，股票分析、市场复盘、Web/API 分析任务、运行时调度和告警 Worker 才会继续按各自选项发送。',
+    valueNotes: [
+      '关闭时仍会执行分析、保存报告并记录告警，只禁止外部自动发送。',
+      '手动“测试通知”属于明确的诊断动作，不受此开关影响。',
+    ],
+    impact: ['影响所有自动报告与告警的外部通知发送。'],
+    notes: ['单次“不发送”选项和 --no-notify 仍是更严格的关闭条件。'],
+  },
+
   'settings.notification.channel_routing': {
     title: '通知渠道路由',
     summary: '为不同类型的通知指定目标推送渠道。',
@@ -2315,6 +2327,18 @@ const settingsHelpEnUS: SettingsHelpMap = {
   // ------------------------------------------------------------------
   // Notification routing
   // ------------------------------------------------------------------
+  'settings.notification.AUTO_NOTIFICATION_ENABLED': {
+    title: 'Automatic Notification Master Switch',
+    summary: 'Controls whether analysis and alerts may be delivered automatically to external channels. Off by default.',
+    usage: 'Enable explicitly before stock analysis, market review, Web/API analysis jobs, runtime scheduling, or alert workers can deliver notifications.',
+    valueNotes: [
+      'When off, analysis, report persistence, and alert recording continue; only external automatic delivery is suppressed.',
+      'Manual notification tests are explicit diagnostics and remain available.',
+    ],
+    impact: ['Affects all automatic external report and alert delivery.'],
+    notes: ['Per-run opt-out options and --no-notify remain stricter disable conditions.'],
+  },
+
   'settings.notification.channel_routing': {
     title: 'Notification Channel Routing',
     summary: 'Specifies target push channels for different notification types.',
