@@ -13,7 +13,7 @@
 
 ## 当前候选
 
-- 状态：候选持久化、本地完整验证和 Draft PR 真实 CI 均已通过；等待总控决定。
+- 状态：R1、R2、R3.1 已完成；R3.2 实现 Head 已通过完整 CI，正在收口最终 Head。
 - 已完成：远程 `main`、官方 Tag/Commit、目标分支不存在和框架附件均已只读核验；
   已从官方固定 Commit 建立新的隔离候选；业务树、控制白名单、历史非回退、格式、
   AI 治理、安全和候选清单检查均通过；初始候选已持久化到独立分支，完整
@@ -22,7 +22,7 @@
 - 未完成：Windows 实机、真实数据以及任何 Ready/合并/Release；这些均不在当前
   Work 授权内。
 - 当前阻塞：无。
-- 下一动作：保持 PR 为 Draft，停止并等待总控。
+- 下一动作：验证 R3.2 文档收口后的最终 Head；保持 PR 为 Draft，随后进入 R3.3。
 
 ## 必读文件
 
@@ -71,3 +71,17 @@
   `docs/ERRORS_AND_LESSONS.md`。
 - 当前只待 Judge 文档收口后的最终 Head CI；PR #3 保持 Draft。
 - 下一迁移切片：R3.2 手动默认与自动通知总开关。
+
+
+## 2026-07-29 R3.2 追加交接
+
+- R3.1 收口 Head `1740fa3655b5eed55c7e4ebda81523ca8095e176` 的
+  Run `30489293885` 已 8/8 success，旧“最终 CI 待通过”状态已关闭。
+- R3.2 已删除每日 Workflow 默认 cron，并建立
+  `AUTO_NOTIFICATION_ENABLED=false` 产品级总开关。
+- CLI、市场复盘、运行时调度、Alert Worker 及 Web/API 自动发送入口均受同一总开关约束；
+  手动测试通知保持独立。
+- R3.2 实现 Head `5316b5ea2ececd9aff0ced556e897f0738dad317` 的
+  Run `30493475960` 为 8/8 success；后端 `4976 passed`。
+- 当前只待 Judge 文档收口后的最终 Head CI；PR #3 保持 Draft。
+- 下一迁移切片：R3.3 官方账本上的快捷持仓。

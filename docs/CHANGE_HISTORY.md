@@ -27,3 +27,14 @@
 - Windows 验收改为 Deferred，后续从固定 PR Head 新建隔离目录。
 - 用户要求继续当前 Work1，不创建新聊天或新 Work；“下一步”连续完成 R2 并进入 R3.1。
 - PR #3 保持 Draft，不转 Ready、不合并、不发布 Release。
+
+
+## 2026-07-29｜统一执行端自动路由 v1.1 与 R3.2
+
+- 用户发布 `PP02-AUTO-ROUTER-001 v1.1`，替代旧路由记录，但不回退已完成阶段。
+- 当前 Work 在已批准范围内自动路由普通开发、测试、非默认分支 Commit、
+  Draft PR 更新和 CI 修复；用户无需选择 Work、Codex 或 GitHub App。
+- 用户发送“继续流程”，同一 Work1 自动进入 R3.2；业务范围仍以
+  `R2_MIGRATION_EXECUTION_PLAN.md` 为准。
+- Ready、合并、Release、默认分支、真实数据、本机重要文件、大型依赖、
+  付费服务和范围扩大仍须单独授权。

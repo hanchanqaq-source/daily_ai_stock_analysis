@@ -70,7 +70,8 @@ Electron、Node test、GitHub Actions。
 - RED：Run `30487941321`，47 pass / 2 expected fail。
 - GREEN：Desktop 49/49；实现 Head Run `30488603501` 8/8 success。
 - macOS productName 路径遗漏已通过根因修复并在同一完整 Run 中转绿。
-- 状态：`PASS — FINAL_HEAD_CI_PENDING`。
+- 收口 Head Run `30489293885` 再次 8/8 success。
+- 状态：`PASS`。
 
 ## R3.2｜手动默认与自动通知总开关
 
@@ -101,6 +102,27 @@ Electron、Node test、GitHub Actions。
   必须同时满足该总开关。
 - 设置页“发送测试通知”是明确的人工动作，可独立测试已配置渠道，不得反向开启
   自动通知。
+
+**执行中确认的下游消费者：**
+
+- `api/v1/endpoints/analysis.py`
+- `src/services/alert_worker.py`
+- `apps/dsa-web/src/utils/systemConfigI18n.ts`
+- `apps/dsa-web/src/locales/settingsHelp.ts`
+- `tests/test_pp02_safe_defaults.py`
+
+这些文件是同一自动发送契约的现有入口或用户可见帮助，不建立平行实现，也不改变
+R3.2 产品范围。
+
+**执行证据：**
+
+- RED：Commit `68dab6a7d54b81f196b642b1352a0a41aa2b8eb5`，
+  Run `30491953318` 为 9 个预期失败。
+- GREEN：Commit `61939ec76384d5c198aecf98e8b413fe13cfdd85`，
+  首轮 Run `30492811439` 暴露 2 项集成/帮助元数据回归。
+- 根因修正：Commit `5316b5ea2ececd9aff0ced556e897f0738dad317`，
+  Run `30493475960` 为 8/8 success；后端 `4976 passed`。
+- 状态：`PASS — FINAL_HEAD_CI_PENDING`。
 
 ## R3.3｜官方账本上的快捷持仓
 

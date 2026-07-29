@@ -84,7 +84,37 @@ PR 必须保持 Draft，不构成 Ready 或合并授权。外部最终回传只�
 
 ### Judge
 
+`PASS`
+
+功能实现 Head Run `30488603501` 与文档收口 Head Run `30489293885` 均为
+8/8 success；R3.1 已完成。
+
+
+## 2026-07-29 R3.2｜手动默认与自动通知总开关
+
+### 实际改动
+
+- GitHub 每日分析 Workflow 移除默认 cron，只保留人工 `workflow_dispatch`。
+- 新增产品级 `AUTO_NOTIFICATION_ENABLED=false`，并纳入配置 Registry 与 Web 设置帮助。
+- CLI 主流程、市场复盘、运行时调度、Alert Worker、Web/API 分析及市场复盘均使用
+  同一自动通知安全门；单次 `no-notify` 仍可进一步关闭。
+- 总开关关闭时继续执行分析、保存报告和记录告警，只禁止外部自动发送。
+- 用户明确点击“测试通知”仍可诊断已配置渠道，且不会反向开启自动通知。
+
+### 测试与 CI
+
+- RED Run `30491953318`：9 个预期失败，证明旧入口仍会自动发送或保留 cron。
+- 首次 GREEN Run `30492811439`：产品行为已满足新契约；发现 1 条旧集成断言和
+  1 处设置帮助元数据遗漏。
+- 根因修正 Head `5316b5ea2ececd9aff0ced556e897f0738dad317`，
+  Run `30493475960`：8/8 success。
+- 后端：`4976 passed, 4 deselected`；Web、Docker、Desktop 单测及
+  Windows/macOS 冻结/包门全部通过。
+
+### Judge
+
 `PASS — FINAL_HEAD_CI_PENDING`
 
-功能实现和实现 Head 完整 CI 已通过；本次只追加 Judge 台账，最终外部回传仍要求
-该文档收口后的 PR Head CI 通过。
+R3.2 功能实现和实现 Head 完整 CI 已通过；本次只追加 Judge 台账。最终外部回传
+仍要求该文档收口后的 PR Head CI 通过。PR #3 保持 Draft，Windows 实机为
+Deferred；Ready、合并、Release、真实数据与真实通知渠道均未执行。
