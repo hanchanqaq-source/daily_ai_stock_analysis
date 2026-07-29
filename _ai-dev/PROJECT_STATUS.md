@@ -11,13 +11,13 @@ ROLE_LOCK=TRUE
 APPLICATION_BASE_VERSION=3.28.0
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-CURRENT_STAGE=R3.1 / PP02 identity and update source
-CURRENT_WORK=R1范围已确认，R2实施计划已形成，正在执行首个R3切片
-ACTIVE_GOAL=切断官方Release运行时引用并建立PP02桌面身份
-CURRENT_STATUS=R2_MIGRATION_CANDIDATE_PLAN_COMPLETE_R3_1_IN_PROGRESS
+CURRENT_STAGE=R3.1 / Final Head CI
+CURRENT_WORK=PP02身份、更新源、产物名和Desktop CI门已实现并通过实现Head完整CI
+ACTIVE_GOAL=追加R3.1 Judge台账并验证文档收口后的最终PR Head
+CURRENT_STATUS=R3_1_IMPLEMENTATION_CI_PASSED_FINAL_HEAD_CI_PENDING
 ACTIVE_BLOCKER=NONE
-NEXT_ACTION=测试先行完成PP02桌面身份与更新源，运行Draft PR最终Head CI
-AUTHORIZATION_REQUIRED=FALSE_WITHIN_R3_1; READY/MERGE/MAIN/RELEASE/REAL_DATA_REQUIRE_NEW_AUTHORIZATION
+NEXT_ACTION=最终Head CI通过后保持Draft；下一迁移切片为R3.2手动默认与自动通知总开关
+AUTHORIZATION_REQUIRED=FALSE_FOR_FINAL_HEAD_VALIDATION; READY/MERGE/MAIN/RELEASE/REAL_DATA_REQUIRE_NEW_AUTHORIZATION
 LAST_UPDATED=2026-07-29
 ```
 
@@ -44,3 +44,15 @@ LAST_UPDATED=2026-07-29
 - 不接触真实 `.env`、Token、API Key、Webhook 或真实数据库。
 - 不迁移基金、多用户或旧平行持仓表。
 - R3.1 只允许 Desktop 身份、Release/更新源、产物名、对应测试和文档。
+
+## R3.1 实现与验证证据
+
+- 测试先行 RED：Commit `c762825102f22b1352949244c12148b821b80b87`，
+  CI Run `30487941321` 的 `desktop-test` 按预期失败；47项旧测试通过，
+  2项新 PP02 身份测试因仍指向官方仓库/名称失败。
+- 首次 GREEN：Commit `c7e483928a92ed1ed589c68647acb554e3b5ee41`；
+  Desktop 49/49 通过，但 macOS 包门暴露旧固定 App 路径。
+- 根因修复：Commit `639d2bc8fc605fbe553fb9c16df7137042bb2079`，
+  将 macOS 未签名 App 与 DMG 验收路径同步为 PP02 productName。
+- 实现 Head CI：Run `30488603501`，8/8 success。
+- PR #3 仍为 Draft；Windows 实机、Ready、合并、Release 和真实数据均未执行。

@@ -65,6 +65,13 @@ Electron、Node test、GitHub Actions。
 4. Release Workflow、`latest.yml` 校验脚本和文档使用同一安装包名称。
 5. `npm test`、Desktop 构建相关 CI、Web/backend 回归门全部通过。
 
+**执行证据：**
+
+- RED：Run `30487941321`，47 pass / 2 expected fail。
+- GREEN：Desktop 49/49；实现 Head Run `30488603501` 8/8 success。
+- macOS productName 路径遗漏已通过根因修复并在同一完整 Run 中转绿。
+- 状态：`PASS — FINAL_HEAD_CI_PENDING`。
+
 ## R3.2｜手动默认与自动通知总开关
 
 **结果：** 新安装在没有主动开启时既不会定时运行，也不会自动发送分析结果。

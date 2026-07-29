@@ -60,3 +60,14 @@
   `docs/pp02/R2_MIGRATION_EXECUTION_PLAN.md`。
 - 当前 Active Goal 是 R3.1 PP02 Desktop 身份与更新源。
 - Windows 实机为 Deferred；PR #3 继续保持 Draft。
+
+## 2026-07-29 R3.1 追加交接
+
+- R3.1 PP02 身份与更新源已实现。
+- 实现 Head `639d2bc8fc605fbe553fb9c16df7137042bb2079` 的 CI Run
+  `30488603501` 为 8/8 success。
+- CI 已新增 `desktop-test`，Desktop 测试为 49/49。
+- macOS productName 固定路径遗漏已修复并记录到
+  `docs/ERRORS_AND_LESSONS.md`。
+- 当前只待 Judge 文档收口后的最终 Head CI；PR #3 保持 Draft。
+- 下一迁移切片：R3.2 手动默认与自动通知总开关。

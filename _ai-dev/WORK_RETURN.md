@@ -61,3 +61,30 @@ PR 必须保持 Draft，不构成 Ready 或合并授权。外部最终回传只�
 - Windows 实机验收为 Deferred；D 盘目录缺失不属于云端阻塞。
 - 当前进入 R3.1：PP02 身份与更新源。
 - R1/R2 未修改业务代码、未处理真实数据、未改变 PR #3 Draft 状态。
+
+## 2026-07-29 R3.1｜PP02 身份与更新源
+
+### 实际改动
+
+- Desktop package name：`pp02-ai-daily-stock-analysis-desktop`。
+- `appId`：`com.hanchanqaq.pp02.aidailystockanalysis`。
+- `productName`：`PP02 AI Daily Stock Analysis`。
+- 更新与 Release 仓库：`hanchanqaq-source/daily_ai_stock_analysis`。
+- Windows installer、noinstall ZIP 与 macOS DMG 使用
+  `pp02-ai-daily-stock-analysis-*` ASCII 产物前缀。
+- CI 新增阻断型 `desktop-test` Job。
+
+### 测试与 CI
+
+- RED Run `30487941321`：47 pass、2 expected fail，证明新测试能识别官方旧身份。
+- GREEN Desktop：49/49 pass。
+- 首次 GREEN Run `30488079539`：macOS 发现 productName 下游固定路径遗漏。
+- 根因修复后 Run `30488603501`：8/8 success。
+- Windows 实机：Deferred；未以 CI 冻结门冒充实机验收。
+
+### Judge
+
+`PASS — FINAL_HEAD_CI_PENDING`
+
+功能实现和实现 Head 完整 CI 已通过；本次只追加 Judge 台账，最终外部回传仍要求
+该文档收口后的 PR Head CI 通过。
