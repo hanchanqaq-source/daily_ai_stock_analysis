@@ -268,8 +268,9 @@ Release、`main`、真实数据、AI 调用、定时器或自动推送。
 - Test：通过；`git diff --check`、`python scripts/check_ai_assets.py`、唯一状态文件、
   必填恢复字段、Work 合同标题、Overlay 内容、修改白名单和官方 Overlay 外全文
   对比均通过。
-- CI：Draft PR #4 Head `6ab647a7…` 的 Run `30540208702` 成功；Change Detection、
-  AI Governance、Backend Gate、Docker Build 通过，Backend 为
+- CI：治理实现/恢复检查点 `6ab647a7…` 的 Run `30540208702` 成功；
+  状态/Judge 收口检查点 `d45bdfad…` 的 Run `30540784009` 也成功。
+  Change Detection、AI Governance、Backend Gate、Docker Build 通过，Backend 为
   `5005 passed, 4 deselected, 51 warnings, 494 subtests passed`；Web/Desktop
   因文档路径按规则跳过。
 - 当前 Blocker：无。
@@ -278,7 +279,8 @@ Release、`main`、真实数据、AI 调用、定时器或自动推送。
 - 发布异常：首次 Git Data Commit `d846af7c…` 的超长 `docs/CHANGELOG.md`
   被终端输出上限截断；远端/本地逐文件比较确认其余 11 个文件一致。
 - 恢复结果：Commit `6ab647a7…` 已用 GitHub `main` 的完整内容恢复 Changelog；
-  12 个远端 Blob SHA 与本地逐一一致，Run `30540208702` 成功。
+  12 个远端 Blob SHA 与本地逐一一致，Run `30540208702` 成功；后续状态收口
+  Run `30540784009` 也成功。
 - Judge：`PASS`；只代表五项治理硬门和 Work2 接管检查点通过，不代表 R3.6
   Windows 便携更新业务实现完成。
 

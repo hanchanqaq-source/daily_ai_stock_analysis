@@ -15,7 +15,7 @@
 | 项目控制框架 | `P000/P001 V1.5.6` |
 | 当前 Work | `WORK-002｜功能改造与验收` |
 | 当前阶段 | R3.1–R3.5 完成；R3.6 治理硬门已通过，业务 Build 待继续 |
-| 当前 Git 检查点 | `main@0f9afe8b…`；Draft PR #4 Head `6ab647a7…`，Run `30540208702` 成功 |
+| 当前 Git 检查点 | `main@0f9afe8b…`；Draft PR #4 实现/恢复检查点 `6ab647a7…`、状态收口 `d45bdfad…` 的 CI 均成功；实际 Head 以 GitHub 为准 |
 | 后续路线 | [`pp02/REBUILD_ROADMAP.md`](pp02/REBUILD_ROADMAP.md)；Windows 验收 Deferred |
 
 ## Work 1 历史身份

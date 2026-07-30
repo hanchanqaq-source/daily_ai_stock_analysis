@@ -11,7 +11,7 @@ TOP_LEVEL_WORK=WORK2
 WORK_ID=WORK-002
 CURRENT_WORK=R3.6 Windows便携更新
 LAST_VALID_COMMIT=6ab647a7c2c2dca90c3a0c1626f270860073b443
-LAST_SUCCESSFUL_TEST=CI_RUN_30540208702_SUCCESS_BACKEND_5005_PASSED_DOCKER_AND_AI_GOVERNANCE_SUCCESS
+LAST_SUCCESSFUL_TEST=FINAL_STATUS_HEAD_D45BDFADF22CF7BEB5E1F6777490091ED5CAC438_CI_RUN_30540784009_SUCCESS
 ACTIVE_BLOCKER=NONE
 NEXT_ACTION=在同一Work2分支和Draft PR4内继续R3.6方案A业务施工；不得进入R3.7
 ```
@@ -35,7 +35,9 @@ NEXT_ACTION=在同一Work2分支和Draft PR4内继续R3.6方案A业务施工；�
   其余 11 个文件已确认与本地一致。该 Commit 不是有效恢复点；修复 Commit
   `6ab647a7…` 已恢复完整文件，12 个 Blob SHA 与本地一致。
 - Run `30540208702` 已成功；Backend `5005 passed`，Docker 与 AI Governance
-  通过。工具恢复和治理 Judge 已收口，可以继续 R3.6，但不得进入 R3.7。
+  通过。状态/Judge 收口 Commit `d45bdfad…` 的 Run `30540784009` 也成功。
+  实际 PR Head 以 GitHub 为准；工具恢复和治理 Judge 已收口，可以继续 R3.6，
+  但不得进入 R3.7。
 
 ## 工具异常恢复
 

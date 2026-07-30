@@ -64,4 +64,5 @@
   `PROJECT_STATUS` 与 Git/测试/CI 对照。
 - Acceptance result：Draft PR #4 Head `6ab647a7…` 的 Run `30540208702` 成功；
   Backend `5005 passed`，Docker 与 AI Governance 通过；远端 12 个 Blob SHA
-  与本地一致。治理子步通过，不代表 R3.6 业务实现完成。
+  与本地一致。状态/Judge 收口 Commit `d45bdfad…` 的 Run `30540784009` 也成功。
+  治理子步通过，不代表 R3.6 业务实现完成。

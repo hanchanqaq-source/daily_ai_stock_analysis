@@ -18,7 +18,7 @@ CURRENT_WORK=R3.6 Windows便携更新
 ACTIVE_GOAL=在不改变v3.28.0业务底座的前提下应用五项治理硬门，并从main合并检查点接续R3.6
 CURRENT_STATUS=WORK2_R3_6_GOVERNANCE_HARD_GATES_JUDGED_R3_6_BUILD_READY
 LAST_VALID_COMMIT=6ab647a7c2c2dca90c3a0c1626f270860073b443
-LAST_SUCCESSFUL_TEST=CI_RUN_30540208702_SUCCESS_BACKEND_5005_PASSED_DOCKER_AND_AI_GOVERNANCE_SUCCESS
+LAST_SUCCESSFUL_TEST=FINAL_STATUS_HEAD_D45BDFADF22CF7BEB5E1F6777490091ED5CAC438_CI_RUN_30540784009_SUCCESS
 ACTIVE_BLOCKER=NONE
 NEXT_ACTION=在同一Work2分支和Draft PR4内继续R3.6方案A业务施工；不得进入R3.7
 AUTHORIZATION_REQUIRED=FALSE_FOR_APPROVED_R3_6_BRANCH_COMMIT_DRAFT_PR_AND_CI; READY/MERGE/MAIN/RELEASE/REAL_DATA_REQUIRE_NEW_AUTHORIZATION
@@ -33,10 +33,12 @@ LAST_UPDATED=2026-07-30
   `0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9`。
 - R3.5 最终 Head `508eb268c78d6172dac22160c9dc0550f83653a6` 的 GitHub Actions
   Run `30526590693` 为 8/8 success。
-- R3.6 使用独立分支 `agent/pp02-work2-r3-6-windows-portable-update`；
-  Draft PR `#4` 当前 Head 为
-  `6ab647a7c2c2dca90c3a0c1626f270860073b443`。
-- Head Run `30540208702` 成功：Change Detection、AI Governance、Backend Gate
+- R3.6 使用独立分支 `agent/pp02-work2-r3-6-windows-portable-update` 和
+  Draft PR `#4`；实际当前 Head 始终以 GitHub PR 为准，不在提交内自引用。
+- 最后有效实现/恢复检查点为
+  `6ab647a7c2c2dca90c3a0c1626f270860073b443`，Run `30540208702` 成功。
+- 状态/Judge 收口检查点 `d45bdfadf22cf7beb5e1f6777490091ed5cac438`
+  的 Run `30540784009` 也成功：Change Detection、AI Governance、Backend Gate
   和 Docker Build 通过；Backend 为
   `5005 passed, 4 deselected, 51 warnings, 494 subtests passed`。Web/Desktop
   因本段仅修改治理文档而按路径规则跳过。
