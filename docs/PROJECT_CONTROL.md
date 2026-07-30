@@ -13,8 +13,9 @@
 | 官方上游 | `ZhuLinsen/daily_stock_analysis` |
 | 当前官方基线 | `v3.28.0` / `905c339d80ad2daa6fd2bab3bb10267b23c7ac1c` |
 | 项目控制框架 | `P000/P001 V1.5.6` |
-| 当前 Work | `WORK-PP02-CLOUD-REBUILD-001` |
-| 当前阶段 | R1/R2/R3.1 完成；R3.2 实现 Head 8/8 CI 通过，等待最终 Head 收口 |
+| 当前 Work | `WORK-002｜功能改造与验收` |
+| 当前阶段 | R3.1–R3.5 完成；当前为 R3.6 Windows 便携更新治理检查点 |
+| 当前 Git 检查点 | `main@0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9`；PR #3 已合并 |
 | 后续路线 | [`pp02/REBUILD_ROADMAP.md`](pp02/REBUILD_ROADMAP.md)；Windows 验收 Deferred |
 
 ## Work 1 历史身份
@@ -58,7 +59,9 @@ PP02 是新的股票专用项目。旧股票基金混合仓库只读冻结；基
 | Judge | 通过 | PR #2 已按授权合并到 `main`，合并提交 `a6bdfb55827080e196c2103292aaedfadc224dc7`；业务代码零修改 |
 | Windows验收 | 待验收 | 必须在 Windows 实机验证安装、启动与 Web 界面 |
 
-Windows 实机验收完成前，不得进入 Work 2。
+历史原文“Windows 实机验收完成前，不得进入 Work 2”已由后续用户裁决替代：
+云端功能改造进入 Work2，Windows 实机验收保留到 R5，不把缺少实机结果冒充阻塞
+或完成。该替代只调整未完成路线，不回退 Work1 已完成历史。
 
 历史口径：本节记录 Work 1 当时的完成事实，不因本次 R0 重建而回退。当前状态以
 `_ai-dev/PROJECT_STATUS.md` 为唯一真源；摘要冲突时先按可验证证据校正。

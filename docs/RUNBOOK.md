@@ -160,6 +160,15 @@ Work 1 只允许出现获批的项目管理和文档差异；若出现 `src/`、
 ## 8. 安全恢复
 
 - 先记录当前分支、HEAD、状态和错误信息，再决定恢复方法。
+- 同步核对 `_ai-dev/PROJECT_STATUS.md` 与 `_ai-dev/AI_HANDOFF.md` 中的
+  `CURRENT_WORK`、`LAST_VALID_COMMIT`、`LAST_SUCCESSFUL_TEST`、
+  `ACTIVE_BLOCKER` 和 `NEXT_ACTION`。
+- 恢复判断顺序固定为：真实项目文件 → Git 实际状态 → 实际测试结果 →
+  GitHub CI → `_ai-dev/PROJECT_STATUS.md` → 聊天描述。
+- 从 `LAST_VALID_COMMIT` 继续，只重跑受影响的验证；不得因工具异常默认重跑整个
+  Work，也不得让用户承担命令、分支或构建恢复。
+- 无法恢复时记录失败位置、已保存状态、恢复条件和备用路线；Blocker 未解除或
+  `SCOPE_DRIFT_BLOCKED` 未清除前，不进入下一 Work。
 - 不使用 `git reset --hard`、整目录清空或覆盖真实数据。
 - 未提交改动与用户文件不明确时暂停并询问。
 - 远端底座导入失败时保留失败证据，重新从已核验 Tag 建立，不用文件快照冒充历史。

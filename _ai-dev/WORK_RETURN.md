@@ -219,3 +219,69 @@ R3.4 功能、事务边界、排除范围和实现 Head 完整 CI 已通过；�
 R3.5 功能、事实源、手动边界、快照追溯和实现 Head 完整 CI 已通过；最终外部
 回传仍要求本次文档收口 Head 自身 8/8。PR #3 保持 Draft，未执行 Ready、合并、
 Release、`main`、真实数据、AI 调用、定时器或自动推送。
+
+## 2026-07-30｜Work1 关闭、Work2 接管与五项治理硬门
+
+> 本节替代上一段 R3.5 “最终 Head CI 待通过、PR #3 保持 Draft”的当前效力；
+> 上述内容保留为当时检查点，不删除历史。
+
+### 已核对事实
+
+- R3.5 最终 Head `508eb268c78d6172dac22160c9dc0550f83653a6` 的 Run
+  `30526590693` 为 8/8 success。
+- PR #3 已合并；当前 `main` 有效检查点为
+  `0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9`。
+- Work1 只负责官方稳定版干净底座，现已完成并永久锁定。
+- R0–R7 后续改造的当前有效归属为 Work2；R3.1–R3.5 已完成，当前任务为 R3.6。
+- 新 R3.6 分支固定为
+  `agent/pp02-work2-r3-6-windows-portable-update`；新 Draft PR 只有在实际创建后
+  才能登记编号。
+
+### 当前治理补丁
+
+- 在现有 `AGENTS.md` PP02 Overlay 中增加连续执行、用户规则 Judge、工具恢复、
+  Work 边界、唯一状态源、长任务进度和五项新增 Judge 门。
+- `_ai-dev/PROJECT_STATUS.md` 继续是唯一当前状态真源，没有创建
+  `00_PROJECT_STATUS.md` 或平行版本。
+- `_ai-dev/WORK_TASK.md` 改为当前 Work2 / R3.6 合同，明确 `ACTIVE_GOAL`、
+  允许做、禁止做、验收标准和授权门。
+- `PROJECT_STATUS.md` 与 `AI_HANDOFF.md` 已包含 `CURRENT_WORK`、
+  `LAST_VALID_COMMIT`、`LAST_SUCCESSFUL_TEST`、`ACTIVE_BLOCKER` 和
+  `NEXT_ACTION`。
+- 现有路线、项目入口和追加式变更历史同步纠正 Work1/Work2 归属；不新增框架。
+
+### 用户规则自检
+
+| 硬规则 | 当前结果 |
+| --- | --- |
+| 完整大段执行 | 通过；Plan、Build、Test、CI、Judge 连续处理 |
+| 减少重复确认 | 通过；已批准事项未重新提问 |
+| 中文白话 | 通过 |
+| 英文界面中文含义 | 不适用；本段无界面操作 |
+| 技术操作优先由 Codex 完成 | 通过 |
+| 显示真实进度 | 通过；未声称后台继续 |
+| 完整文件或复制块 | 通过；修改落在现有完整文件 |
+| 默认用户不是程序员 | 通过 |
+
+### 当前 Test / CI / Judge
+
+- Test：通过；`git diff --check`、`python scripts/check_ai_assets.py`、唯一状态文件、
+  必填恢复字段、Work 合同标题、Overlay 内容、修改白名单和官方 Overlay 外全文
+  对比均通过。
+- CI：新 Draft PR 尚未创建，必须保持 `未触发`，不得复用旧 PR #3 的 CI。
+- 当前 Blocker：无。
+- 工具恢复：当前环境没有 `gh`，已从同一检查点切换到已连接 GitHub App /
+  Git Data API；未重跑整个 Work，未要求用户安装工具或重新认证。
+- Judge：`PENDING`；只有本地检查和新 Draft PR CI 与状态文件一致后才能通过。
+
+### 新增五项验收
+
+1. 用户没有承担不必要的人工中转：待 Judge 最终确认。
+2. 用户规则全部执行：待 Judge 最终确认。
+3. 工具异常有恢复检查点：已建立。
+4. Work 范围没有串段或跑偏：已拦截并纠正。
+5. `PROJECT_STATUS` 与 Git、测试和 CI 一致：待 Test/CI 后最终确认。
+
+准确停止点：
+
+`WORK2_R3_6_GOVERNANCE_HARD_GATES_LOCAL_TEST_PASSED_CI_NOT_TRIGGERED`

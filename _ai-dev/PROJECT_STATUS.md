@@ -6,18 +6,22 @@
 PROJECT_ID=PP02
 PROJECT_NAME=AI 每日股票分析
 CHAT_ROLE=WORK
-WORK_ID=WORK-PP02-CLOUD-REBUILD-001
+TOP_LEVEL_WORK=WORK2
+WORK_ID=WORK-002
+PREVIOUS_WORK=WORK1_COMPLETED_AND_LOCKED
 ROLE_LOCK=TRUE
 APPLICATION_BASE_VERSION=3.28.0
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
-PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-CURRENT_STAGE=R3.5 / Judge
-CURRENT_WORK=应用内手动周期报告与下周参考展望
-ACTIVE_GOAL=验证R3.5文档收口Head完整CI并完成Judge回传
-CURRENT_STATUS=R3_5_IMPLEMENTATION_CI_PASSED_FINAL_HEAD_CI_PENDING
+PROJECT_WORK_VERSION=pp02-work2-r3.6
+CURRENT_STAGE=Work2 / R3.6 / Governance Gate CI
+CURRENT_WORK=R3.6 Windows便携更新
+ACTIVE_GOAL=在不改变v3.28.0业务底座的前提下应用五项治理硬门，并从main合并检查点接续R3.6
+CURRENT_STATUS=WORK2_R3_6_GOVERNANCE_HARD_GATES_LOCAL_TEST_PASSED_CI_NOT_TRIGGERED
+LAST_VALID_COMMIT=0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9
+LAST_SUCCESSFUL_TEST=GOVERNANCE_DIFF_CHECK_AI_ASSETS_SCOPE_AND_STATUS_CONSISTENCY_PASS_2026_07_30
 ACTIVE_BLOCKER=NONE
-NEXT_ACTION=验证R3.5文档收口Head完整CI；成功后停止并回传总控
-AUTHORIZATION_REQUIRED=FALSE_FOR_R3_5_BUILD_TEST_CI; READY/MERGE/MAIN/RELEASE/REAL_DATA_REQUIRE_NEW_AUTHORIZATION
+NEXT_ACTION=完成治理文件一致性验证后发布到R3.6独立分支并创建Draft PR；随后继续R3.6施工
+AUTHORIZATION_REQUIRED=FALSE_FOR_APPROVED_R3_6_BRANCH_COMMIT_DRAFT_PR_AND_CI; READY/MERGE/MAIN/RELEASE/REAL_DATA_REQUIRE_NEW_AUTHORIZATION
 LAST_UPDATED=2026-07-30
 ```
 
@@ -25,28 +29,51 @@ LAST_UPDATED=2026-07-30
 
 - 官方底座：`v3.28.0` /
   `905c339d80ad2daa6fd2bab3bb10267b23c7ac1c`。
-- Draft PR：`#3`，分支 `agent/pp02-v3.28.0-cloud-rebuild`，保持 Draft。
-- R0 最终 Head `1327e402ac9d88e711ca4ef8de174118f427ad0e` 的 GitHub Actions
-  Run `30221540882` 为 7/7 success。
-- 远程 `main` 未因 R1/R2 改动。
+- PR `#3` 已合并；远程 `main` 当前有效检查点为合并 Commit
+  `0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9`。
+- R3.5 最终 Head `508eb268c78d6172dac22160c9dc0550f83653a6` 的 GitHub Actions
+  Run `30526590693` 为 8/8 success。
+- R3.6 使用独立分支 `agent/pp02-work2-r3-6-windows-portable-update`；
+  Draft PR 在治理补丁发布前不得写成已创建。
+
+## Work 边界纠正与治理检查点
+
+- Work1 的职责是官方稳定版干净底座，已完成并永久锁定。
+- R0–R7 的后续改造按当前有效管理口径归属 Work2；聊天窗口名称不得改变归属。
+- 旧 `WORK-PP02-CLOUD-REBUILD-001` 及“继续同一 Work1”记录保留为历史，
+  由本次 Work2 纠正记录替代其当前身份效力，不倒改已完成提交和测试。
+- `PP02-GOVERNANCE-GATE-001` 已批准：只强化现有 Overlay、四份 `_ai-dev`
+  文件和现有路线台账，不创建平行状态文件或复杂验证系统。
+- 当前较长任务必须显示 `Plan → Build → Test → CI → Judge`、当前 Blocker 和
+  用户操作；回复结束后不得声称仍在后台执行。
+
+## 当前工具恢复
+
+- 失败位置：发布前检查发现当前环境没有 GitHub CLI `gh`。
+- 已保存状态：12 个治理文件的本地补丁与本地 Test 均已完成。
+- 恢复条件：已连接 GitHub App 可使用 Git Data API 完成同一已授权发布范围。
+- 备用路线：直接创建 Blob、Tree、Commit、独立分支和 Draft PR；不安装 `gh`、
+  不发起设备登录、不让用户承担技术恢复。
+- `ACTIVE_BLOCKER=NONE`；继续从
+  `LAST_VALID_COMMIT=0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9` 执行。
 
 ## R1/R2 当前裁决
 
 - R1：需求、保留/调整/不迁移分类和冲突处理已确认。
 - PP02 保持单用户；旧用户档案、切换、隔离和用户级备份全部不迁移。
 - 官方账户/组合事件账本是持仓唯一事实源。
-- R2：迁移拆为 R3.1–R3.7；R3.1–R3.4 已完成，当前执行 R3.5
-  应用内手动周期报告与下周参考展望。
+- R2：迁移拆为 R3.1–R3.7；R3.1–R3.5 已完成，当前执行 R3.6
+  Windows 便携更新。
 - Windows 实机验收为 `Deferred`，不把 D 盘目录缺失登记为云端阻塞。
 
 ## 当前保护边界
 
-- PR #3 不转 Ready、不合并、不发布 Release。
+- R3.6 新 PR 只允许保持 Draft；不得转 Ready、合并、修改 `main` 或发布 Release。
 - 不接触真实 `.env`、Token、API Key、Webhook 或真实数据库。
 - 不迁移基金、多用户或旧平行持仓表。
-- R3.5 只允许正式分析/市场复盘历史聚合、条件化下周展望、展望快照、
-  对应 Web/API、测试和文档。
-- 不新增事实表、不调用 AI、不新增定时器或自动通知，不迁移基金或多用户。
+- 当前治理补丁只允许修改现有 PP02 控制规则、状态、任务、交接、回传、路线和
+  追加式变更记录；不得借机修改 R3.6 业务代码。
+- R3.6 不新增 AI 调用、定时器、自动通知、真实数据入口、基金或多用户能力。
 - 仓库经只读安全审计和用户授权后已改为 Public；PR、分支和 Actions 历史公开，
   但真实数据、密钥和备份文件仍不得进入仓库。
 
@@ -156,4 +183,4 @@ LAST_UPDATED=2026-07-30
 - PR #3 保持 Draft；Windows 实机仍为 Deferred；未使用真实历史、真实数据库、
   模型、通知渠道或自动入口。
 
-`R3_5_IMPLEMENTATION_CI_PASSED_FINAL_HEAD_CI_PENDING`
+`WORK2_R3_6_GOVERNANCE_HARD_GATES_LOCAL_TEST_PASSED_CI_NOT_TRIGGERED`

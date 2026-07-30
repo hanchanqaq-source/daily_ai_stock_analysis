@@ -1,5 +1,45 @@
 # PP02 新聊天交接
 
+## 当前有效交接｜Work2 / R3.6
+
+> 本节替代下方旧 Work1 交接的当前效力；旧内容继续作为追加式历史保留。
+> 发生冲突时，先按真实项目文件、Git、实际测试、GitHub CI、
+> `PROJECT_STATUS.md`、聊天描述的顺序核对。
+
+```text
+TOP_LEVEL_WORK=WORK2
+WORK_ID=WORK-002
+CURRENT_WORK=R3.6 Windows便携更新
+LAST_VALID_COMMIT=0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9
+LAST_SUCCESSFUL_TEST=GOVERNANCE_DIFF_CHECK_AI_ASSETS_SCOPE_AND_STATUS_CONSISTENCY_PASS_2026_07_30
+ACTIVE_BLOCKER=NONE
+NEXT_ACTION=完成PP02五项治理硬门验证并发布到R3.6独立分支；随后继续方案A施工
+```
+
+- Work1 官方稳定版干净底座已完成并永久锁定。
+- PR #3 已合并到 `main@0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9`；
+  下方“PR #3 保持 Draft”和“R3.5 最终 Head CI 待通过”均为旧检查点。
+- R3.1–R3.5 已完成；R3.5 最终 Head Run `30526590693` 为 8/8 success。
+- 当前分支：
+  `agent/pp02-work2-r3-6-windows-portable-update`；新 Draft PR 在实际创建前
+  不得写成已创建。
+- 当前治理子步只修改现有规则、状态、任务、交接、回传、路线和变更历史；
+  不修改业务代码，不提前施工 R3.6。
+- R3.6 接收已批准方案 A；不重新选 A/B/C，不重做 R3.1–R3.5。
+- Windows 实机仍属于 R5；云端 Judge 不得超过
+  `IMPLEMENTATION PASS — R5 WINDOWS VALIDATION REQUIRED`。
+- Ready、Merge、修改 `main`、Tag、Release、真实数据、密钥和付费服务均未授权。
+- 当前环境没有 `gh`；已确认使用已连接 GitHub App / Git Data API 作为恢复路线，
+  不安装工具、不发起设备登录，`ACTIVE_BLOCKER` 仍为 `NONE`。
+
+## 工具异常恢复
+
+1. 先核对当前 Git Head、工作区、最近实际测试与 GitHub CI。
+2. 从 `LAST_VALID_COMMIT` 继续，不重跑整个 Work。
+3. 不让用户承担技术恢复；只有真实授权门或无法解除的 Blocker 才暂停。
+4. 无法恢复时记录失败位置、已保存状态、恢复条件和备用路线。
+5. Blocker 未解除或出现 `SCOPE_DRIFT_BLOCKED` 时，不进入下一 Work。
+
 ## 身份与基线
 
 | 项目 | 当前值 |

@@ -1,150 +1,153 @@
-# WORK-PP02-CLOUD-REBUILD-001 任务合同
+# WORK-002｜R3.6 Windows 便携更新任务合同
+
+> 本文件只定义当前 Work。Work1 与旧
+> `WORK-PP02-CLOUD-REBUILD-001` 的完成证据保留在 Git 历史、
+> `WORK_RETURN.md` 和 `docs/CHANGE_HISTORY.md`，不得重新打开或改写。
 
 ## 任务身份
 
 ```text
 CHAT_ROLE=WORK
-WORK_ID=WORK-PP02-CLOUD-REBUILD-001
+TOP_LEVEL_WORK=WORK2
+WORK_ID=WORK-002
+CURRENT_WORK=R3.6 Windows便携更新
 ROLE_LOCK=TRUE
 STOP_RULE=TRUE
 SCOPE_DRIFT=FALSE
+SCOPE_DRIFT_BLOCKED=FALSE
 ```
 
-## 用户结果
+## 边界纠正记录
 
-从可核验正式来源重新生成“官方 v3.28.0 完整业务树 + P000/P001 V1.5.6
-项目控制 Overlay”的完整候选；先建立可恢复的 GitHub 远程检查点，再完成完整验证、
-Draft PR、真实 CI 和 Judge。
+- Work1 只负责官方稳定版干净底座，已完成并永久锁定。
+- R0–R7 后续改造按当前有效管理口径归属 Work2；继续使用旧聊天窗口不能改变归属。
+- 用户此前要求“继续同一 Work1”的记录是当时的历史事实；本任务合同只替换其
+  当前身份效力，不倒改任何已完成代码、Commit、测试或 CI。
+- PR #3 已合并到 `main@0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9`。
+- Work2 从该合并检查点建立 R3.6 独立分支和新的 Draft PR，不复用已合并的 PR #3。
 
-## 范围
+## ACTIVE_GOAL
 
-- 核验远程 `main`、官方 Tag/Commit、框架附件和目标分支。
-- 在新的隔离目录重建官方业务树与批准的控制层。
-- 运行最低完整性硬门并记录候选文件清单与树哈希。
-- 通过 GitHub App/Git Data 使用 `Blob → Tree → Commit → Branch` 原子持久化。
-- 运行 Python、Web、Desktop、AI 治理和差异验证。
-- 创建以 `main` 为目标的 Draft PR，检查并在范围内修复真实 CI。
+接收 Work1 已完成的 R3.6 现状核验和方案 A 设计，在 PP02 当前架构与安全边界内
+实现 Windows 便携 ZIP 安全更新；先应用本次五项治理硬门，再继续业务施工。
 
-## 非目标
+本次治理补丁只强化现有 PP02 控制层，不改变官方 `v3.28.0` 业务底座，也不提前
+实现 R3.6 业务代码。
 
-- 不执行 Ready、合并、改写或强推 `main`、Release。
-- 不迁移 R1–R7 的旧业务功能，不新增产品能力。
-- 不读取、复制或迁移真实用户数据，不连接真实账号、行情、通知或付费服务。
-- 不使用或发布旧工作树的 7 项未提交变化。
-- 不访问用户本机工作区，不进行 GitHub 设备认证。
+## 允许做
 
-## 允许修改
+- 只读核对真实项目文件、Git、测试和 GitHub CI。
+- 在现有 `AGENTS.md` Overlay、四份 `_ai-dev` 文件、既有路线图、项目入口和
+  追加式变更历史中应用治理硬门。
+- 在 `agent/pp02-work2-r3-6-windows-portable-update` 上执行 R3.6 范围内的
+  代码、测试、文档、普通 Commit、Push、Draft PR、CI 检查和范围内修复。
+- 采用测试先行验证便携版识别、资产配对、下载校验、备份、替换、健康检查和回滚。
+- 保持 NSIS 安装版现有更新方式不变。
 
-- 官方 `AGENTS.md` 中唯一明确标记的 PP02 Overlay。
-- `.github/workflows/ci.yml` 的既有最小只读权限块。
-- `_ai-dev/` 四份项目控制文件。
-- `docs/PROJECT_CONTROL.md`、`ROADMAP.md`、`OPEN_BLOCKERS.md`、
-  `REQUIREMENTS.md`、`CHANGE_HISTORY.md`、`RUNBOOK.md`、`INDEX.md`。
-- `docs/pp02/` 七份重建、迁移和验收文档。
-- 仅为修复本候选测试/CI 且仍在上述原始范围内所必需的文件。
+## 禁止做
 
-## 禁止修改
+- 不创建 `00_PROJECT_STATUS.md`、`PROJECT_STATUS_v2.md` 或任何平行状态/路线/规则。
+- 不建设新的复杂验证系统，不让辅助工具或测试成为新的主项目。
+- 不重做 R3.1–R3.5，不提前进入 R3.7、R4–R7。
+- 不转 Ready、不合并、不修改或强推 `main`、不创建 Tag 或 Release。
+- 不读取或上传真实 `.env`、Token、API Key、Webhook、数据库或用户备份。
+- 不执行真实数据迁移，不接入付费服务，不新增 AI 调用、定时任务、自动推送或
+  后台自动更新入口。
+- 不迁移基金、多用户或旧 `plugins/config` 机制，不顺手重构无关模块。
+- 不把云端测试或打包结果冒充 Windows R5 实机验收。
 
-- 官方业务代码、`CLAUDE.md`、License、来源信息和 Copilot 规则不得因控制层重建而改变。
-- 旧工作树不得 reset、clean、stash、覆盖、删除、提交或推送。
-- 不复制 P001 空白模板的通用骨架、生成器、模板历史或平行规则。
+## R3.6 已批准产品契约
+
+- 采用方案 A：迁入并强化旧 Portable-M2 的安全更新思想，按 PP02 当前架构重写，
+  不照搬不可靠实现。
+- 只对可明确识别的 PP02 便携 ZIP 启用；NSIS 安装版继续使用原更新链路。
+- 只在用户主动点击“安全更新”后下载匹配的 ZIP 与 `.sha256`。
+- 替换前必须验证 SHA-256、目标版本、PP02 产品身份、压缩包结构、路径安全和
+  便携版发布清单；校验未完成前不得停止旧后端或替换程序。
+- 更新前备份 `.env`、SQLite 数据库、发布清单管理的旧程序文件和数据库恢复点。
+- 只替换发布清单管理的程序文件；保留 `.env`、`data/`、`logs/` 和未知用户文件。
+- PowerShell 更新助手隐藏运行，负责退出、替换、健康检查、失败恢复和重新启动。
+- 后端健康检查与主页加载都通过后才确认成功；失败时恢复旧程序和更新前数据库。
+- Windows 最终用户不安装或手动操作 Python、Node、Git。
+
+## 五项治理硬门
+
+1. 一次指令默认完成完整可验收大段，减少用户人工中转。
+2. Work 开始和 Judge 前检查中文白话、英文界面中文含义、Codex 优先操作、真实
+   进度、完整交付和默认用户不是程序员；未纠正的违反项阻止完全通过。
+3. `PROJECT_STATUS.md` 与 `AI_HANDOFF.md` 必须记录
+   `CURRENT_WORK`、`LAST_VALID_COMMIT`、`LAST_SUCCESSFUL_TEST`、
+   `ACTIVE_BLOCKER`、`NEXT_ACTION`。
+4. 检测到范围漂移时设置 `SCOPE_DRIFT_BLOCKED`；Blocker 未解除不得进入下一 Work。
+5. 唯一状态真源是 `_ai-dev/PROJECT_STATUS.md`，状态冲突按真实项目文件、Git、
+   实际测试、GitHub CI、状态文件、聊天描述的顺序裁决。
+
+长任务必须显示 `Plan → Build → Test → CI → Judge`、当前正在做什么、当前
+Blocker 和用户是否需要操作，不得假装回复结束后仍在后台执行。
+
+## 执行顺序
+
+1. Plan：核对 `main`、当前分支、PR、现有更新链路、测试和治理台账。
+2. Build：先完成治理硬门最小补丁；随后按批准方案 A 实现 R3.6。
+3. Test：运行治理检查、Desktop 专项、Windows 便携候选、Web Build 和受影响回归。
+4. CI：使用新 Draft PR 的真实 GitHub Actions；失败时从最后有效 Commit 最小修复。
+5. Judge：核对 R3.6 产品验收、用户规则、恢复检查点、范围和状态一致性后停止。
+
+除授权门、范围变化或真实 Blocker 外，不要求用户逐项回复“下一步”。
 
 ## 验收标准
 
-1. 执行前硬门全部严格匹配，目标分支不存在。
-2. 五个指定完整性文件存在；官方业务文件逐路径、模式和内容一致。
-3. PP02 控制层只在批准白名单；Work 1 历史和解除证据不回退。
-4. 密钥、真实数据和跨项目内容检查通过；候选清单和树哈希已记录。
-5. 本地树、GitHub `create_tree` 返回树和远程 Commit 树一致。
-6. 完整 Python、Web、Desktop、AI 治理、格式和范围验证有本轮结果。
-7. Draft PR 保持草稿；真实 Actions 通过或形成可证明的真实阻塞。
+### 治理补丁
 
-## Plan Challenge Result
+- `AGENTS.md` 仍是唯一规则真源；PP02 Overlay 外官方内容未改变。
+- `_ai-dev/PROJECT_STATUS.md` 是唯一当前状态文件，仓库中没有平行命名。
+- Work1 锁定、Work2 接管和 PR #3 已合并的事实与 Git 一致。
+- 四份 `_ai-dev` 文件及现有路线/入口不再把 R3.6 记入 Work1。
+- 五项新增 Judge 条件均可从现有文件直接核对，不新增验证程序。
 
-| 项目 | 结果 |
-| --- | --- |
-| 适用性 | 已执行；当前是已批准范围的恢复性重建 |
-| 问题级别 | 无待决产品问题 |
-| 问答 | 0 个问题，通过 |
-| 已确认假设 | 项目、仓库、官方固定 Commit、V1.5.6、手动分析优先、定时和自动推送默认关闭、Windows 优先均由任务书/总控确认 |
-| 推荐方案 | 官方固定业务树 + 最小控制 Overlay；最低硬门后先持久化，再跑完整测试 |
-| 明确不做 | R1–R7、基金、真实数据、Ready/合并/Release |
-| Backlog | 旧功能产品取舍、脱敏迁移演练、Windows 实机、正式数据迁移和 Release |
-| 剩余阻塞 | 无 |
-| 证据位置 | 本文件、`docs/pp02/`、正式重建任务书和追加式台账 |
-| 允许进入 Build | 是 |
+### R3.6 业务实现
 
-## 测试要求
+- 便携版与 NSIS 识别稳定，ZIP 与 SHA-256 资产准确配对。
+- 包身份、版本、哈希、结构和路径安全全部校验。
+- 校验完成前不停止旧后端、不替换程序。
+- `.env`、数据库、日志和未知用户文件得到保护，只操作发布清单文件。
+- 后端和主页健康检查通过后才确认成功；失败时程序与数据库均可恢复。
+- 无命令行黑框，最终用户不依赖 Python、Node 或 Git。
+- R3.1–R3.5 和官方既有功能不回归，专项测试、回归和 Draft PR CI 通过。
+- 云端 Judge 最高为
+  `IMPLEMENTATION PASS — R5 WINDOWS VALIDATION REQUIRED`，不得冒充实机通过。
 
-- 最低硬门：`git diff --check`、`python scripts/check_ai_assets.py`、业务树完整性、
-  控制层白名单、台账非回退、安全扫描、文件清单与树哈希。
-- 持久化后：Python 完整离线测试、Web lint/build、Desktop 支持范围内测试、
-  AI 治理、格式与差异范围检查。
-- 远程：Draft PR 的真实 GitHub Actions；失败时先诊断，再做范围内最小修复。
+## 授权门
 
-## 授权门与回传
+当前已授权：
 
-本 Work 已获独立分支、Commit、Draft PR、CI 和范围内修复授权；Ready、合并、
-`main`、Release、真实数据和下一 Work 仍需总控另行授权。最终回传必须包含远程
-基线、重建来源、旧树保护、硬门、初始/最终 Commit、树哈希、PR、测试、Actions、
-Judge、阻塞、`SCOPE_DRIFT`、超授权检查和下一决定。
+- R3.6 独立分支；
+- 普通 Commit 与 Push；
+- 新 Draft PR；
+- 测试与范围内 CI 修复；
+- 必要项目台账同步。
 
-## 2026-07-29 用户追加授权｜同一 Work1 连续推进
+仍需新授权：
 
-- 用户明确要求继续当前 Work1，不创建新聊天或新 Work。
-- R1 已授权并完成需求与旧功能迁移确认；单用户裁决覆盖此前本地档案建议。
-- “下一步”授权本轮连续完成 R2 迁移计划，并进入首个 R3.1 小版本。
-- R3.1 只允许 PP02 Desktop 身份、Release/更新源、ASCII 技术 ID、产物名、
-  对应测试和文档；不修改股票分析、数据库、持仓、调度或通知行为。
-- Windows 实机验收标记为 Deferred；不恢复、不新建或操作旧 D 盘验收目录。
-- Ready、合并、main、Release、真实数据和密钥操作继续禁止。
+- Publish Changes 的范围扩大；
+- PR 转 Ready；
+- Merge；
+- 修改 `main`；
+- Tag 或 Release；
+- 真实数据迁移；
+- API、密钥或付费服务；
+- 大型依赖或明显范围变化。
 
+## 当前恢复检查点
 
-## 2026-07-29 用户追加授权｜自动路由 v1.1 与 R3.2
+```text
+CURRENT_WORK=R3.6 Windows便携更新
+LAST_VALID_COMMIT=0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9
+LAST_SUCCESSFUL_TEST=R3.5_FINAL_HEAD_508eb268c78d6172dac22160c9dc0550f83653a6_RUN_30526590693_8_OF_8_SUCCESS
+ACTIVE_BLOCKER=NONE
+NEXT_ACTION=完成治理硬门验证并发布新Draft PR，然后继续R3.6业务施工
+```
 
-- `PP02-AUTO-ROUTER-001 v1.1` 覆盖旧路由：当前 Work 在已批准范围内自动完成
-  普通开发、测试、独立分支 Commit、Draft PR 更新和范围内 CI 修复，不反复询问。
-- 用户发送“继续流程”，授权同一 Work1 进入 R3.2；主要执行端为云端 Codex，
-  GitHub App 负责保存 Commit、更新同一 Draft PR 并验证 CI。
-- R3.2 仅覆盖手动默认、默认 cron 移除、自动通知总开关、全部自动发送入口、
-  设置帮助、测试和文档。
-- Ready、合并、`main`、Release、Windows 本机、真实数据、真实通知渠道、
-  大型依赖与付费服务继续禁止，必须单独授权。
+准确停止点：
 
-## 2026-07-30 用户追加授权｜R3.5 应用内手动周期报告
-
-- 继续当前 Work1 和 Draft PR #3，不重开路线、不重做 R3.1–R3.4。
-- 采用“方案 A＋下周参考展望”，一次性完成 Plan、Build、Test、CI 和 Judge。
-- 周期报告只聚合正式分析历史和市场复盘历史，覆盖本周至今、上一周、下周展望、
-  5周、10周、1个月和2个月。
-- 下周展望只使用最近 14 个自然日内的合格记录；不得重新调用 AI，不访问第二套
-  报告事实表，不编造方向、目标价或确定性结论。
-- 展望快照及来源记录标识必须使用现有 `AnalysisHistory` 和可识别
-  `report_type` 持久化；不得创建平行历史真源。
-- 只允许用户在应用内手动生成；不新增后台定时器、GitHub Actions 周五定时、
-  自动模型调用、通知或报告推送。
-- 允许当前分支普通 Commit、Draft PR 更新、测试先行施工、范围内 CI 修复与
-  项目台账同步。
-- PR 转 Ready、合并、Release、`main`、真实密钥/数据库、定时器和自动推送继续
-  禁止。
-
-### R3.5 Plan Challenge Result
-
-| 项目 | 结果 |
-| --- | --- |
-| 问题级别 | 无待决产品问题 |
-| 问答 | 0 个问题，通过 |
-| 已确认方案 | 方案 A＋条件化下周参考展望 |
-| 唯一事实源 | `HistoryService.get_history_list()` / `AnalysisHistory` |
-| 快照边界 | `report_type=period_outlook`，保留来源记录 ID |
-| 自动化边界 | 仅应用内手动触发；无定时、模型调用或推送 |
-| 允许进入 Build | 是 |
-
-### R3.5 执行结果
-
-- 实现 Head `4b563bc63e9638731f2a17ed25129de095046ef4` 的 Run
-  `30525590779` 已 8/8 success。
-- Backend：`5005 passed, 4 deselected, 51 warnings, 494 subtests passed`。
-- Web 阻断套件：`55/55 passed`；Lint 与 Production Build 成功。
-- 未新增 AI 调用、定时器、自动通知、事实表、基金或多用户功能。
-- 当前只待本次 Judge 文档收口 Head 的完整 CI；成功后 R3.5 一次性回传总控。
+`WORK2_R3_6_GOVERNANCE_HARD_GATES_READY_FOR_TEST`
