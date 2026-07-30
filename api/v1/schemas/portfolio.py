@@ -335,3 +335,28 @@ class PortfolioRiskResponse(BaseModel):
     drawdown: Dict[str, Any] = Field(default_factory=dict)
     stop_loss: Dict[str, Any] = Field(default_factory=dict)
     decision_signal_risk: PortfolioDecisionSignalRiskBlock = Field(default_factory=PortfolioDecisionSignalRiskBlock)
+
+
+class PortfolioBackupDocument(BaseModel):
+    format: Literal["pp02.portfolio.backup"]
+    format_version: Literal[1]
+    metadata: Dict[str, Any]
+    portfolio: Dict[str, List[Dict[str, Any]]]
+
+
+class PortfolioBackupPreviewResponse(BaseModel):
+    mode: Literal["replace"]
+    preview_token: str
+    requires_confirmation: bool
+    incoming_counts: Dict[str, int]
+    current_counts: Dict[str, int]
+    warnings: List[str] = Field(default_factory=list)
+
+
+class PortfolioBackupRestoreRequest(BaseModel):
+    backup: PortfolioBackupDocument
+    preview_token: str = Field(..., min_length=1, max_length=128)
+
+
+class PortfolioBackupRestoreResponse(BaseModel):
+    restored_counts: Dict[str, int]
