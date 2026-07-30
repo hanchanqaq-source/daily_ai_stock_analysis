@@ -56,7 +56,7 @@ from api.v1.schemas.history import (
 from api.v1.schemas.run_flow import RunFlowSnapshot
 from data_provider.base import canonical_stock_code, normalize_stock_code
 from src.data.stock_index_loader import resolve_index_stock_code
-from src.config import Config
+from src.config import Config, should_send_automatic_notification
 from src.core.market_review_lock import (
     MarketReviewExecutionLock as _MarketReviewExecutionLock,
     market_review_lock_path,
@@ -93,6 +93,7 @@ from src.utils.data_processing import (
     extract_market_structure_detail_field,
     extract_realtime_detail_fields,
 )
+from src.utils.market_review_region import normalize_market_review_region_lenient
 
 logger = logging.getLogger(__name__)
 
@@ -132,15 +133,19 @@ def _with_request_report_language(config: Config, report_language: Optional[str]
 
 def _run_market_review_background(
     send_notification: bool,
-    override_region: Optional[str] = None,
+    effective_region: str,
     lock_token: Optional[_MarketReviewExecutionLock] = None,
     config: Optional[Config] = None,
     query_id: Optional[str] = None,
-) -> None:
+) -> Dict[str, Any]:
     """Run market review after the API response has been accepted."""
     from src.core.market_review import run_market_review
 
     runtime_config = config or get_config_dep()
+    effective_send_notification = should_send_automatic_notification(
+        runtime_config,
+        requested=send_notification,
+    )
     try:
         notifier, analyzer, search_service = _build_market_review_runtime(runtime_config)
         review_kwargs = {
@@ -148,8 +153,8 @@ def _run_market_review_background(
             "analyzer": analyzer,
             "search_service": search_service,
             "config": runtime_config,
-            "send_notification": send_notification,
-            "override_region": override_region,
+            "send_notification": effective_send_notification,
+            "override_region": effective_region,
             "return_structured": True,
             "trigger_source": "api",
         }
@@ -159,7 +164,7 @@ def _run_market_review_background(
             "[MarketReview] component=market_review action=background_start "
             "trigger_source=api task_id=%s region=%s",
             query_id or "-",
-            override_region or getattr(runtime_config, "market_review_region", "cn") or "cn",
+            effective_region,
         )
         report = run_market_review(**review_kwargs)
         if not report:
@@ -168,8 +173,9 @@ def _run_market_review_background(
             return {
                 "result": report.report,
                 "market_review_payload": getattr(report, "market_review_payload", None),
+                "region": effective_region,
             }
-        return {"result": report}
+        return {"result": report, "region": effective_region}
     finally:
         _release_market_review_lock(lock_token)
 
@@ -334,6 +340,11 @@ def trigger_analysis(
     if not stock_codes:
         raise api_error(400, "validation_error", "股票代码不能为空或仅包含空白字符")
 
+    effective_send_notification = should_send_automatic_notification(
+        config,
+        requested=getattr(request, "notify", True),
+    )
+
     # Sync mode only supports single-stock analysis.
     if not request.async_mode:
         if len(stock_codes) > 1:
@@ -342,15 +353,25 @@ def trigger_analysis(
                 "validation_error",
                 "同步模式仅支持单只股票分析，请使用 async_mode=true 进行批量分析",
             )
-        return _handle_sync_analysis(stock_codes[0], request)
+        return _handle_sync_analysis(
+            stock_codes[0],
+            request,
+            send_notification=effective_send_notification,
+        )
 
     # Async mode submits one task per stock.
-    return _handle_async_analysis_batch(stock_codes, request)
+    return _handle_async_analysis_batch(
+        stock_codes,
+        request,
+        send_notification=effective_send_notification,
+    )
 
 
 def _handle_async_analysis_batch(
     stock_codes: list,
-    request: AnalyzeRequest
+    request: AnalyzeRequest,
+    *,
+    send_notification: Optional[bool] = None,
 ) -> JSONResponse:
     """
     Handle asynchronous analysis requests, including batch submission.
@@ -366,7 +387,11 @@ def _handle_async_analysis_batch(
     stock_name = request.stock_name if is_single else None
     original_query = request.original_query if (is_single or preserve_batch_metadata) else None
     selection_source = request.selection_source if (is_single or preserve_batch_metadata) else None
-    notify = getattr(request, "notify", True)
+    notify = (
+        getattr(request, "notify", True)
+        if send_notification is None
+        else bool(send_notification)
+    )
     skills = getattr(request, "skills", None)
     analysis_phase = request.analysis_phase
     report_language = normalize_report_language(getattr(request, "report_language", None), default="")
@@ -450,7 +475,9 @@ def _handle_async_analysis_batch(
 
 def _handle_sync_analysis(
     stock_code: str,
-    request: AnalyzeRequest
+    request: AnalyzeRequest,
+    *,
+    send_notification: Optional[bool] = None,
 ) -> AnalysisResultResponse:
     """
     处理同步分析请求
@@ -469,7 +496,11 @@ def _handle_sync_analysis(
             report_type=request.report_type,
             force_refresh=request.force_refresh,
             query_id=query_id,
-            send_notification=getattr(request, "notify", True),
+            send_notification=(
+                getattr(request, "notify", True)
+                if send_notification is None
+                else bool(send_notification)
+            ),
             skills=getattr(request, "skills", None),
             analysis_phase=request.analysis_phase,
             report_language=getattr(request, "report_language", None),
@@ -535,9 +566,13 @@ def trigger_market_review(
     """Trigger market review from Web/API without blocking the request."""
     request = request or MarketReviewRequest()
 
-    runtime_config = _with_request_report_language(
-        config,
-        getattr(request, "report_language", None),
+    runtime_config = _with_request_report_language(config, request.report_language)
+    effective_send_notification = should_send_automatic_notification(
+        runtime_config,
+        requested=request.send_notification,
+    )
+    effective_region = request.region or (
+        normalize_market_review_region_lenient(runtime_config.market_review_region) or "cn"
     )
 
     lock_token = _try_acquire_market_review_lock(runtime_config)
@@ -550,13 +585,13 @@ def trigger_market_review(
             "[MarketReview] component=market_review action=submit trigger_source=api "
             "task_id=%s region=%s send_notification=%s",
             task_id,
-            getattr(runtime_config, "market_review_region", "cn") or "cn",
-            request.send_notification,
+            effective_region,
+            effective_send_notification,
         )
         task = get_task_queue().submit_background_task(
             lambda: _run_market_review_background(
-                request.send_notification,
-                override_region=None,
+                effective_send_notification,
+                effective_region=effective_region,
                 lock_token=lock_token,
                 config=runtime_config,
                 query_id=task_id,
@@ -565,6 +600,7 @@ def trigger_market_review(
             stock_name="大盘复盘",
             message="大盘复盘任务已提交",
             task_id=task_id,
+            region=effective_region,
         )
     except Exception:
         _release_market_review_lock(lock_token)
@@ -573,7 +609,8 @@ def trigger_market_review(
     return MarketReviewAccepted(
         status="accepted",
         message="大盘复盘任务已提交，完成后会保存报告并按配置推送通知",
-        send_notification=request.send_notification,
+        send_notification=effective_send_notification,
+        region=effective_region,
         task_id=task.task_id,
         trace_id=_get_task_trace_id(task),
     )
@@ -641,6 +678,7 @@ def get_task_list(
             selection_source=t.selection_source,
             analysis_phase=t.analysis_phase,
             skills=getattr(t, "skills", None),
+            region=t.region,
         )
         for t in all_tasks
     ]
@@ -1076,6 +1114,7 @@ def get_analysis_status(task_id: str) -> TaskStatus:
             result=result,
             market_review_report=market_review_report,
             market_review_payload=market_review_payload,
+            region=task.region,
             error=task.error,
             stock_name=task.stock_name,
             original_query=task.original_query,
@@ -1097,10 +1136,18 @@ def get_analysis_status(task_id: str) -> TaskStatus:
                 market_review_report = None
                 context_snapshot = parse_json_field(getattr(record, "context_snapshot", None))
                 market_review_payload = None
+                region = None
                 if isinstance(context_snapshot, dict):
+                    raw_region = context_snapshot.get("market_review_region")
+                    if isinstance(raw_region, str) and raw_region.strip():
+                        region = raw_region.strip()
                     payload = context_snapshot.get("market_review_payload")
                     if isinstance(payload, dict):
                         market_review_payload = payload
+                        if region is None:
+                            payload_region = payload.get("region")
+                            if isinstance(payload_region, str) and payload_region.strip():
+                                region = payload_region.strip()
                 if isinstance(raw_result, dict):
                     report_text = raw_result.get("raw_response") or raw_result.get("market_review_report")
                     if isinstance(report_text, str) and report_text.strip():
@@ -1116,6 +1163,7 @@ def get_analysis_status(task_id: str) -> TaskStatus:
                     result=None,
                     market_review_report=market_review_report,
                     market_review_payload=market_review_payload,
+                    region=region,
                     error=None,
                     stock_name=record.name,
                 )

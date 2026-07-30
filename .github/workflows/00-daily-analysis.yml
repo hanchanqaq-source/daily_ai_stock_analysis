@@ -1,11 +1,7 @@
 name: 每日股票分析
 
 on:
-  # 定时触发 - 每天北京时间 18:00 (UTC 10:00)
-  schedule:
-    - cron: '0 10 * * 1-5'     # 周一到周五，UTC 10:00 = 北京时间 18:00
-  
-  # 手动触发
+  # PP02 默认仅允许人工触发；如未来恢复云端定时，必须经过单独授权。
   workflow_dispatch:
     inputs:
       mode:
@@ -54,6 +50,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
+          python -c "import futu; print('✅ futu SDK import OK')"
       
       - name: 创建必要目录
         run: |
@@ -254,6 +251,8 @@ jobs:
           # 数据源
           # ==========================================
           TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
+          # Tushare Pro 自定义接入地址（可选；指向自建网关或第三方兼容镜像时设置）
+          TUSHARE_HTTP_URL: ${{ vars.TUSHARE_HTTP_URL || secrets.TUSHARE_HTTP_URL }}
           # TickFlow（A 股日 K、实时行情、股票列表/名称与大盘复盘增强；不设则走免费源 fallback）
           TICKFLOW_API_KEY: ${{ secrets.TICKFLOW_API_KEY }}
           TICKFLOW_PRIORITY: ${{ vars.TICKFLOW_PRIORITY || secrets.TICKFLOW_PRIORITY }}
@@ -364,6 +363,8 @@ jobs:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
 
+          # PP02 自动通知总开关；渠道凭据存在也不会绕过此开关。
+          AUTO_NOTIFICATION_ENABLED: ${{ vars.AUTO_NOTIFICATION_ENABLED || secrets.AUTO_NOTIFICATION_ENABLED || 'false' }}
           # 通知路由策略（留空时保持全部已配置渠道）
           NOTIFICATION_REPORT_CHANNELS: ${{ vars.NOTIFICATION_REPORT_CHANNELS || secrets.NOTIFICATION_REPORT_CHANNELS }}
           NOTIFICATION_ALERT_CHANNELS: ${{ vars.NOTIFICATION_ALERT_CHANNELS || secrets.NOTIFICATION_ALERT_CHANNELS }}

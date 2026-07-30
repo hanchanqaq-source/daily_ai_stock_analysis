@@ -1,6 +1,23 @@
 # PP02 项目总入口
 
-## 项目身份
+## 当前项目控制
+
+当前状态唯一真源为 [`../_ai-dev/PROJECT_STATUS.md`](../_ai-dev/PROJECT_STATUS.md)；
+新聊天交接入口为 [`../_ai-dev/AI_HANDOFF.md`](../_ai-dev/AI_HANDOFF.md)。本文件只保留
+项目入口、版本关系和历史索引，不再作为当前状态真源。
+
+| 项目 | 当前值 |
+| --- | --- |
+| 项目名称 | `PP02｜AI 每日股票分析` |
+| GitHub 仓库 | `hanchanqaq-source/daily_ai_stock_analysis` |
+| 官方上游 | `ZhuLinsen/daily_stock_analysis` |
+| 当前官方基线 | `v3.28.0` / `905c339d80ad2daa6fd2bab3bb10267b23c7ac1c` |
+| 项目控制框架 | `P000/P001 V1.5.6` |
+| 当前 Work | `WORK-PP02-CLOUD-REBUILD-001` |
+| 当前阶段 | R1/R2/R3.1 完成；R3.2 实现 Head 8/8 CI 通过，等待最终 Head 收口 |
+| 后续路线 | [`pp02/REBUILD_ROADMAP.md`](pp02/REBUILD_ROADMAP.md)；Windows 验收 Deferred |
+
+## Work 1 历史身份
 
 | 项目 | 当前值 |
 | --- | --- |
@@ -11,7 +28,7 @@
 | 官方基线 Commit | `b36c721415560e48115ad4444d5af2125fc53f5c` |
 | License | MIT |
 | 当前 Work | `WORK-001｜官方稳定版干净底座建立` |
-| Work 总体状态 | `Waiting for User`（云端 Plan、Build、Test、CI、Judge 已完成；等待 Windows 实机验收） |
+| Work 总体状态 | `Waiting for User`（当时的云端 Plan、Build、Test、CI、Judge 已完成；等待 Windows 实机验收） |
 
 PP02 是新的股票专用项目。旧股票基金混合仓库只读冻结；基金业务属于 PP03，不进入本仓库。
 
@@ -20,14 +37,17 @@ PP02 是新的股票专用项目。旧股票基金混合仓库只读冻结；基
 | 文档 | 唯一职责 |
 | --- | --- |
 | [`AGENTS.md`](../AGENTS.md) | 项目级强制开发规则与授权边界 |
+| [`../_ai-dev/PROJECT_STATUS.md`](../_ai-dev/PROJECT_STATUS.md) | 唯一当前状态真源 |
+| [`../_ai-dev/AI_HANDOFF.md`](../_ai-dev/AI_HANDOFF.md) | 新聊天交接入口 |
+| [`pp02/REBUILD_ROADMAP.md`](pp02/REBUILD_ROADMAP.md) | R0–R7 重建路线 |
 | [`REQUIREMENTS.md`](REQUIREMENTS.md) | 唯一需求总表 |
-| [`ROADMAP.md`](ROADMAP.md) | 当前及后续 Work 的滚动路线图 |
+| [`ROADMAP.md`](ROADMAP.md) | 已接受历史与重建路线导航 |
 | [`CHANGE_HISTORY.md`](CHANGE_HISTORY.md) | 用户决策和范围变化的追加历史 |
-| [`OPEN_BLOCKERS.md`](OPEN_BLOCKERS.md) | 当前未解除阻塞 |
+| [`OPEN_BLOCKERS.md`](OPEN_BLOCKERS.md) | 阻塞及解除记录 |
 | [`RUNBOOK.md`](RUNBOOK.md) | 安装、启动、验证和恢复 |
 | [`CHANGELOG.md`](CHANGELOG.md) | 产品版本变化；不代替项目控制台账 |
 
-## Work 1 当前状态
+## Work 1 历史状态
 
 | 阶段 | 状态 | 当前内容 |
 | --- | --- | --- |
@@ -40,7 +60,8 @@ PP02 是新的股票专用项目。旧股票基金混合仓库只读冻结；基
 
 Windows 实机验收完成前，不得进入 Work 2。
 
-状态口径：本文件是 Work 总体状态和阶段汇总真源；`ROADMAP.md` 是子步骤状态真源。状态变化必须在同一改动中同步，冲突时不得宣称完成，先按验证证据校正。
+历史口径：本节记录 Work 1 当时的完成事实，不因本次 R0 重建而回退。当前状态以
+`_ai-dev/PROJECT_STATUS.md` 为唯一真源；摘要冲突时先按可验证证据校正。
 
 ## Work 1 云端验证证据
 

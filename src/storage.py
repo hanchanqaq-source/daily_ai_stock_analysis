@@ -1131,6 +1131,50 @@ class DecisionSignalFeedbackRecord(Base):
     updated_at = Column(DateTime, default=utc_naive_now, onupdate=utc_naive_now, index=True)
 
 
+class SkillOpinionSampleRecord(Base):
+    """Immutable, low-sensitivity skill opinion sample for Issue #1904 P2 PR1."""
+
+    __tablename__ = 'skill_opinion_samples'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    analysis_history_id = Column(
+        Integer,
+        ForeignKey('analysis_history.id'),
+        nullable=False,
+        index=True,
+    )
+    stock_code = Column(String(16), nullable=False, index=True)
+    skill_id = Column(String(128), nullable=False, index=True)
+    skill_version = Column(String(64), index=True)
+    signal = Column(String(16), nullable=False, index=True)
+    confidence = Column(Float, nullable=False)
+    horizon = Column(String(16), index=True)
+    data_quality_level = Column(String(24), index=True)
+    opinion_created_at = Column(DateTime, index=True)
+    sample_schema_version = Column(String(32), nullable=False, index=True)
+    created_at = Column(DateTime, default=utc_naive_now, index=True)
+
+    __table_args__ = (
+        UniqueConstraint(
+            'analysis_history_id',
+            'skill_id',
+            'sample_schema_version',
+            name='uix_skill_opinion_sample_key',
+        ),
+        Index(
+            'ix_skill_opinion_sample_skill_horizon_created',
+            'skill_id',
+            'horizon',
+            'created_at',
+        ),
+        Index(
+            'ix_skill_opinion_sample_stock_created',
+            'stock_code',
+            'created_at',
+        ),
+    )
+
+
 class _DatabaseManagerMeta(type):
     """Serialize DatabaseManager construction across __new__ and __init__."""
 
@@ -2155,6 +2199,52 @@ class DatabaseManager(metaclass=_DatabaseManagerMeta):
             logger.error(f"保存分析历史失败: {e}")
             return 0
 
+    def save_period_outlook_snapshot(
+        self,
+        *,
+        query_id: str,
+        snapshot: Dict[str, Any],
+        created_at: datetime,
+    ) -> int:
+        """Persist a manual next-week outlook in the formal analysis history."""
+        target_period = snapshot.get("target_period")
+        target_period = target_period if isinstance(target_period, dict) else {}
+        overall_tendency = snapshot.get("overall_tendency")
+        summary = snapshot.get("message") or (
+            f"下周展望 {target_period.get('start_date', '')} 至 "
+            f"{target_period.get('end_date', '')}"
+        )
+
+        def _write(session: Session) -> int:
+            history = AnalysisHistory(
+                query_id=query_id,
+                code="PERIOD",
+                name="下周展望",
+                report_type="period_outlook",
+                sentiment_score=None,
+                operation_advice="仅供参考",
+                trend_prediction=overall_tendency,
+                analysis_summary=summary,
+                raw_result=self._safe_json_dumps(
+                    {
+                        "snapshot_version": snapshot.get("snapshot_version"),
+                        "overall_tendency": overall_tendency,
+                        "source_record_ids": snapshot.get("source_record_ids") or [],
+                    }
+                ),
+                news_content=None,
+                context_snapshot=self._safe_json_dumps(snapshot),
+                created_at=created_at,
+            )
+            session.add(history)
+            session.flush()
+            return int(history.id or 0)
+
+        return self._run_write_transaction(
+            f"save_period_outlook_snapshot[{query_id}]",
+            _write,
+        )
+
     def update_analysis_history_diagnostics(
         self,
         *,
@@ -2404,7 +2494,7 @@ class DatabaseManager(metaclass=_DatabaseManagerMeta):
         if not ids:
             return 0
 
-        with self.session_scope() as session:
+        def _write(session: Session) -> int:
             existing_ids = sorted(
                 session.execute(
                     select(AnalysisHistory.id).where(AnalysisHistory.id.in_(ids))
@@ -2440,10 +2530,20 @@ class DatabaseManager(metaclass=_DatabaseManagerMeta):
             session.execute(
                 delete(BacktestResult).where(BacktestResult.analysis_history_id.in_(existing_ids))
             )
+            session.execute(
+                delete(SkillOpinionSampleRecord).where(
+                    SkillOpinionSampleRecord.analysis_history_id.in_(existing_ids)
+                )
+            )
             result = session.execute(
                 delete(AnalysisHistory).where(AnalysisHistory.id.in_(existing_ids))
             )
             return result.rowcount or 0
+
+        return self._run_write_transaction(
+            "delete analysis history records",
+            _write,
+        )
 
     def get_distinct_stocks_from_history(
         self,
@@ -2472,6 +2572,15 @@ class DatabaseManager(metaclass=_DatabaseManagerMeta):
                 select(
                     AnalysisHistory.code,
                     func.max(AnalysisHistory.id).label("max_id"),
+                )
+            )
+            subq = subq.where(
+                and_(
+                    AnalysisHistory.code != "PERIOD",
+                    or_(
+                        AnalysisHistory.report_type.is_(None),
+                        AnalysisHistory.report_type != "period_outlook",
+                    ),
                 )
             )
             if start_date:

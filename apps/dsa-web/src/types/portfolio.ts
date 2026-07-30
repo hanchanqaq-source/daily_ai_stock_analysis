@@ -193,6 +193,47 @@ export interface PortfolioTradeCreateRequest {
   note?: string;
 }
 
+export interface PortfolioQuickPositionPreviewRequest {
+  accountId: number;
+  symbol: string;
+  targetQuantity: number;
+  tradeDate: string;
+  price: number;
+  fee?: number;
+  tax?: number;
+  market?: 'cn' | 'hk' | 'us' | 'jp' | 'kr' | 'tw';
+  currency?: string;
+  note?: string;
+}
+
+export interface PortfolioQuickPositionConfirmRequest extends PortfolioQuickPositionPreviewRequest {
+  previewUid: string;
+  expectedCurrentQuantity: number;
+}
+
+export interface PortfolioQuickPositionPreviewResponse {
+  previewUid: string;
+  accountId: number;
+  symbol: string;
+  market: string;
+  currency: string;
+  tradeDate: string;
+  currentQuantity: number;
+  targetQuantity: number;
+  deltaQuantity: number;
+  side: PortfolioSide | null;
+  tradeQuantity: number;
+  price: number;
+  fee: number;
+  tax: number;
+  cashChange: number;
+  requiresEvent: boolean;
+}
+
+export interface PortfolioQuickPositionConfirmResponse extends PortfolioQuickPositionPreviewResponse {
+  tradeId: number;
+}
+
 export interface PortfolioCashLedgerCreateRequest {
   accountId: number;
   eventDate: string;
@@ -336,4 +377,52 @@ export interface PortfolioFxRefreshResponse {
   updatedCount: number;
   staleCount: number;
   errorCount: number;
+}
+
+
+export interface PortfolioBackupMetadata {
+  createdAt: string;
+  projectId: 'PP02';
+  projectName: 'AI 每日股票分析';
+  applicationBaseVersion: string;
+  databaseSchemaVersion: string;
+}
+
+export interface PortfolioBackupPayload {
+  accounts: Array<Record<string, unknown>>;
+  trades: Array<Record<string, unknown>>;
+  cashLedger: Array<Record<string, unknown>>;
+  corporateActions: Array<Record<string, unknown>>;
+}
+
+export interface PortfolioBackupDocument {
+  format: 'pp02.portfolio.backup';
+  formatVersion: 1;
+  metadata: PortfolioBackupMetadata;
+  portfolio: PortfolioBackupPayload;
+}
+
+export interface PortfolioBackupCounts {
+  accounts: number;
+  trades: number;
+  cashLedger: number;
+  corporateActions: number;
+}
+
+export interface PortfolioBackupPreviewResponse {
+  mode: 'replace';
+  previewToken: string;
+  requiresConfirmation: boolean;
+  incomingCounts: PortfolioBackupCounts;
+  currentCounts: PortfolioBackupCounts;
+  warnings: string[];
+}
+
+export interface PortfolioBackupRestoreResponse {
+  restoredCounts: PortfolioBackupCounts;
+}
+
+export interface PortfolioBackupExportResponse {
+  fileName: string;
+  backup: PortfolioBackupDocument;
 }

@@ -35,6 +35,8 @@ import type {
 } from '../types/decisionSignals';
 import type {
   PortfolioAccountItem,
+  PortfolioBackupDocument,
+  PortfolioBackupPreviewResponse,
   PortfolioCashDirection,
   PortfolioCashLedgerListItem,
   PortfolioCorporateActionListItem,
@@ -44,6 +46,7 @@ import type {
   PortfolioImportCommitResponse,
   PortfolioImportParseResponse,
   PortfolioPositionItem,
+  PortfolioQuickPositionPreviewResponse,
   PortfolioRiskResponse,
   PortfolioSide,
   PortfolioSnapshotResponse,
@@ -257,6 +260,22 @@ const PortfolioPage: React.FC = () => {
     tradeUid: '',
     note: '',
   });
+  const [quickForm, setQuickForm] = useState({
+    symbol: '',
+    targetQuantity: '',
+    tradeDate: getTodayIso(),
+    price: '',
+    fee: '',
+    tax: '',
+  });
+  const [quickPreview, setQuickPreview] = useState<PortfolioQuickPositionPreviewResponse | null>(null);
+  const [quickPreviewing, setQuickPreviewing] = useState(false);
+  const [quickConfirming, setQuickConfirming] = useState(false);
+  const [quickMessage, setQuickMessage] = useState<string | null>(null);
+  const [backupDocument, setBackupDocument] = useState<PortfolioBackupDocument | null>(null);
+  const [backupPreview, setBackupPreview] = useState<PortfolioBackupPreviewResponse | null>(null);
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [backupMessage, setBackupMessage] = useState<string | null>(null);
   const [cashForm, setCashForm] = useState({
     eventDate: getTodayIso(),
     direction: 'in' as PortfolioCashDirection,
@@ -463,7 +482,9 @@ const PortfolioPage: React.FC = () => {
     if (!writeBlocked) {
       setWriteWarning(null);
     }
-  }, [writeBlocked]);
+    setQuickPreview(null);
+    setQuickMessage(null);
+  }, [writeBlocked, writableAccountId]);
 
   const positionRows: FlatPosition[] = useMemo(() => {
     if (!snapshot) return [];
@@ -617,6 +638,138 @@ const PortfolioPage: React.FC = () => {
 
   const concentrationPieData = sectorPieData.length > 0 ? sectorPieData : positionFallbackPieData;
   const concentrationMode = sectorPieData.length > 0 ? 'sector' : 'position';
+
+  const updateQuickForm = (fields: Partial<typeof quickForm>) => {
+    setQuickForm((prev) => ({ ...prev, ...fields }));
+    setQuickPreview(null);
+    setQuickMessage(null);
+  };
+
+  const buildQuickPositionPayload = () => {
+    if (!writableAccountId) {
+      throw new Error('请先在右上角选择具体账户，再进行快捷持仓调整。');
+    }
+    return {
+      accountId: writableAccountId,
+      symbol: quickForm.symbol,
+      targetQuantity: Number(quickForm.targetQuantity),
+      tradeDate: quickForm.tradeDate,
+      price: Number(quickForm.price),
+      fee: Number(quickForm.fee || 0),
+      tax: Number(quickForm.tax || 0),
+    };
+  };
+
+  const handleQuickPreview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!writableAccountId) {
+      setWriteWarning('请先在右上角选择具体账户，再进行快捷持仓调整。');
+      return;
+    }
+    try {
+      setQuickPreviewing(true);
+      setQuickMessage(null);
+      setWriteWarning(null);
+      setError(null);
+      const preview = await portfolioApi.previewPositionAdjustment(buildQuickPositionPayload());
+      setQuickPreview(preview);
+    } catch (err) {
+      setError(getParsedApiError(err));
+    } finally {
+      setQuickPreviewing(false);
+    }
+  };
+
+  const handleQuickConfirm = async () => {
+    if (!quickPreview || !quickPreview.requiresEvent || quickConfirming) return;
+    try {
+      setQuickConfirming(true);
+      setQuickMessage(null);
+      setWriteWarning(null);
+      setError(null);
+      await portfolioApi.confirmPositionAdjustment({
+        ...buildQuickPositionPayload(),
+        previewUid: quickPreview.previewUid,
+        expectedCurrentQuantity: quickPreview.currentQuantity,
+      });
+      setQuickPreview(null);
+      setQuickMessage('快捷持仓已写入官方交易账本。');
+      await refreshPortfolioData();
+    } catch (err) {
+      setError(getParsedApiError(err));
+    } finally {
+      setQuickConfirming(false);
+    }
+  };
+
+
+  const handleExportBackup = async () => {
+    try {
+      setBackupLoading(true);
+      setBackupMessage(null);
+      setError(null);
+      const result = await portfolioApi.exportBackup();
+      if (typeof URL.createObjectURL === 'function') {
+        const blob = new Blob([JSON.stringify(result.backup, null, 2)], {
+          type: 'application/json',
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = result.fileName;
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+      setBackupMessage('股票备份已导出。');
+    } catch (err) {
+      setError(getParsedApiError(err));
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const handleBackupFile = async (file: File | null) => {
+    setBackupDocument(null);
+    setBackupPreview(null);
+    setBackupMessage(null);
+    if (!file) return;
+    try {
+      setBackupLoading(true);
+      setError(null);
+      const parsed = JSON.parse(await file.text()) as PortfolioBackupDocument;
+      const preview = await portfolioApi.previewBackup(parsed);
+      setBackupDocument(parsed);
+      setBackupPreview(preview);
+    } catch (err) {
+      setError(getParsedApiError(err));
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const handleRestoreBackup = async () => {
+    if (!backupDocument || !backupPreview || backupLoading) return;
+    try {
+      setBackupLoading(true);
+      setBackupMessage(null);
+      setError(null);
+      await portfolioApi.restoreBackup({
+        backup: backupDocument,
+        previewToken: backupPreview.previewToken,
+      });
+      setBackupDocument(null);
+      setBackupPreview(null);
+      setSelectedAccount('all');
+      setEventPage(1);
+      setPortfolioSignalsRefreshKey((value) => value + 1);
+      await loadAccounts();
+      setBackupMessage('股票备份恢复完成。');
+    } catch (err) {
+      setError(getParsedApiError(err));
+    } finally {
+      setBackupLoading(false);
+    }
+  };
 
   const handleTradeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1317,6 +1470,128 @@ const PortfolioPage: React.FC = () => {
         />
       ) : null}
 
+      <section>
+        <Card padding="md">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-sm font-semibold text-foreground">快捷持仓调整</h2>
+            <p className="text-xs text-secondary">
+              先预览差额，再确认写入一条官方交易事件；不会直接修改持仓结果表。
+            </p>
+          </div>
+          <form className="mt-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2" onSubmit={handleQuickPreview}>
+            <label className="space-y-1 text-xs text-secondary">
+              <span>股票代码</span>
+              <input
+                aria-label="快捷持仓股票代码"
+                className={PORTFOLIO_INPUT_CLASS}
+                value={quickForm.symbol}
+                onChange={(e) => updateQuickForm({ symbol: e.target.value })}
+                placeholder="例如 600519"
+                required
+              />
+            </label>
+            <label className="space-y-1 text-xs text-secondary">
+              <span>目标持仓数量</span>
+              <input
+                aria-label="目标持仓数量"
+                className={PORTFOLIO_INPUT_CLASS}
+                type="number"
+                min="0"
+                step="0.0001"
+                value={quickForm.targetQuantity}
+                onChange={(e) => updateQuickForm({ targetQuantity: e.target.value })}
+                required
+              />
+            </label>
+            <label className="space-y-1 text-xs text-secondary">
+              <span>成交日期</span>
+              <input
+                aria-label="快捷持仓成交日期"
+                className={PORTFOLIO_INPUT_CLASS}
+                type="date"
+                value={quickForm.tradeDate}
+                onChange={(e) => updateQuickForm({ tradeDate: e.target.value })}
+                required
+              />
+            </label>
+            <label className="space-y-1 text-xs text-secondary">
+              <span>参考成交价</span>
+              <input
+                aria-label="快捷持仓参考成交价"
+                className={PORTFOLIO_INPUT_CLASS}
+                type="number"
+                min="0"
+                step="0.0001"
+                value={quickForm.price}
+                onChange={(e) => updateQuickForm({ price: e.target.value })}
+                required
+              />
+            </label>
+            <label className="space-y-1 text-xs text-secondary">
+              <span>手续费</span>
+              <input
+                aria-label="快捷持仓手续费"
+                className={PORTFOLIO_INPUT_CLASS}
+                type="number"
+                min="0"
+                step="0.0001"
+                value={quickForm.fee}
+                onChange={(e) => updateQuickForm({ fee: e.target.value })}
+              />
+            </label>
+            <label className="space-y-1 text-xs text-secondary">
+              <span>税费</span>
+              <input
+                aria-label="快捷持仓税费"
+                className={PORTFOLIO_INPUT_CLASS}
+                type="number"
+                min="0"
+                step="0.0001"
+                value={quickForm.tax}
+                onChange={(e) => updateQuickForm({ tax: e.target.value })}
+              />
+            </label>
+            <button
+              type="submit"
+              className="btn-secondary md:col-span-2 xl:col-span-3"
+              disabled={!writableAccountId || quickPreviewing || quickConfirming}
+            >
+              {quickPreviewing ? '预览中...' : '预览调整'}
+            </button>
+          </form>
+          {quickPreview ? (
+            <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3 text-sm">
+              <div className="grid grid-cols-1 gap-1 text-secondary md:grid-cols-3">
+                <div>当前：{quickPreview.currentQuantity.toFixed(4)} 股</div>
+                <div>目标：{quickPreview.targetQuantity.toFixed(4)} 股</div>
+                <div>现金变化：{formatMoney(quickPreview.cashChange, quickPreview.currency)}</div>
+              </div>
+              <p className="mt-2 font-medium text-foreground">
+                {quickPreview.requiresEvent && quickPreview.side
+                  ? `${quickPreview.side === 'buy' ? '买入' : '卖出'} ${quickPreview.tradeQuantity.toFixed(4)} 股`
+                  : '当前持仓已经等于目标数量，无需写入事件。'}
+              </p>
+              <button
+                type="button"
+                className="btn-secondary mt-3 w-full"
+                onClick={() => void handleQuickConfirm()}
+                disabled={!quickPreview.requiresEvent || quickConfirming}
+              >
+                {quickConfirming ? '写入中...' : '确认写入账本'}
+              </button>
+            </div>
+          ) : null}
+          {quickMessage ? (
+            <InlineAlert
+              variant="success"
+              title="快捷持仓"
+              message={quickMessage}
+              className="mt-3 rounded-xl px-3 py-2 text-xs shadow-none"
+            />
+          ) : null}
+        </Card>
+      </section>
+
       <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
         <Card padding="md">
           <h3 className="text-sm font-semibold text-foreground mb-2">{text.drawdownMonitor}</h3>
@@ -1451,6 +1726,61 @@ const PortfolioPage: React.FC = () => {
       </section>
 
       <section className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+        <Card padding="md">
+          <h3 className="text-sm font-semibold text-foreground mb-3">股票备份与恢复</h3>
+          <div className="space-y-3">
+            <p className="text-xs text-secondary">
+              仅包含账户、交易、资金和公司行动；不包含密钥、配置、基金或派生持仓缓存。
+            </p>
+            <button
+              type="button"
+              className="btn-secondary w-full"
+              disabled={backupLoading}
+              onClick={() => void handleExportBackup()}
+            >
+              {backupLoading ? '处理中...' : '导出股票备份'}
+            </button>
+            <label className={PORTFOLIO_FILE_PICKER_CLASS}>
+              选择股票备份 JSON
+              <input
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                onChange={(event) => void handleBackupFile(event.target.files?.[0] || null)}
+              />
+            </label>
+            {backupPreview ? (
+              <div className="space-y-2 rounded-lg border border-amber-400/30 bg-amber-500/5 p-3">
+                <p className="text-sm font-medium text-foreground">
+                  将恢复 {backupPreview.incomingCounts.accounts} 个账户、
+                  {backupPreview.incomingCounts.trades} 条交易事件
+                </p>
+                <p className="text-xs text-secondary">
+                  当前 {backupPreview.currentCounts.accounts} 个账户及其正式事件将被整套替换。
+                </p>
+                {backupPreview.warnings.map((warning) => (
+                  <p key={warning} className="text-xs text-amber-200">{warning}</p>
+                ))}
+                <button
+                  type="button"
+                  className="btn-secondary w-full border-red-400/40 text-red-100 hover:bg-red-500/15"
+                  disabled={backupLoading}
+                  onClick={() => void handleRestoreBackup()}
+                >
+                  确认替换当前股票账本
+                </button>
+              </div>
+            ) : null}
+            {backupMessage ? (
+              <InlineAlert
+                variant="success"
+                message={backupMessage}
+                className="rounded-lg px-3 py-2 text-xs shadow-none"
+              />
+            ) : null}
+          </div>
+        </Card>
+
         <Card padding="md">
           <h3 className="text-sm font-semibold text-foreground mb-3">券商 CSV 导入</h3>
           <div className="space-y-2">

@@ -11,7 +11,7 @@ from datetime import datetime
 from types import SimpleNamespace
 from typing import Any, Callable, Dict, List, Optional, Set
 
-from src.config import Config, get_config
+from src.config import Config, get_config, should_send_automatic_notification
 from src.scheduler import Scheduler, normalize_schedule_times
 
 logger = logging.getLogger(__name__)
@@ -29,6 +29,7 @@ SCHEDULE_ARGS_OVERRIDE_KEYS = {
     "single_notify",
     "no_context_snapshot",
     "workers",
+    "portfolio",
 }
 
 
@@ -155,6 +156,7 @@ class RuntimeSchedulerService:
             "serve": False,
             "serve_only": True,
             "stocks": None,
+            "portfolio": None,
             "workers": None,
         }
         defaults.update(self._schedule_args_overrides)
@@ -179,7 +181,12 @@ class RuntimeSchedulerService:
 
                 runner = run_scheduled_analysis
             self._last_run_at = datetime.now().isoformat()
-            result = runner(config, self._make_schedule_args(), stock_codes)
+            schedule_args = self._make_schedule_args()
+            schedule_args.no_notify = not should_send_automatic_notification(
+                config,
+                requested=not bool(schedule_args.no_notify),
+            )
+            result = runner(config, schedule_args, stock_codes)
             if result is False:
                 raise RuntimeError("runtime scheduled analysis reported failure")
             self._last_success_at = datetime.now().isoformat()

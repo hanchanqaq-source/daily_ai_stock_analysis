@@ -1,5 +1,5 @@
 {
-  "name": "daily-stock-analysis-desktop",
+  "name": "pp02-ai-daily-stock-analysis-desktop",
   "version": "3.21.0",
   "private": true,
   "main": "main.js",
@@ -16,11 +16,12 @@
     "electron-builder": "^24.13.3"
   },
   "build": {
-    "appId": "com.daily-stock-analysis.desktop",
-    "productName": "Daily Stock Analysis",
+    "appId": "com.hanchanqaq.pp02.aidailystockanalysis",
+    "productName": "PP02 AI Daily Stock Analysis",
     "directories": {
       "output": "dist"
     },
+    "afterPack": "scripts/afterPackMacos.js",
     "files": [
       "main.js",
       "preload.js",
@@ -38,12 +39,12 @@
     ],
     "win": {
       "target": "nsis",
-      "artifactName": "daily-stock-analysis-windows-installer-v${version}.${ext}",
+      "artifactName": "pp02-ai-daily-stock-analysis-windows-installer-v${version}.${ext}",
       "publish": [
         {
           "provider": "github",
-          "owner": "ZhuLinsen",
-          "repo": "daily_stock_analysis"
+          "owner": "hanchanqaq-source",
+          "repo": "daily_ai_stock_analysis"
         }
       ]
     },
@@ -54,6 +55,8 @@
       "include": "installer.nsh"
     },
     "mac": {
+      "identity": null,
+      "hardenedRuntime": false,
       "target": "dmg"
     }
   }

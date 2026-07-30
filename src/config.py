@@ -71,6 +71,7 @@ from src.llm.hermes import (
     route_has_hermes,
 )
 from src.scheduler import normalize_schedule_times
+from src.utils.market_review_region import normalize_market_review_region_lenient
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +110,19 @@ TICKFLOW_KLINE_ADJUST_VALUES = {"none", "forward", "backward", "forward_additive
 # These are compatibility examples; actual availability should be validated by Anspire console/model entitlement.
 ANSPIRE_LLM_BASE_URL_DEFAULT = "https://open-gateway.anspire.cn/v6"
 ANSPIRE_LLM_MODEL_DEFAULT = "Doubao-Seed-2.0-lite"
+
+
+def should_send_automatic_notification(config: Any, requested: bool = True) -> bool:
+    """Return whether an automatic external notification may be delivered.
+
+    PP02 defaults the product-level switch off. The attribute fallback remains
+    True for legacy test doubles and compatibility callers that do not yet
+    expose the new field; real Config instances always define it.
+    """
+
+    return bool(requested) and bool(
+        getattr(config, "auto_notification_enabled", True)
+    )
 
 
 def _has_ntfy_topic_endpoint(value: Optional[str]) -> bool:
@@ -856,6 +870,7 @@ class Config:
     agent_decision_agent_timeout_s: float = 0
     agent_portfolio_agent_timeout_s: float = 0
     agent_skill_agent_timeout_s: float = 0
+    agent_skill_concurrency: int = 3
     agent_risk_override: bool = True  # Allow risk agent to veto buy signals
     agent_deep_research_budget: int = 30000  # Max token budget for deep research
     agent_deep_research_timeout: int = 180  # Max seconds for /research command before returning timeout
@@ -948,6 +963,9 @@ class Config:
     notification_timezone: str = ""
     notification_min_severity: str = ""
     notification_daily_digest_enabled: bool = False
+
+    # PP02 产品级自动通知总开关：默认关闭，显式启用后各发送入口才可继续判断。
+    auto_notification_enabled: bool = False
 
     # 单股推送模式：每分析完一只股票立即推送，而不是汇总后推送
     single_stock_notify: bool = False
@@ -1138,6 +1156,7 @@ class Config:
     _WEBUI_RUNTIME_ENV_FILE_PRIORITY_KEYS = frozenset(
         {
             "STOCK_LIST",
+            "AUTO_NOTIFICATION_ENABLED",
             "RUN_IMMEDIATELY",
             "SCHEDULE_ENABLED",
             "SCHEDULE_TIME",
@@ -1787,6 +1806,13 @@ class Config:
                 os.getenv('AGENT_SKILL_AGENT_TIMEOUT_S'), 0,
                 field_name='AGENT_SKILL_AGENT_TIMEOUT_S', minimum=0,
             ),
+            agent_skill_concurrency=parse_env_int(
+                os.getenv('AGENT_SKILL_CONCURRENCY'),
+                3,
+                field_name='AGENT_SKILL_CONCURRENCY',
+                minimum=1,
+                maximum=4,
+            ),
             agent_risk_override=os.getenv('AGENT_RISK_OVERRIDE', 'true').lower() == 'true',
             agent_deep_research_budget=parse_env_int(
                 os.getenv('AGENT_DEEP_RESEARCH_BUDGET'),
@@ -1897,6 +1923,14 @@ class Config:
             notification_min_severity=(os.getenv('NOTIFICATION_MIN_SEVERITY') or '').strip().lower(),
             notification_daily_digest_enabled=parse_env_bool(
                 os.getenv('NOTIFICATION_DAILY_DIGEST_ENABLED'),
+                default=False,
+            ),
+            auto_notification_enabled=parse_env_bool(
+                cls._resolve_env_value(
+                    'AUTO_NOTIFICATION_ENABLED',
+                    default='false',
+                    prefer_env_file=True,
+                ),
                 default=False,
             ),
             single_stock_notify=os.getenv('SINGLE_STOCK_NOTIFY', 'false').lower() == 'true',
@@ -2566,7 +2600,7 @@ class Config:
         raw = (value or "").strip()
         if raw and not is_supported_report_language_value(raw):
             logging.getLogger(__name__).warning(
-                "REPORT_LANGUAGE '%s' invalid, fallback to 'zh' (valid: zh/en)",
+                "REPORT_LANGUAGE '%s' invalid, fallback to 'zh' (valid: zh/en/ko)",
                 value,
             )
         return normalized
@@ -2594,23 +2628,9 @@ class Config:
     @classmethod
     def _parse_market_review_region(cls, value: str) -> str:
         """解析大盘复盘市场区域，非法值记录警告后回退为 cn"""
-        import logging
-        v = (value or 'cn').strip().lower()
-        supported_regions = ('cn', 'hk', 'us', 'jp', 'kr', 'both')
-        ordered_regions = ('cn', 'hk', 'us', 'jp', 'kr')
-
-        if v in supported_regions:
-            if v == 'both':
-                return ','.join(ordered_regions)
-            return v
-
-        if ',' in v:
-            requested = {item.strip() for item in v.split(',') if item.strip()}
-            normalized = [region for region in ordered_regions if region in requested]
-            if 'both' in requested:
-                normalized = list(ordered_regions)
-            if normalized:
-                return ','.join(normalized)
+        normalized = normalize_market_review_region_lenient(value)
+        if normalized is not None:
+            return normalized
 
         logging.getLogger(__name__).warning(
             f"MARKET_REVIEW_REGION 配置值 '{value}' 无效，已回退为默认值 'cn'（合法值：cn / hk / us / jp / kr / both；支持逗号分隔有效值）"

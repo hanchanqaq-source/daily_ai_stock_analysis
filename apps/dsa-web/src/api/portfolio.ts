@@ -5,6 +5,10 @@ import type {
   PortfolioAccountItem,
   PortfolioAccountCreateRequest,
   PortfolioAccountListResponse,
+  PortfolioBackupDocument,
+  PortfolioBackupExportResponse,
+  PortfolioBackupPreviewResponse,
+  PortfolioBackupRestoreResponse,
   PortfolioCashLedgerCreateRequest,
   PortfolioCashLedgerListResponse,
   PortfolioCorporateActionCreateRequest,
@@ -17,6 +21,10 @@ import type {
   PortfolioImportCommitResponse,
   PortfolioImportParseResponse,
   PortfolioPositionAnalysisRequest,
+  PortfolioQuickPositionConfirmRequest,
+  PortfolioQuickPositionConfirmResponse,
+  PortfolioQuickPositionPreviewRequest,
+  PortfolioQuickPositionPreviewResponse,
   PortfolioRiskResponse,
   PortfolioSnapshotResponse,
   PortfolioTradeCreateRequest,
@@ -56,6 +64,21 @@ type CorporateListQuery = EventQuery & {
   symbol?: string;
   actionType?: 'cash_dividend' | 'split_adjustment';
 };
+
+function toSnakeCaseKeys(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => toSnakeCaseKeys(item));
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, item]) => [
+        key.replace(/[A-Z]/g, (letter) => '_' + letter.toLowerCase()),
+        toSnakeCaseKeys(item),
+      ]),
+    );
+  }
+  return value;
+}
 
 function buildSnapshotParams(query: SnapshotQuery): Record<string, string | number> {
   const params: Record<string, string | number> = {};
@@ -134,6 +157,50 @@ export const portfolioApi = {
       params: buildSnapshotParams(query),
     });
     return toCamelCase<PortfolioSnapshotResponse>(response.data);
+  },
+
+  async previewPositionAdjustment(
+    payload: PortfolioQuickPositionPreviewRequest,
+  ): Promise<PortfolioQuickPositionPreviewResponse> {
+    const response = await apiClient.post<Record<string, unknown>>(
+      '/api/v1/portfolio/positions/quick-adjust/preview',
+      {
+        account_id: payload.accountId,
+        symbol: payload.symbol,
+        target_quantity: payload.targetQuantity,
+        trade_date: payload.tradeDate,
+        price: payload.price,
+        fee: payload.fee ?? 0,
+        tax: payload.tax ?? 0,
+        market: payload.market,
+        currency: payload.currency,
+        note: payload.note,
+      },
+    );
+    return toCamelCase<PortfolioQuickPositionPreviewResponse>(response.data);
+  },
+
+  async confirmPositionAdjustment(
+    payload: PortfolioQuickPositionConfirmRequest,
+  ): Promise<PortfolioQuickPositionConfirmResponse> {
+    const response = await apiClient.post<Record<string, unknown>>(
+      '/api/v1/portfolio/positions/quick-adjust/confirm',
+      {
+        account_id: payload.accountId,
+        symbol: payload.symbol,
+        target_quantity: payload.targetQuantity,
+        trade_date: payload.tradeDate,
+        price: payload.price,
+        fee: payload.fee ?? 0,
+        tax: payload.tax ?? 0,
+        market: payload.market,
+        currency: payload.currency,
+        note: payload.note,
+        preview_uid: payload.previewUid,
+        expected_current_quantity: payload.expectedCurrentQuantity,
+      },
+    );
+    return toCamelCase<PortfolioQuickPositionConfirmResponse>(response.data);
   },
 
   async analyzePosition(symbol: string, payload: PortfolioPositionAnalysisRequest = {}): Promise<TaskAccepted> {
@@ -286,4 +353,36 @@ export const portfolioApi = {
     });
     return toCamelCase<PortfolioImportCommitResponse>(response.data);
   },
+  async exportBackup(): Promise<PortfolioBackupExportResponse> {
+    const response = await apiClient.get<Record<string, unknown>>('/api/v1/portfolio/backup/export');
+    const disposition = String(response.headers['content-disposition'] || '');
+    const match = disposition.match(/filename="?([^";]+)"?/i);
+    return {
+      fileName: match?.[1] || 'pp02-stock-portfolio-backup.json',
+      backup: toCamelCase<PortfolioBackupDocument>(response.data),
+    };
+  },
+
+  async previewBackup(backup: PortfolioBackupDocument): Promise<PortfolioBackupPreviewResponse> {
+    const response = await apiClient.post<Record<string, unknown>>(
+      '/api/v1/portfolio/backup/preview',
+      toSnakeCaseKeys(backup),
+    );
+    return toCamelCase<PortfolioBackupPreviewResponse>(response.data);
+  },
+
+  async restoreBackup(payload: {
+    backup: PortfolioBackupDocument;
+    previewToken: string;
+  }): Promise<PortfolioBackupRestoreResponse> {
+    const response = await apiClient.post<Record<string, unknown>>(
+      '/api/v1/portfolio/backup/restore',
+      {
+        backup: toSnakeCaseKeys(payload.backup),
+        preview_token: payload.previewToken,
+      },
+    );
+    return toCamelCase<PortfolioBackupRestoreResponse>(response.data);
+  },
+
 };

@@ -1,5 +1,12 @@
 # PP02 当前阻塞
 
+当前状态和当前 Active Blocker 以
+[`../_ai-dev/PROJECT_STATUS.md`](../_ai-dev/PROJECT_STATUS.md) 为唯一真源。下列
+`WORK-001` 项目均为追加式历史记录；其解除证据完整保留，不因本次
+`WORK-PP02-CLOUD-REBUILD-001` 启动而回退。当前 R3.4 实现 Head 已通过完整
+Draft PR CI，没有活动阻塞；本文件继续保留 Actions 额度阻塞及其解除证据。
+Windows 实机与真实数据是明确未执行的授权外验收项，不回写成当前代码阻塞。
+
 ## WORK-001-BLOCKER-001｜远端完整历史尚未导入
 
 | 项目 | 当前事实 |
@@ -73,3 +80,16 @@
 | 正式处理 | 用户已授权从最新 `main` 创建正式修复分支，永久加入同一最小权限并同步 Work 1 台账 |
 | 当前状态 | 已解除；正式 PR #2 的 CI 运行 `29986024984` 成功，并已按用户授权合并到 `main` |
 | 解除证据 | PR #2 已合并为 `a6bdfb55827080e196c2103292aaedfadc224dc7`；`main` 已包含 `contents: read` 与 `pull-requests: read`；仅剩 Windows 实机验收 |
+
+## WORK-PP02-CLOUD-REBUILD-001-BLOCKER-001｜私有仓库 Actions 分钟耗尽
+
+| 项目 | 当前事实 |
+| --- | --- |
+| 发现日期 | 2026-07-30 |
+| 影响步骤 | R3.4 GREEN Head 完整 CI |
+| 现象 | Run `30516696130` 的首发 Job 零 Step、零日志立即失败，依赖 Job 全部跳过 |
+| 根因 | 账户私有仓库 2000 分钟免费 Actions 额度已全部使用 |
+| 风险 | 反复空 Commit 或重跑无法验证产品，并会混淆平台失败与代码失败 |
+| 解除方法 | 完成公开前历史/分支/PR/配置/日志安全审计；用户授权后将 PP02 改为 Public |
+| 解除证据 | 公开库标准 Runner 成功运行；最终实现 Head Run `30519559480` 为 8/8 success |
+| 当前状态 | 已解除；仓库公开不构成 Ready、合并、Release 或真实数据授权 |

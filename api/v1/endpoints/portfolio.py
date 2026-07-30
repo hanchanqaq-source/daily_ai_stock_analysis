@@ -18,6 +18,10 @@ from api.v1.schemas.portfolio import (
     PortfolioAccountItem,
     PortfolioAccountListResponse,
     PortfolioAccountUpdateRequest,
+    PortfolioBackupDocument,
+    PortfolioBackupPreviewResponse,
+    PortfolioBackupRestoreRequest,
+    PortfolioBackupRestoreResponse,
     PortfolioCashLedgerListResponse,
     PortfolioCashLedgerCreateRequest,
     PortfolioCorporateActionListResponse,
@@ -30,12 +34,21 @@ from api.v1.schemas.portfolio import (
     PortfolioImportParseResponse,
     PortfolioImportTradeItem,
     PortfolioPositionAnalysisRequest,
+    PortfolioQuickPositionConfirmRequest,
+    PortfolioQuickPositionConfirmResponse,
+    PortfolioQuickPositionPreviewRequest,
+    PortfolioQuickPositionPreviewResponse,
     PortfolioRiskResponse,
     PortfolioSnapshotResponse,
     PortfolioTradeListResponse,
     PortfolioTradeCreateRequest,
 )
 from src.services.task_queue import get_task_queue
+from src.services.portfolio_backup_service import (
+    PortfolioBackupConflictError,
+    PortfolioBackupService,
+    PortfolioBackupValidationError,
+)
 from src.services.portfolio_import_service import PortfolioImportService
 from src.services.portfolio_risk_service import PortfolioRiskService
 from src.services.portfolio_service import (
@@ -71,6 +84,82 @@ def _serialize_import_record(item: dict) -> PortfolioImportTradeItem:
     else:
         payload["trade_date"] = str(trade_date)
     return PortfolioImportTradeItem(**payload)
+
+
+def _schema_dict(value: object) -> dict:
+    if hasattr(value, "model_dump"):
+        return value.model_dump()
+    return value.dict()
+
+
+@router.get(
+    "/backup/export",
+    response_model=PortfolioBackupDocument,
+    responses={500: {"model": ErrorResponse}},
+    summary="Export the versioned PP02 stock portfolio backup",
+)
+def export_portfolio_backup() -> JSONResponse:
+    try:
+        backup = PortfolioBackupService().export_backup()
+        compact_time = (
+            str(backup["metadata"]["created_at"])
+            .replace("-", "")
+            .replace(":", "")
+        )
+        filename = "pp02-stock-portfolio-backup-" + compact_time + ".json"
+        return JSONResponse(
+            content=backup,
+            headers={"Content-Disposition": 'attachment; filename="' + filename + '"'},
+        )
+    except Exception as exc:
+        raise _internal_error("Export portfolio backup failed", exc)
+
+
+@router.post(
+    "/backup/preview",
+    response_model=PortfolioBackupPreviewResponse,
+    responses={400: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
+    summary="Validate and preview replacement from a PP02 portfolio backup",
+)
+def preview_portfolio_backup(
+    request: PortfolioBackupDocument,
+) -> PortfolioBackupPreviewResponse:
+    try:
+        data = PortfolioBackupService().preview_restore(_schema_dict(request))
+        return PortfolioBackupPreviewResponse(**data)
+    except PortfolioBackupValidationError as exc:
+        raise _bad_request(exc)
+    except Exception as exc:
+        raise _internal_error("Preview portfolio backup failed", exc)
+
+
+@router.post(
+    "/backup/restore",
+    response_model=PortfolioBackupRestoreResponse,
+    responses={
+        400: {"model": ErrorResponse},
+        409: {"model": ErrorResponse},
+        500: {"model": ErrorResponse},
+    },
+    summary="Atomically replace the official ledger from a previewed backup",
+)
+def restore_portfolio_backup(
+    request: PortfolioBackupRestoreRequest,
+) -> PortfolioBackupRestoreResponse:
+    try:
+        data = PortfolioBackupService().restore_backup(
+            _schema_dict(request.backup),
+            preview_token=request.preview_token,
+        )
+        return PortfolioBackupRestoreResponse(**data)
+    except PortfolioBackupValidationError as exc:
+        raise _bad_request(exc)
+    except PortfolioBackupConflictError as exc:
+        raise _conflict_error(error="backup_conflict", message=str(exc))
+    except PortfolioBusyError as exc:
+        raise _conflict_error(error="portfolio_busy", message=str(exc))
+    except Exception as exc:
+        raise _internal_error("Restore portfolio backup failed", exc)
 
 
 @router.post(
@@ -439,6 +528,74 @@ def get_snapshot(
         raise _bad_request(exc)
     except Exception as exc:
         raise _internal_error("Get snapshot failed", exc)
+
+
+@router.post(
+    "/positions/quick-adjust/preview",
+    response_model=PortfolioQuickPositionPreviewResponse,
+    responses={400: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
+    summary="Preview a target position adjustment without writing",
+)
+def preview_position_adjustment(
+    request: PortfolioQuickPositionPreviewRequest,
+) -> PortfolioQuickPositionPreviewResponse:
+    service = PortfolioService()
+    try:
+        data = service.preview_position_adjustment(
+            account_id=request.account_id,
+            symbol=request.symbol,
+            target_quantity=request.target_quantity,
+            trade_date=request.trade_date,
+            price=request.price,
+            fee=request.fee,
+            tax=request.tax,
+            market=request.market,
+            currency=request.currency,
+            note=request.note,
+        )
+        return PortfolioQuickPositionPreviewResponse(**data)
+    except ValueError as exc:
+        raise _bad_request(exc)
+    except Exception as exc:
+        raise _internal_error("Preview position adjustment failed", exc)
+
+
+@router.post(
+    "/positions/quick-adjust/confirm",
+    response_model=PortfolioQuickPositionConfirmResponse,
+    responses={400: {"model": ErrorResponse}, 409: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
+    summary="Confirm a target position adjustment as one official trade event",
+)
+def confirm_position_adjustment(
+    request: PortfolioQuickPositionConfirmRequest,
+) -> PortfolioQuickPositionConfirmResponse:
+    service = PortfolioService()
+    try:
+        data = service.confirm_position_adjustment(
+            account_id=request.account_id,
+            symbol=request.symbol,
+            target_quantity=request.target_quantity,
+            trade_date=request.trade_date,
+            price=request.price,
+            fee=request.fee,
+            tax=request.tax,
+            market=request.market,
+            currency=request.currency,
+            note=request.note,
+            preview_uid=request.preview_uid,
+            expected_current_quantity=request.expected_current_quantity,
+        )
+        return PortfolioQuickPositionConfirmResponse(**data)
+    except PortfolioBusyError as exc:
+        raise _conflict_error(error="portfolio_busy", message=str(exc))
+    except PortfolioOversellError as exc:
+        raise _conflict_error(error="portfolio_oversell", message=str(exc))
+    except PortfolioConflictError as exc:
+        raise _conflict_error(error="conflict", message=str(exc))
+    except ValueError as exc:
+        raise _bad_request(exc)
+    except Exception as exc:
+        raise _internal_error("Confirm position adjustment failed", exc)
 
 
 @router.post(

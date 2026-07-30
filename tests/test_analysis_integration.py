@@ -80,7 +80,8 @@ class TestAnalysisIntegration:
         assert kwargs["report_type"] == "detailed"
         assert kwargs["analysis_phase"] == "auto"
         assert kwargs["force_refresh"] is False
-        assert kwargs["notify"] is True
+        # PP02 keeps automatic external delivery off until the product-level switch is enabled.
+        assert kwargs["notify"] is False
 
     def test_trigger_analysis_batch_deduplication(self, client, mock_task_queue):
         """Test de-duplication across different formats (600519 and 600519.SH)."""

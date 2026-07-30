@@ -10,9 +10,32 @@
 | WORK-001-AUTH-002 | 2026-07-23 | 授权正式修复 `main` 的 CI 权限并更新 Work 1 台账；创建 Draft PR，CI 通过后等待用户确认是否合并 | 验证 PR #1 已证明缺少 `pull-requests: read` 是唯一权限根因，最小只读修复可使完整 CI 成功 | Work 1.6；允许正式分支、提交、推送和 Draft PR，不包含合并或 Release |
 
 | WORK-001-AUTH-003 | 2026-07-23 | 授权将 PR #2 转为 Ready 并合并到 `main`；合并后复核 `main` 并更新最终进度，不发布 Release | 正式 CI 权限修复已通过完整 CI，需要完成合并与台账收口 | Work 1.6；已合并为 `a6bdfb55827080e196c2103292aaedfadc224dc7`，Release 未发布 |
+| WORK-PP02-CLOUD-REBUILD-001-DECISION-001 | 2026-07-26 | Work 1 的 v3.27.0 管理底座作为历史保留；当前 R0 从官方 `v3.28.0` 固定提交重建，并叠加 P000/P001 V1.5.6 控制层 | 消除旧基线、旧状态真源和空白模板覆盖风险，同时保持官方业务树完整 | 当前 Work 只执行 R0；R1–R7 不启动 |
+| WORK-PP02-CLOUD-REBUILD-001-AUTH-001 | 2026-07-26 | 授权在同一 Work 内恢复性重建，并通过已连接的 GitHub App/Git Data API 创建原子 Commit、独立分支、Draft PR、检查真实 CI 和修复范围内问题 | 已验证候选未持久化，需要先建立可恢复的远程检查点再运行完整验证 | 不含 Ready、合并、改写 `main`、Release、真实数据或重复设备认证 |
+| WORK-PP02-CLOUD-REBUILD-001-AUTH-002 | 2026-07-30 | 授权对 PP02 做公开前只读安全审计，审计通过后把仓库从 Private 改为 Public 并继续 R3.4 CI | 私有仓库 2000 分钟免费 Actions 额度已耗尽；公开库标准 Runner 可继续验证 | 公开代码、分支、PR 和 Actions 历史；不包含 Ready、合并、Release、真实数据或密钥 |
 
 ## 记录规则
 
-- 新功能或范围变化先执行三选一，用户选择后再追加一行。
+- 新功能或范围变化先执行 Plan Challenge Gate，用户选择后再追加一行。
 - 授权记录必须写清目标、范围和未包含事项。
 - 技术实现细节不作为范围决策；重要故障与解除条件写入 `OPEN_BLOCKERS.md`。
+
+## 2026-07-29｜R1 单用户裁决与 R2 迁移排序
+
+- 用户取消本地用户切换/多档案需求，PP02 保持官方单用户模式。
+- 用户档案、当前用户持久化、按用户隔离历史和用户级备份恢复全部改为不迁移。
+- 官方组合事件账本固定为持仓唯一事实源。
+- Windows 验收改为 Deferred，后续从固定 PR Head 新建隔离目录。
+- 用户要求继续当前 Work1，不创建新聊天或新 Work；“下一步”连续完成 R2 并进入 R3.1。
+- PR #3 保持 Draft，不转 Ready、不合并、不发布 Release。
+
+
+## 2026-07-29｜统一执行端自动路由 v1.1 与 R3.2
+
+- 用户发布 `PP02-AUTO-ROUTER-001 v1.1`，替代旧路由记录，但不回退已完成阶段。
+- 当前 Work 在已批准范围内自动路由普通开发、测试、非默认分支 Commit、
+  Draft PR 更新和 CI 修复；用户无需选择 Work、Codex 或 GitHub App。
+- 用户发送“继续流程”，同一 Work1 自动进入 R3.2；业务范围仍以
+  `R2_MIGRATION_EXECUTION_PLAN.md` 为准。
+- Ready、合并、Release、默认分支、真实数据、本机重要文件、大型依赖、
+  付费服务和范围扩大仍须单独授权。
