@@ -6,18 +6,18 @@
 PROJECT_ID=PP02
 PROJECT_NAME=AI 每日股票分析
 CHAT_ROLE=WORK
-WORK_ID=WORK-PP02-CLOUD-REBUILD-001
+WORK_ID=WORK-002
 ROLE_LOCK=TRUE
 APPLICATION_BASE_VERSION=3.28.0
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-CURRENT_STAGE=R3.5 / Judge
-CURRENT_WORK=应用内手动周期报告与下周参考展望
-ACTIVE_GOAL=验证R3.5文档收口Head完整CI并完成Judge回传
-CURRENT_STATUS=R3_5_IMPLEMENTATION_CI_PASSED_FINAL_HEAD_CI_PENDING
+CURRENT_STAGE=R3.6 / R5 Windows Basic Validation Rework
+CURRENT_WORK=Windows 便携安全更新
+ACTIVE_GOAL=修复Draft PR #7冻结后端基础启动失败并生成新候选
+CURRENT_STATUS=R5_WINDOWS_BASIC_VALIDATION_FAILED — REWORK_REQUIRED — DRAFT_HOLD
 ACTIVE_BLOCKER=NONE
-NEXT_ACTION=验证R3.5文档收口Head完整CI；成功后停止并回传总控
-AUTHORIZATION_REQUIRED=FALSE_FOR_R3_5_BUILD_TEST_CI; READY/MERGE/MAIN/RELEASE/REAL_DATA_REQUIRE_NEW_AUTHORIZATION
+NEXT_ACTION=完成fake-useragent冻结收集与真实启动门修复，更新PR #7并等待新Head完整CI/Artifact
+AUTHORIZATION_REQUIRED=FALSE_FOR_R3_6_BUILD_TEST_COMMIT_DRAFT_PR_CI; READY/MERGE/MAIN/RELEASE/REAL_DATA_REQUIRE_NEW_AUTHORIZATION
 LAST_UPDATED=2026-07-30
 ```
 
@@ -157,3 +157,32 @@ LAST_UPDATED=2026-07-30
   模型、通知渠道或自动入口。
 
 `R3_5_IMPLEMENTATION_CI_PASSED_FINAL_HEAD_CI_PENDING`
+
+## 2026-07-30 Work2 / R3.6 接管
+
+`WORK_ID=WORK-002`；`CURRENT_STAGE=R3.6 / Build-Test-Publish-CI`；`ACTIVE_GOAL=Windows 便携安全更新`。Work1 已永久关闭，PR #3 已合并，R3.1–R3.5 已进入 `main`。本轮基线 `0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9`，独立分支 `agent/pp02-work2-r3-6-windows-portable-update`，只创建独立 Draft PR。Windows R5 真机验收、Ready、合并、Tag、Release 和真实数据继续禁止。
+
+## 2026-07-30 Work2 / R3.6 Review 修复（历史，已由 PR #6 取代）
+
+- 当时 Draft PR：`#5`；实际分支：`codex`。该 PR 现已关闭并标记为 superseded。
+- 上一 Head：`e5cdb70`；CI Run `30543513470` 为 8/8 success，但 Work2 Judge 发现更新事务与真实运行行为阻断，不能据此判定通过。
+- 先前 `PUBLISH_BLOCKED` 仅保留为历史说明，当前不再是 Active Blocker。
+- 历史动作：收敛助手资源、下载重定向/超时、停止后备份、完整回滚、动态端口握手、严格便携身份和真实行为测试；成果后由 PR #6 接管。
+
+## 2026-07-30 Work2 / R3.6 最终收口
+
+- 活动 Draft PR：`#6`；分支：`codex-xbl3c5`；Base：`main@0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9`。
+- 已验证 Head：`71404954407a9a3a6362a398465fc822b1351c72`；CI Run `30547333980` 为 8/8 success。
+- PR #5 已关闭并由 PR #6 取代，只保留为 superseded 历史。
+- 当前 Judge：`IMPLEMENTATION PASS — R5 WINDOWS VALIDATION REQUIRED`；`DRAFT_HOLD`。
+- 本轮只为 Windows CI 增加已验证便携候选 artifact，不修改便携更新业务行为、不升版本、不创建 Tag 或 Release。
+
+
+## 2026-07-30 PR #7｜R5 Windows 基础启动失败与返工
+
+- 活动 Draft PR：`#7`；验收失败 Head `d489a795b6089575a1fd61a27c9b28e2f3cb1b03`；CI Run `30564032072` 为 8/8 success。
+- 失败 Artifact SHA-256：`203e41a35e2cd081a20640f514c9de417bd507cbd9b8a2f097a4d0bed36cda1a`；不得继续用于回滚模拟。
+- Windows 11 隔离目录中 Electron loading shell 可启动，但冻结后端因缺少 `fake_useragent.data` / 浏览器数据立即崩溃，健康端点持续 `ECONNREFUSED`。
+- 根因：依赖无上限、PyInstaller 未收集 `fake_useragent` 全部数据/子模块、冻结探针未实际加载 UserAgent 数据或 efinance 链、候选上传前未真实启动冻结后端。
+- 修复范围：`fake-useragent>=1.4.0,<3.0.0`（当前 CI 同代环境实测 2.2.0）、Windows/macOS `--collect-all fake_useragent`、真实运行时探针，以及 Windows 动态端口健康/主页/进程树启动门。
+- 当前结论：`R5_WINDOWS_BASIC_VALIDATION_FAILED — REWORK_REQUIRED — DRAFT_HOLD`。新 Head 完整 CI 和 Head-bound Artifact 通过前不得重进 R5。

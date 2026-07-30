@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 > For user-friendly release highlights, see the [GitHub Releases](https://github.com/ZhuLinsen/daily_stock_analysis/releases) page.
 
 ## [Unreleased]
+- [修复] 补齐 fake-useragent 冻结资源与真实 Windows 后端启动门，阻止不可启动的便携候选上传
+- [新功能] 为 PP02 Windows 便携 ZIP 增加用户触发、完整校验、事务切换和失败回滚的安全更新链路
+- [改进] 统一 Windows CI 与正式 Release 的便携清单、ZIP 和 SHA-256 资产准备及复验流程
+
 - [chore] 将桌面端身份、更新源和发布产物切换为 PP02 专用仓库与 ASCII 技术名称，并让 CI 阻断执行 Desktop 单元测试。
 - [改进] PP02 默认关闭自动通知，并用统一总开关约束股票分析、市场复盘、Web/API、运行时调度与告警发送。
 - [改进] GitHub Actions 每日分析改为仅支持人工触发，移除默认 cron 定时入口。

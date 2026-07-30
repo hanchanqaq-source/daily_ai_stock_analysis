@@ -134,3 +134,16 @@
 - 当前只待 Judge 文档收口后的最终 Head CI；PR #3 保持 Draft。
 - Windows 实机、真实历史/数据库、模型调用、定时器和自动推送均未执行；
   R3.6 只能由总控审核 R3.5 后另行下发。
+
+## 2026-07-30 Work2 / R3.6 新交接
+
+Work1 已永久关闭，旧“PR #3 保持 Draft”只在合并前有效；PR #3 现已合并。R3.1–R3.5 已进入 main。Work2 在 `0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9` 上以独立分支和独立 Draft PR 实现 Windows 便携安全更新。云端最高 Judge 为 `IMPLEMENTATION PASS — R5 WINDOWS VALIDATION REQUIRED`，不得自行进入 R3.7。
+
+## 2026-07-30 R3.6 最终交接
+
+当前唯一活动项为 Draft PR `#6`，分支 `codex-xbl3c5`，Base `main@0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9`。Head `71404954407a9a3a6362a398465fc822b1351c72` 的 CI Run `30547333980` 已 8/8 success。旧 PR #5 已关闭并标记为 superseded。Judge 为 `IMPLEMENTATION PASS — R5 WINDOWS VALIDATION REQUIRED`，继续 `DRAFT_HOLD`；下一步只能是验证本次 artifact 收口的新 Head CI，并等待 R5 Windows 实机验收授权，不得进入 R3.7。
+
+
+## 2026-07-30 PR #7 R5 失败交接
+
+PR #7 Head `d489a795b6089575a1fd61a27c9b28e2f3cb1b03` / Run `30564032072` 虽为 8/8 success，但 Windows 11 隔离验收中冻结后端因 `fake_useragent.data` 和浏览器数据未进入 PyInstaller 产物而立即崩溃。失败 Artifact SHA-256 `203e41a35e2cd081a20640f514c9de417bd507cbd9b8a2f097a4d0bed36cda1a` 已作废。当前只修复同一 Draft PR #7：双平台收集 `fake_useragent`、真实 UserAgent/efinance 探针、Windows 动态端口冻结 EXE 启动门。新 Head CI 与 Head-bound Artifact 完成前状态为 `R5_WINDOWS_BASIC_VALIDATION_FAILED — REWORK_REQUIRED — DRAFT_HOLD`。

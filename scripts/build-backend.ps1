@@ -137,7 +137,8 @@ $pyInstallerArgs = @(
   '--collect-data', 'tiktoken',
   '--collect-data', 'akshare',
   '--collect-all', 'alphasift',
-  '--collect-all', 'futu'
+  '--collect-all', 'futu',
+  '--collect-all', 'fake_useragent'
 )
 $pyInstallerArgs += $hiddenImportArgs
 $pyInstallerArgs += 'main.py'
@@ -175,6 +176,29 @@ try {
     $env:DSA_PACKAGED_IMPORT_PROBE = $previousProbe
   }
 }
+
+Write-Host 'Verifying packaged fake-useragent data and efinance import chain...'
+$previousFakeUserAgentProbe = $env:DSA_PACKAGED_FAKE_USERAGENT_PROBE
+try {
+  $env:DSA_PACKAGED_FAKE_USERAGENT_PROBE = '1'
+  $fakeUserAgentProbe = Start-Process -FilePath $packagedEntry -Wait -PassThru
+  if ($fakeUserAgentProbe.ExitCode -ne 0) {
+    throw "Packaged backend cannot load fake-useragent data; probe exited with code $($fakeUserAgentProbe.ExitCode)."
+  }
+  Remove-Item Env:DSA_PACKAGED_FAKE_USERAGENT_PROBE -ErrorAction SilentlyContinue
+  $env:DSA_PACKAGED_IMPORT_PROBE = 'data_provider.efinance_fetcher'
+  $efinanceProbe = Start-Process -FilePath $packagedEntry -Wait -PassThru
+  if ($efinanceProbe.ExitCode -ne 0) {
+    throw "Packaged backend cannot import data_provider.efinance_fetcher; probe exited with code $($efinanceProbe.ExitCode)."
+  }
+} finally {
+  Remove-Item Env:DSA_PACKAGED_IMPORT_PROBE -ErrorAction SilentlyContinue
+  if ($null -eq $previousFakeUserAgentProbe) { Remove-Item Env:DSA_PACKAGED_FAKE_USERAGENT_PROBE -ErrorAction SilentlyContinue } else { $env:DSA_PACKAGED_FAKE_USERAGENT_PROBE = $previousFakeUserAgentProbe }
+}
+
+Write-Host 'Verifying frozen backend startup and HTTP endpoints...'
+& powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${PSScriptRoot}\verify-frozen-backend.ps1" -PackagedEntry $packagedEntry
+if ($LASTEXITCODE -ne 0) { throw "Frozen backend startup verification failed with exit code $LASTEXITCODE." }
 
 Write-Host 'Verifying packaged AkShare calendar data...'
 $packagedAkshareCalendar = Join-Path 'dist\backend\stock_analysis' '_internal\akshare\file_fold\calendar.json'

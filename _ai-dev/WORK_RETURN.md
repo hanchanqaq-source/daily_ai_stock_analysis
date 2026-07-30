@@ -219,3 +219,39 @@ R3.4 功能、事务边界、排除范围和实现 Head 完整 CI 已通过；�
 R3.5 功能、事实源、手动边界、快照追溯和实现 Head 完整 CI 已通过；最终外部
 回传仍要求本次文档收口 Head 自身 8/8。PR #3 保持 Draft，未执行 Ready、合并、
 Release、`main`、真实数据、AI 调用、定时器或自动推送。
+
+## WORK-002 / R3.6 执行回传（待最终 CI）
+
+- 身份：Work2；Work1 CLOSED；PR #3 MERGED_AND_CLOSED。
+- 起点：`0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9`。
+- 发布分支：`agent/pp02-work2-r3-6-windows-portable-update`；新 Draft PR 编号和最终 CI 待发布后回填。
+- 范围：便携身份、Release 资产、下载、ZIP/清单校验、事务计划、隐藏 PowerShell 助手、Desktop/Web 状态、Windows 候选与正式资产流程。
+- Judge 上限：`IMPLEMENTATION PASS — R5 WINDOWS VALIDATION REQUIRED`；`DRAFT_HOLD`。
+
+### 发布结果
+
+`PUBLISH_BLOCKED`（历史状态，现已解除）：本地 Commit `df3cee8` 已完成，且已通过 `make_pr` 准备 Draft PR 标题和完整正文；但容器没有 GitHub App 写入工具，本地 HTTPS push 又被网络代理以 `CONNECT tunnel failed, response 403` 拒绝，因此没有实际远程分支、PR 编号或 CI Run。不得把该状态表述为已发布或 CI 已通过。
+
+
+## PR #5 Judge 阻断修复（历史，已关闭并由 PR #6 取代）
+
+- 实际分支：`codex`；上一 Head `e5cdb70`；CI Run `30543513470` 为 8/8 success。
+- CI 成功不覆盖 Judge 阻断；该 PR 当时用于修复助手资源、受控重定向、事务顺序、完整回滚、动态端口握手、严格身份和行为测试。
+- PR #5 已关闭并标记为 superseded；当前唯一活动项为下方 PR #6。
+
+## PR #6 最终收口
+
+- 唯一活动 Draft PR：`#6`；分支 `codex-xbl3c5`；Base `main@0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9`。
+- 已验证 Head `71404954407a9a3a6362a398465fc822b1351c72`；CI Run `30547333980` 为 8/8 success。
+- PR #5 已关闭，状态为 superseded，仅保留历史。
+- 本轮仅增加 Windows CI 已验证便携 ZIP/SHA 候选 artifact，保留 14 天；它不是 GitHub Release。
+- Judge：`IMPLEMENTATION PASS — R5 WINDOWS VALIDATION REQUIRED`；`DRAFT_HOLD`。
+
+
+## PR #7 R5 Windows 基础启动失败
+
+- 候选：Head `d489a795b6089575a1fd61a27c9b28e2f3cb1b03`；Run `30564032072` 8/8 success；Artifact SHA-256 `203e41a35e2cd081a20640f514c9de417bd507cbd9b8a2f097a4d0bed36cda1a`。
+- 实机结果：Electron loading shell 启动，冻结后端因 `ModuleNotFoundError: fake_useragent.data` / 浏览器数据解析失败退出，`/api/health` 为 `ECONNREFUSED`。
+- 根因：PyInstaller 收集缺口、依赖上限缺失、探针只做静态导入、Artifact 上传前没有真实服务启动门。
+- 旧候选已作废；新 Head 完整 CI 和新 Head-bound Artifact 前不得用于回滚模拟或重进 R5。
+- Judge：`R5_WINDOWS_BASIC_VALIDATION_FAILED — REWORK_REQUIRED — DRAFT_HOLD`。
