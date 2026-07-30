@@ -159,14 +159,14 @@ marker="${candidate}.removed"
 case "$1" in
   -d)
     if [[ -f "${marker}" ]] || [[ "${candidate}" == *"unsigned.bin" ]]; then
-      printf 'code object is not signed at all\n' >&2
+      printf 'code object is not signed at all\\n' >&2
       exit 1
     fi
-    printf 'Authority=adhoc\n' >&2
+    printf 'Authority=adhoc\\n' >&2
     ;;
   --verify)
     if [[ "${candidate}" == *"broken.bin" ]] && [[ ! -f "${marker}" ]]; then
-      printf 'broken signature\n' >&2
+      printf 'broken signature\\n' >&2
       exit 1
     fi
     ;;
