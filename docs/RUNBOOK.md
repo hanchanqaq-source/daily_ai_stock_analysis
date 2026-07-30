@@ -160,13 +160,22 @@ Work 1 只允许出现获批的项目管理和文档差异；若出现 `src/`、
 ## 8. 安全恢复
 
 - 先记录当前分支、HEAD、状态和错误信息，再决定恢复方法。
+- 同步核对 `_ai-dev/PROJECT_STATUS.md` 与 `_ai-dev/AI_HANDOFF.md` 中的
+  `CURRENT_WORK`、`LAST_VALID_COMMIT`、`LAST_SUCCESSFUL_TEST`、
+  `ACTIVE_BLOCKER` 和 `NEXT_ACTION`。
+- 恢复判断顺序固定为：真实项目文件 → Git 实际状态 → 实际测试结果 →
+  GitHub CI → `_ai-dev/PROJECT_STATUS.md` → 聊天描述。
+- 从 `LAST_VALID_COMMIT` 继续，只重跑受影响的验证；不得因工具异常默认重跑整个
+  Work，也不得让用户承担命令、分支或构建恢复。
+- 无法恢复时记录失败位置、已保存状态、恢复条件和备用路线；Blocker 未解除或
+  `SCOPE_DRIFT_BLOCKED` 未清除前，不进入下一 Work。
 - 不使用 `git reset --hard`、整目录清空或覆盖真实数据。
 - 未提交改动与用户文件不明确时暂停并询问。
 - 远端底座导入失败时保留失败证据，重新从已核验 Tag 建立，不用文件快照冒充历史。
 
 ## 9. 云端受限环境注意事项
 
-- 若工作区不允许写入用户级缓存，把 pip/npm 缓存放到任务专用临时目录，不修改官方依赖清单。
+- 若工作区不允许写入用户级缓存，把 pip/npm 缓存放到任务专用临时目录，不修改官方依赖清单。当前 npm 需使用大写 `NPM_CONFIG_CACHE`；只运行 Node 单测且 Electron 下载目录不可写时可使用 `npm ci --ignore-scripts`，但该方式不能作为 Electron 打包通过的证据。
 - 若工作区会改写 Git 中的符号链接，应从准确提交树导出到临时目录后执行治理和 Web 构建检查，不能把工作区伪差异提交到仓库。
 - 通过 Git Data API 发布管理文件时，必须逐个比较本地 `git hash-object` 与远端 Blob SHA。大型未改文件不得经过受输出上限影响的文本转发；应直接复用官方基线 Blob，避免截断。
 - LiteLLM 无法在线刷新模型价格表时会回退到随包本地副本；这不阻塞无密钥的 Work 1 启动检查，但需要保留告警记录。
