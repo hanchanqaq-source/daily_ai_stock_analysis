@@ -416,6 +416,64 @@ class PeriodOutlookPersistenceTestCase(unittest.TestCase):
             )
             session.commit()
 
+    @staticmethod
+    def _snapshot_payload() -> dict[str, Any]:
+        return {
+            "snapshot_version": 1,
+            "status": "insufficient_data",
+            "message": INSUFFICIENT_OUTLOOK_MESSAGE,
+            "target_period": {
+                "start_date": "2026-08-03",
+                "end_date": "2026-08-09",
+            },
+            "generated_at": "2026-07-30T12:00:00",
+            "overall_tendency": None,
+            "stocks": [],
+            "etfs": [],
+            "market_signals": [],
+            "data_as_of": None,
+            "source_record_count": 0,
+            "source_record_ids": [],
+            "disclaimer": OUTLOOK_DISCLAIMER,
+        }
+
+    def test_outlook_snapshot_stays_queryable_but_not_in_official_stock_bar(self) -> None:
+        snapshot_id = self.db.save_period_outlook_snapshot(
+            query_id="period-outlook-stock-bar",
+            snapshot=self._snapshot_payload(),
+            created_at=datetime(2026, 7, 30, 7, 0),
+        )
+
+        traceable = HistoryService(self.db).get_history_list(
+            report_type=PERIOD_OUTLOOK_REPORT_TYPE,
+            page=1,
+            limit=10,
+        )
+        stock_bar_records = self.db.get_distinct_stocks_from_history(limit=10)
+
+        self.assertEqual([item["id"] for item in traceable["items"]], [snapshot_id])
+        self.assertEqual(stock_bar_records, [])
+
+    def test_outlook_snapshot_is_never_a_backtest_candidate(self) -> None:
+        from src.repositories.backtest_repo import BacktestRepository
+
+        snapshot_id = self.db.save_period_outlook_snapshot(
+            query_id="period-outlook-backtest",
+            snapshot=self._snapshot_payload(),
+            created_at=datetime(2024, 1, 1, 7, 0),
+        )
+
+        candidates = BacktestRepository(self.db).get_candidates(
+            code=None,
+            min_age_days=0,
+            limit=10,
+            eval_window_days=3,
+            engine_version="period-report-test",
+            force=True,
+        )
+
+        self.assertNotIn(snapshot_id, [row.id for row in candidates])
+
     def test_next_week_saves_traceable_snapshot_in_analysis_history(self) -> None:
         self._seed_analysis(
             record_id=101,

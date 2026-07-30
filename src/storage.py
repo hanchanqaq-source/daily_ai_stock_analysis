@@ -2574,6 +2574,15 @@ class DatabaseManager(metaclass=_DatabaseManagerMeta):
                     func.max(AnalysisHistory.id).label("max_id"),
                 )
             )
+            subq = subq.where(
+                and_(
+                    AnalysisHistory.code != "PERIOD",
+                    or_(
+                        AnalysisHistory.report_type.is_(None),
+                        AnalysisHistory.report_type != "period_outlook",
+                    ),
+                )
+            )
             if start_date:
                 subq = subq.where(
                     AnalysisHistory.created_at >= datetime.combine(start_date, datetime.min.time())

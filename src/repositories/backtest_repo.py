@@ -22,6 +22,11 @@ from src.storage import BacktestResult, BacktestSummary, DatabaseManager, Analys
 logger = logging.getLogger(__name__)
 
 MARKET_REVIEW_REPORT_TYPE = "market_review"
+PERIOD_OUTLOOK_REPORT_TYPE = "period_outlook"
+NON_BACKTEST_REPORT_TYPES = (
+    MARKET_REVIEW_REPORT_TYPE,
+    PERIOD_OUTLOOK_REPORT_TYPE,
+)
 BacktestResultContextRow = Tuple[
     BacktestResult,
     Optional[str],
@@ -61,7 +66,7 @@ class BacktestRepository:
             conditions.append(
                 or_(
                     AnalysisHistory.report_type.is_(None),
-                    AnalysisHistory.report_type != MARKET_REVIEW_REPORT_TYPE,
+                    AnalysisHistory.report_type.not_in(NON_BACKTEST_REPORT_TYPES),
                 )
             )
 
@@ -107,7 +112,7 @@ class BacktestRepository:
                 BacktestResult.engine_version == engine_version,
                 or_(
                     AnalysisHistory.report_type.is_(None),
-                    AnalysisHistory.report_type != MARKET_REVIEW_REPORT_TYPE,
+                    AnalysisHistory.report_type.not_in(NON_BACKTEST_REPORT_TYPES),
                 ),
             ]
             if code:
