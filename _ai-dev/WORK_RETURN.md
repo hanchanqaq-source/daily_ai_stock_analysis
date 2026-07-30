@@ -272,6 +272,12 @@ Release、`main`、真实数据、AI 调用、定时器或自动推送。
 - 当前 Blocker：无。
 - 工具恢复：当前环境没有 `gh`，已从同一检查点切换到已连接 GitHub App /
   Git Data API；未重跑整个 Work，未要求用户安装工具或重新认证。
+- 发布异常：首次 Git Data Commit `d846af7c…` 的超长 `docs/CHANGELOG.md`
+  被终端输出上限截断；远端/本地逐文件比较确认其余 11 个文件一致。
+- 已保存状态：PR #4 为 Draft；有效恢复点仍是 `main@0f9afe8b…`，不把异常
+  Commit 当作通过证据。
+- 恢复条件：从 `main` 直接读取完整 Changelog 生成修复 Blob，追加 Commit 后
+  重新执行远端树一致性和新 Head CI。
 - Judge：`PENDING`；只有本地检查和新 Draft PR CI 与状态文件一致后才能通过。
 
 ### 新增五项验收

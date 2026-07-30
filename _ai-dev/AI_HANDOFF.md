@@ -12,8 +12,8 @@ WORK_ID=WORK-002
 CURRENT_WORK=R3.6 Windows便携更新
 LAST_VALID_COMMIT=0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9
 LAST_SUCCESSFUL_TEST=GOVERNANCE_DIFF_CHECK_AI_ASSETS_SCOPE_AND_STATUS_CONSISTENCY_PASS_2026_07_30
-ACTIVE_BLOCKER=NONE
-NEXT_ACTION=完成PP02五项治理硬门验证并发布到R3.6独立分支；随后继续方案A施工
+ACTIVE_BLOCKER=REMOTE_CHANGELOG_TRUNCATION_RECOVERY_IN_PROGRESS
+NEXT_ACTION=恢复PR4分支中的完整CHANGELOG并确认远端树一致；之后重新检查CI
 ```
 
 - Work1 官方稳定版干净底座已完成并永久锁定。
@@ -30,7 +30,11 @@ NEXT_ACTION=完成PP02五项治理硬门验证并发布到R3.6独立分支；随
   `IMPLEMENTATION PASS — R5 WINDOWS VALIDATION REQUIRED`。
 - Ready、Merge、修改 `main`、Tag、Release、真实数据、密钥和付费服务均未授权。
 - 当前环境没有 `gh`；已确认使用已连接 GitHub App / Git Data API 作为恢复路线，
-  不安装工具、不发起设备登录，`ACTIVE_BLOCKER` 仍为 `NONE`。
+  不安装工具、不发起设备登录。
+- 首次发布 Commit `d846af7c…` 的 `docs/CHANGELOG.md` 因终端输出上限被截断；
+  其余 11 个文件已确认与本地一致。该 Commit 不是有效恢复点。
+- 正在从 `main` 的完整 GitHub 文件内容直接生成修复 Blob；修复、远端树核对和
+  新 Head CI 完成前，不进入 R3.6 业务施工。
 
 ## 工具异常恢复
 
