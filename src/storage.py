@@ -2199,6 +2199,52 @@ class DatabaseManager(metaclass=_DatabaseManagerMeta):
             logger.error(f"保存分析历史失败: {e}")
             return 0
 
+    def save_period_outlook_snapshot(
+        self,
+        *,
+        query_id: str,
+        snapshot: Dict[str, Any],
+        created_at: datetime,
+    ) -> int:
+        """Persist a manual next-week outlook in the formal analysis history."""
+        target_period = snapshot.get("target_period")
+        target_period = target_period if isinstance(target_period, dict) else {}
+        overall_tendency = snapshot.get("overall_tendency")
+        summary = snapshot.get("message") or (
+            f"下周展望 {target_period.get('start_date', '')} 至 "
+            f"{target_period.get('end_date', '')}"
+        )
+
+        def _write(session: Session) -> int:
+            history = AnalysisHistory(
+                query_id=query_id,
+                code="PERIOD",
+                name="下周展望",
+                report_type="period_outlook",
+                sentiment_score=None,
+                operation_advice="仅供参考",
+                trend_prediction=overall_tendency,
+                analysis_summary=summary,
+                raw_result=self._safe_json_dumps(
+                    {
+                        "snapshot_version": snapshot.get("snapshot_version"),
+                        "overall_tendency": overall_tendency,
+                        "source_record_ids": snapshot.get("source_record_ids") or [],
+                    }
+                ),
+                news_content=None,
+                context_snapshot=self._safe_json_dumps(snapshot),
+                created_at=created_at,
+            )
+            session.add(history)
+            session.flush()
+            return int(history.id or 0)
+
+        return self._run_write_transaction(
+            f"save_period_outlook_snapshot[{query_id}]",
+            _write,
+        )
+
     def update_analysis_history_diagnostics(
         self,
         *,
