@@ -148,3 +148,7 @@ Judge、阻塞、`SCOPE_DRIFT`、超授权检查和下一决定。
 - Web 阻断套件：`55/55 passed`；Lint 与 Production Build 成功。
 - 未新增 AI 调用、定时器、自动通知、事实表、基金或多用户功能。
 - 当前只待本次 Judge 文档收口 Head 的完整 CI；成功后 R3.5 一次性回传总控。
+
+## WORK-002｜R3.6 Windows 便携安全更新
+
+Work1 已永久关闭；Work2 从已合并 PR #3 的 main 基线 `0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9` 接管 R3.6，继承而不重做 R3.1–R3.5。批准方案为复用旧 Portable-M2 安全思想并按 PP02 当前边界重建。允许独立分支 Commit、Draft PR 和 CI 修复；禁止 Ready、合并、Tag、Release、真实数据和进入 R3.7。Plan Challenge：0 个问题，通过。

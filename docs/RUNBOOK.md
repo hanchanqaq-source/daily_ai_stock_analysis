@@ -171,3 +171,7 @@ Work 1 只允许出现获批的项目管理和文档差异；若出现 `src/`、
 - 通过 Git Data API 发布管理文件时，必须逐个比较本地 `git hash-object` 与远端 Blob SHA。大型未改文件不得经过受输出上限影响的文本转发；应直接复用官方基线 Blob，避免截断。
 - LiteLLM 无法在线刷新模型价格表时会回退到随包本地副本；这不阻塞无密钥的 Work 1 启动检查，但需要保留告警记录。
 - 未配置 `STOCK_LIST`、模型密钥和通知渠道时，只验证服务启动、健康接口与静态 Web 页面；不得声称已完成真实股票分析验收。
+
+## R3.6 便携更新排障
+
+便携更新失败时不要删除 `.pp02-update-backup`。先保留更新计划、恢复元数据和本地日志，再确认当前根目录的 `.env`、SQLite DB/WAL/SHM 以及 `pp02-portable-release.json`。云端 CI 只能验证 Windows 候选构建，R5 必须在固定 PR Head 的全新 Windows 隔离目录执行。
