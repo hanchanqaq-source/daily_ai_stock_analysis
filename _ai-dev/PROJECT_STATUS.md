@@ -13,15 +13,15 @@ ROLE_LOCK=TRUE
 APPLICATION_BASE_VERSION=3.28.0
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-work2-r3.6
-CURRENT_STAGE=Work2 / R3.6 / Governance Reconciliation / Build
+CURRENT_STAGE=Work2 / R3.6 / Judge
 CURRENT_WORK=R3.6 Windows便携更新
-ACTIVE_GOAL=在Draft PR #7内合入已批准治理硬门并使状态与Git和CI一致；完成后等待R5 Windows实机验收授权
-CURRENT_STATUS=R3_6_IMPLEMENTATION_PASS_GOVERNANCE_RECONCILIATION_IN_PROGRESS; DRAFT_HOLD
-LAST_VALID_COMMIT=7104bbc5b1f5a1c6ed9863f87472014c72eb79e8
-LAST_SUCCESSFUL_TEST=PR7_HEAD_7104BBC5_CI_RUN_30552446534_SUCCESS_8_OF_8
+ACTIVE_GOAL=保持Draft PR #7并等待R5 Windows实机升级与回滚验收精确授权；不得进入R3.7
+CURRENT_STATUS=WORK2_R3_6_IMPLEMENTATION_JUDGED — R5_WINDOWS_VALIDATION_REQUIRED — DRAFT_HOLD
+LAST_VALID_COMMIT=f39cc552c60a1e8e5014e8640cbd7a9a7d2c6d5a
+LAST_SUCCESSFUL_TEST=PR7_HEAD_F39CC552_CI_RUN_30561670644_SUCCESS_8_OF_8
 ACTIVE_BLOCKER=NONE
-NEXT_ACTION=完成PR7治理归并、本地验证、最终Head CI和Judge；之后停在R5 Windows实机验收授权门
-AUTHORIZATION_REQUIRED=FALSE_FOR_APPROVED_R3_6_BRANCH_COMMIT_DRAFT_PR_AND_CI; READY/MERGE/MAIN/RELEASE/REAL_DATA_REQUIRE_NEW_AUTHORIZATION
+NEXT_ACTION=等待R5 Windows实机验收精确授权；不得进入R3.7
+AUTHORIZATION_REQUIRED=TRUE_FOR_R5_WINDOWS_REAL_DEVICE_VALIDATION_READY_MERGE_MAIN_RELEASE_REAL_DATA; PR7_REMAINS_DRAFT
 LAST_UPDATED=2026-07-30
 ```
 
@@ -35,12 +35,12 @@ LAST_UPDATED=2026-07-30
   Run `30526590693` 为 8/8 success。
 - R3.6 当前唯一活动项为 Draft PR `#7`，分支 `codex-4z7ady`；实际当前 Head
   始终以 GitHub PR 为准，不在提交内自引用。
-- 最后有效 R3.6 实现检查点为
-  `7104bbc5b1f5a1c6ed9863f87472014c72eb79e8`，Run `30552446534`
+- 最后有效 R3.6 实现与治理检查点为
+  `f39cc552c60a1e8e5014e8640cbd7a9a7d2c6d5a`，Run `30561670644`
   为 8/8 success。
 - 治理硬门来源为 Draft PR `#4` / Head
-  `9c136a4662f7ed817deb63019b3c106fe73cface`，本轮将其提交历史归并到 PR #7；
-  PR #4 在 PR #7 最终 Head CI 通过前保持未合并。
+  `9c136a4662f7ed817deb63019b3c106fe73cface`；等价治理内容已逐文件归并到 PR #7，
+  PR #4 已关闭且未合并。
 - 治理恢复检查点
   `6ab647a7c2c2dca90c3a0c1626f270860073b443` 的 Run `30540208702` 成功。
 - 状态/Judge 收口检查点 `d45bdfadf22cf7beb5e1f6777490091ed5cac438`
@@ -76,6 +76,8 @@ LAST_UPDATED=2026-07-30
 - 本地 `git diff` 在超长文件比较时发生段错误，已改用逐文件 Blob SHA 作为备用
   验证；`python scripts/check_ai_assets.py` 与 `git diff --check` 同时通过。
 - Blocker 已解除；没有重跑整个 Work，没有让用户安装 `gh` 或重新认证。
+- PR #7 发布时，GitHub App 的引用更新接口无法移动 Codex 分支；已从既存分支
+  逐文件提交 13 个已核验 Blob，最终 Head `f39cc552…` 与本地目标内容一致。
 
 ## R1/R2 当前裁决
 
