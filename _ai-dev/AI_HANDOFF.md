@@ -10,20 +10,20 @@
 TOP_LEVEL_WORK=WORK2
 WORK_ID=WORK-002
 CURRENT_WORK=R3.6 Windows便携更新
-LAST_VALID_COMMIT=7104bbc5b1f5a1c6ed9863f87472014c72eb79e8
-LAST_SUCCESSFUL_TEST=PR7_HEAD_7104BBC5_CI_RUN_30552446534_SUCCESS_8_OF_8
+LAST_VALID_COMMIT=f39cc552c60a1e8e5014e8640cbd7a9a7d2c6d5a
+LAST_SUCCESSFUL_TEST=PR7_HEAD_F39CC552_CI_RUN_30561670644_SUCCESS_8_OF_8
 ACTIVE_BLOCKER=NONE
-NEXT_ACTION=完成PR7治理归并、本地验证、最终Head CI和Judge；之后停在R5 Windows实机验收授权门
+NEXT_ACTION=等待R5 Windows实机验收精确授权；不得进入R3.7
 ```
 
 - Work1 官方稳定版干净底座已完成并永久锁定。
 - PR #3 已合并到 `main@0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9`；
   下方“PR #3 保持 Draft”和“R3.5 最终 Head CI 待通过”均为旧检查点。
 - R3.1–R3.5 已完成；R3.5 最终 Head Run `30526590693` 为 8/8 success。
-- 当前唯一活动项：Draft PR `#7` / 分支 `codex-4z7ady`；PR #6 已关闭，
-  PR #4 只作为待归并的治理来源。
-- 当前治理归并只修改现有规则、状态、任务、交接、回传、路线和变更历史；
-  不修改已通过 CI 的 R3.6 业务代码，不进入 R3.7。
+- 当前唯一活动项：Draft PR `#7` / 分支 `codex-4z7ady`；PR #4、PR #6 已关闭
+  且未合并，只保留为治理来源与历史证据。
+- 治理归并只修改现有规则、状态、任务、交接、回传、路线和变更历史；没有修改
+  已通过 CI 的 R3.6 业务代码，也没有进入 R3.7。
 - R3.6 接收已批准方案 A；不重新选 A/B/C，不重做 R3.1–R3.5。
 - Windows 实机仍属于 R5；云端 Judge 不得超过
   `IMPLEMENTATION PASS — R5 WINDOWS VALIDATION REQUIRED`。
@@ -35,9 +35,9 @@ NEXT_ACTION=完成PR7治理归并、本地验证、最终Head CI和Judge；之�
   `6ab647a7…` 已恢复完整文件，12 个 Blob SHA 与本地一致。
 - Run `30540208702` 已成功；Backend `5005 passed`，Docker 与 AI Governance
   通过。状态/Judge 收口 Commit `d45bdfad…` 的 Run `30540784009` 也成功。
-  PR #7 实现检查点 `7104bbc5…` 的 Run `30552446534` 为 8/8 success；
-  实际 PR Head 以 GitHub 为准。当前只完成治理归并、最终 CI 与 Judge，
-  不得进入 R3.7。
+  PR #7 实现与治理检查点 `f39cc552…` 的 Run `30561670644` 为 8/8 success；
+  实际 PR Head 以 GitHub 为准。当前已完成治理归并、最终 CI 与 Judge，
+  下一步只允许在精确授权后进入 R5 Windows 实机验收，不得进入 R3.7。
 
 ## 工具异常恢复
 
@@ -194,12 +194,12 @@ Work1 已永久关闭，旧“PR #3 保持 Draft”只在合并前有效；PR #3
 
 - 唯一活动项：Draft PR `#7` / `codex-4z7ady`；Base
   `main@0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9`。
-- 实现检查点 `7104bbc5b1f5a1c6ed9863f87472014c72eb79e8` 的 CI Run
-  `30552446534` 为 8/8 success；本地 Desktop 基线 `60/60 passed`。
+- 实现与治理检查点 `f39cc552c60a1e8e5014e8640cbd7a9a7d2c6d5a`
+  的 CI Run `30561670644` 为 8/8 success；本地 Desktop 基线 `60/60 passed`。
 - PR #7 已生成 Windows 便携 ZIP/SHA 临时候选，但包内版本仍为 `3.21.0`；
   可用于候选打包、校验和启动路径验证，不能单独证明从当前版本升级成功。
-- 当前动作只把 PR #4 的治理提交归并进 PR #7，并纠正 PR #6 遗留状态；
-  PR #7 最终 Head CI 通过后关闭 PR #4。
+- PR #4 的等价治理内容已归并进 PR #7，PR #6 遗留状态已纠正；PR #4 已关闭
+  且未合并。
 - Judge 上限保持
   `IMPLEMENTATION PASS — R5 WINDOWS VALIDATION REQUIRED`；继续 `DRAFT_HOLD`，
   不转 Ready、不合并、不发布、不进入 R3.7。
