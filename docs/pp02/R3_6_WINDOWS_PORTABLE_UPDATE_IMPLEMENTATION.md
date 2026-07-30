@@ -33,7 +33,7 @@ Release 和 Windows CI 复用 `scripts/prepare-portable-release.js`：从干净 
 
 ## PR #7 当前收口与 CI 候选
 
-唯一活动项为 Draft PR `#7` / `codex-4z7ady`，Base `main@0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9`。实现检查点 `7104bbc5b1f5a1c6ed9863f87472014c72eb79e8` 的 CI Run `30552446534` 已 8/8 success；PR #5、PR #6 已关闭，治理 PR #4 的提交历史正归并到 PR #7。
+唯一活动项为 Draft PR `#7` / `codex-4z7ady`，Base `main@0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9`。实现与治理检查点 `f39cc552c60a1e8e5014e8640cbd7a9a7d2c6d5a` 的 CI Run `30561670644` 已 8/8 success；PR #4、PR #5、PR #6 已关闭且未合并，PR #4 的等价治理内容已进入 PR #7。
 
 Windows CI 在 ZIP 与 SHA 完整验证后上传以 PR Head SHA 命名的临时候选 artifact，包含精确的便携 ZIP 和 `.zip.sha256`，保留 14 天且缺失即失败。该 artifact 只服务于后续 R5 Windows 验收，不是 GitHub Release，不改变版本、Tag 或发布状态。
 
