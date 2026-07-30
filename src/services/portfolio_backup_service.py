@@ -109,15 +109,26 @@ class PortfolioBackupService:
     def _counts(portfolio: Dict[str, Any]) -> Dict[str, int]:
         return {key: len(portfolio[key]) for key in COUNT_KEYS}
 
-    @staticmethod
-    def _digest(value: Dict[str, Any]) -> str:
+    @classmethod
+    def _digest(cls, value: Dict[str, Any]) -> str:
         raw = json.dumps(
             value,
             ensure_ascii=False,
             sort_keys=True,
             separators=(",", ":"),
+            default=cls._json_default,
         ).encode("utf-8")
         return hashlib.sha256(raw).hexdigest()
+
+    @classmethod
+    def _json_default(cls, value: Any) -> Any:
+        if isinstance(value, datetime):
+            return cls._datetime_text(value)
+        if isinstance(value, date):
+            return value.isoformat()
+        raise TypeError(
+            f"Object of type {type(value).__name__} is not JSON serializable"
+        )
 
     def _read_portfolio(self, session: Any) -> Dict[str, Any]:
         accounts = session.execute(
