@@ -28,6 +28,8 @@ const {
   createAccount,
   deleteAccount,
   analyzePosition,
+  previewPositionAdjustment,
+  confirmPositionAdjustment,
   listDecisionSignals,
   getLatestDecisionSignals,
 } = vi.hoisted(() => ({
@@ -50,6 +52,8 @@ const {
   createAccount: vi.fn(),
   deleteAccount: vi.fn(),
   analyzePosition: vi.fn(),
+  previewPositionAdjustment: vi.fn(),
+  confirmPositionAdjustment: vi.fn(),
   listDecisionSignals: vi.fn(),
   getLatestDecisionSignals: vi.fn(),
 }));
@@ -82,6 +86,8 @@ vi.mock('../../api/portfolio', () => ({
     createAccount,
     deleteAccount,
     analyzePosition,
+    previewPositionAdjustment,
+    confirmPositionAdjustment,
   },
 }));
 
@@ -326,6 +332,43 @@ describe('PortfolioPage FX refresh', () => {
     });
     createAccount.mockResolvedValue({ id: 1 });
     deleteAccount.mockResolvedValue({ deleted: 1 });
+    previewPositionAdjustment.mockResolvedValue({
+      previewUid: 'quick-preview-1',
+      accountId: 1,
+      symbol: '600519',
+      market: 'cn',
+      currency: 'CNY',
+      tradeDate: '2026-03-19',
+      currentQuantity: 10,
+      targetQuantity: 15,
+      deltaQuantity: 5,
+      side: 'buy',
+      tradeQuantity: 5,
+      price: 90,
+      fee: 1,
+      tax: 0,
+      cashChange: -451,
+      requiresEvent: true,
+    });
+    confirmPositionAdjustment.mockResolvedValue({
+      previewUid: 'quick-preview-1',
+      accountId: 1,
+      symbol: '600519',
+      market: 'cn',
+      currency: 'CNY',
+      tradeDate: '2026-03-19',
+      currentQuantity: 10,
+      targetQuantity: 15,
+      deltaQuantity: 5,
+      side: 'buy',
+      tradeQuantity: 5,
+      price: 90,
+      fee: 1,
+      tax: 0,
+      cashChange: -451,
+      requiresEvent: true,
+      tradeId: 88,
+    });
     analyzePosition.mockResolvedValue({
       taskId: 'task-portfolio-1',
       traceId: 'task-portfolio-1',
@@ -1109,4 +1152,59 @@ describe('PortfolioPage FX refresh', () => {
     await waitFor(() => expect(screen.queryByText('Main (#1)')).not.toBeInTheDocument());
     expect(screen.getByRole('option', { name: 'Alt (#2)' })).toBeInTheDocument();
   });
+
+  it('previews a quick position adjustment and writes only after explicit confirmation', async () => {
+    getSnapshot.mockImplementation(async ({ accountId }: { accountId?: number } = {}) => makeSnapshot({
+      accountId,
+      fxStale: false,
+      positions: [makePosition({ quantity: 10 })],
+    }));
+
+    render(<PortfolioPage />);
+    await waitForInitialLoad();
+
+    fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: '1' } });
+    await waitFor(() => expect(getSnapshot).toHaveBeenLastCalledWith({
+      accountId: 1,
+      costMethod: 'fifo',
+      includeRealtime: false,
+    }));
+
+    fireEvent.change(screen.getByLabelText('快捷持仓股票代码'), { target: { value: '600519' } });
+    fireEvent.change(screen.getByLabelText('目标持仓数量'), { target: { value: '15' } });
+    fireEvent.change(screen.getByLabelText('快捷持仓成交日期'), { target: { value: '2026-03-19' } });
+    fireEvent.change(screen.getByLabelText('快捷持仓参考成交价'), { target: { value: '90' } });
+    fireEvent.change(screen.getByLabelText('快捷持仓手续费'), { target: { value: '1' } });
+
+    fireEvent.click(screen.getByRole('button', { name: '预览调整' }));
+
+    await waitFor(() => expect(previewPositionAdjustment).toHaveBeenCalledWith({
+      accountId: 1,
+      symbol: '600519',
+      targetQuantity: 15,
+      tradeDate: '2026-03-19',
+      price: 90,
+      fee: 1,
+      tax: 0,
+    }));
+    expect(confirmPositionAdjustment).not.toHaveBeenCalled();
+    expect(screen.getByText('买入 5.0000 股')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '确认写入账本' }));
+
+    await waitFor(() => expect(confirmPositionAdjustment).toHaveBeenCalledWith({
+      accountId: 1,
+      symbol: '600519',
+      targetQuantity: 15,
+      tradeDate: '2026-03-19',
+      price: 90,
+      fee: 1,
+      tax: 0,
+      previewUid: 'quick-preview-1',
+      expectedCurrentQuantity: 10,
+    }));
+    expect(createTrade).not.toHaveBeenCalled();
+    expect(await screen.findByText('快捷持仓已写入官方交易账本。')).toBeInTheDocument();
+  });
+
 });
