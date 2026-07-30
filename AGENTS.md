@@ -92,6 +92,58 @@
 - 本规则只调整未完成路线和未来 Work；R0 及其他已验收历史不得回退或重做。
   旧版路由规则保留历史记录，并标记为由 v1.1 替代。
 
+### 0.7 五项核心治理硬门（PP02-GOVERNANCE-GATE-001）
+
+本节只强化现有 PP02 控制层，不改变官方 `v3.28.0` 业务底座，不创建平行状态、
+路线、验证系统或辅助主项目。
+
+#### 连续执行与用户规则 Judge 门
+
+- 一次指令默认完成一个完整可验收大段；普通分析、修改、测试、范围内修复、文档
+  和状态更新连续执行，不按文件或微步骤反复要求用户发送“下一步”。
+- Work 收口时自动同步 `_ai-dev/PROJECT_STATUS.md`、`_ai-dev/AI_HANDOFF.md` 和
+  `_ai-dev/WORK_RETURN.md`。交付优先使用完整文件或完整复制块。
+- 只有 Publish Changes、Commit、Push、PR、Merge、Release、真实数据迁移、API、
+  密钥、付费服务、明显范围变化或无法自行解除的真实 Blocker 才暂停；已有精确
+  授权覆盖的普通分支 Commit、Draft PR 更新和范围内 CI 修复不重复确认。
+- 每个 Work 开始和 Judge 前必须核对：完整大段、减少重复确认、中文白话、英文
+  界面同时标注中文含义、技术操作优先由 Codex 完成、真实进度、完整交付、默认
+  用户不是程序员。任一项违反且未纠正时，Judge 不得完全通过。
+
+#### 工具异常恢复门
+
+- `_ai-dev/PROJECT_STATUS.md` 与 `_ai-dev/AI_HANDOFF.md` 必须记录
+  `CURRENT_WORK`、`LAST_VALID_COMMIT`、`LAST_SUCCESSFUL_TEST`、
+  `ACTIVE_BLOCKER` 和 `NEXT_ACTION`。
+- Codex、云端任务、GitHub 或构建异常时，先核对真实 Git 与测试状态，从最后有效
+  检查点继续；不得默认重跑整个 Work，也不得把技术恢复转交给用户。
+- 无法恢复时必须说明失败位置、已保存状态、恢复条件和备用路线；Blocker 未解除
+  前不得进入下一 Work。
+
+#### Work 边界与范围漂移门
+
+- `_ai-dev/WORK_TASK.md` 必须明确 `ACTIVE_GOAL`、允许做、禁止做、验收标准和
+  授权门。当前 Work 外的新需求只进入 Backlog，不提前塞入当前 Work。
+- 已完成 Work 永久锁定；后续修正必须追加变更原因和影响，不倒改完成历史。
+- 辅助工具与测试不得变成新的主项目。检测到范围漂移时设置
+  `SCOPE_DRIFT_BLOCKED`，纠正前 Judge 不得通过。
+
+#### 唯一状态真源与证据优先级
+
+- 项目唯一当前状态真源固定为 `_ai-dev/PROJECT_STATUS.md`；禁止创建
+  `00_PROJECT_STATUS.md`、版本副本或其他平行状态文件。
+- Work 开始、Plan 确认、Build 完成、Test 完成或失败、CI 结果、Blocker 出现或
+  解除、Judge、授权门、Work 收口和交接时，都要同步当前状态。
+- 状态冲突按以下顺序裁决：真实项目文件 → Git 实际状态 → 实际测试结果 →
+  GitHub CI → `_ai-dev/PROJECT_STATUS.md` → 聊天描述。聊天不得覆盖可验证事实。
+
+#### 长任务可见进度与新增 Judge 项
+
+- 较长任务必须显示 `Plan → Build → Test → CI → Judge`，并说明当前正在做什么、
+  当前 Blocker 和是否需要用户操作；不得声称在回复结束后仍会后台继续执行。
+- Judge 还必须确认：用户未承担不必要的人工中转、用户规则全部执行、工具异常有
+  恢复检查点、Work 未串段或跑偏、`PROJECT_STATUS` 与 Git/测试/CI 一致。
+
 <!-- END PP02 PROJECT CONTROL OVERLAY -->
 ## 1. 硬规则
 
