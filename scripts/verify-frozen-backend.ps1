@@ -43,7 +43,7 @@ try {
     if ($health -and $home -and [int]$health.StatusCode -eq 200 -and [int]$home.StatusCode -eq 200) { $healthy = $true; break }
     Start-Sleep -Milliseconds 500
   } while ((Get-Date) -lt $deadline)
-  if (-not $healthy) { throw "Frozen backend HTTP probes failed on dynamic port $port: health=$healthDiagnostic; home=$homeDiagnostic.`n$(Get-Content -LiteralPath $stderr -Raw -ErrorAction SilentlyContinue)" }
+  if (-not $healthy) { throw "Frozen backend HTTP probes failed on dynamic port ${port}: health=$healthDiagnostic; home=$homeDiagnostic.`n$(Get-Content -LiteralPath $stderr -Raw -ErrorAction SilentlyContinue)" }
   Write-Host "Frozen backend smoke passed on dynamic port $port."
 } finally {
   if ($process -and -not $process.HasExited) { & taskkill.exe /PID $process.Id /T /F | Out-Null; try { Wait-Process -Id $process.Id -Timeout 15 -ErrorAction SilentlyContinue } catch {} }
