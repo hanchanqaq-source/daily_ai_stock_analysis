@@ -72,9 +72,9 @@
 
 - Request and user value：把已通过的治理硬门合入当前唯一活动 PR #7，消除 PR #6、
   PR #4 与 PR #7 的现行状态冲突，避免 Work2 越界。
-- Evidence state：Confirmed；PR #7 Head `7104bbc5…` 的 Run `30552446534`
-  为 8/8 success，PR #4 Head `9c136a46…` 为独立治理分支。
+- Evidence state：Confirmed；PR #7 实现与治理检查点 `f39cc552…` 的 Run
+  `30561670644` 为 8/8 success，PR #4 Head `9c136a46…` 已关闭且未合并。
 - Scope：只归并治理提交、解决四个台账冲突、更新现有状态与验证证据。
 - Exclusions：不改便携更新业务逻辑、NSIS、版本、Release、真实数据或 R3.7。
-- Acceptance：本地治理与 Desktop 测试、PR #7 最终 Head CI、Draft 状态和
-  `_ai-dev/PROJECT_STATUS.md` 一致；通过后关闭被取代的 PR #4。
+- Acceptance：本地治理与 Desktop `60/60`、PR #7 检查点 8/8 CI、Draft 状态和
+  `_ai-dev/PROJECT_STATUS.md` 一致；被取代的 PR #4 已关闭且未合并。
