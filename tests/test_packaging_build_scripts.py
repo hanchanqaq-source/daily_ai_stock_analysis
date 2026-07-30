@@ -62,7 +62,8 @@ def test_windows_backend_collects_and_exercises_fake_useragent_runtime() -> None
     assert "Get-FreeTcpPort" in verifier
     assert "[string]$PackagedEntry" in verifier
     assert "/api/health" in verifier
-    assert "Invoke-WebRequest" in verifier
+    assert "HttpClient" in verifier
+    assert "Add-Type -AssemblyName System.Net.Http" in verifier
     assert "taskkill.exe" in verifier
     assert 'os.getenv("GITHUB_ACTIONS") != "true"' in main_py
     assert "'GITHUB_ACTIONS','PYTHONUTF8','PYTHONIOENCODING'" in verifier
@@ -72,7 +73,12 @@ def test_windows_backend_collects_and_exercises_fake_useragent_runtime() -> None
     assert "foreach ($name in $saved.Keys)" in verifier
     assert "SetEnvironmentVariable($name, $saved[$name], 'Process')" in verifier
     assert "if (-not $healthy)" in verifier
-    assert "$health.StatusCode -eq 200 -and $home.StatusCode -eq 200" in verifier
+    assert "[int]$health.StatusCode -eq 200 -and [int]$home.StatusCode -eq 200" in verifier
+    assert "UseProxy = $false" in verifier
+    assert "$healthDiagnostic" in verifier
+    assert "$homeDiagnostic" in verifier
+    assert "health=$healthDiagnostic" in verifier
+    assert "home=$homeDiagnostic" in verifier
 
 
 def test_macos_backend_build_script_collects_alphasift_adapter() -> None:
@@ -153,14 +159,14 @@ marker="${candidate}.removed"
 case "$1" in
   -d)
     if [[ -f "${marker}" ]] || [[ "${candidate}" == *"unsigned.bin" ]]; then
-      printf 'code object is not signed at all\\n' >&2
+      printf 'code object is not signed at all\n' >&2
       exit 1
     fi
-    printf 'Authority=adhoc\\n' >&2
+    printf 'Authority=adhoc\n' >&2
     ;;
   --verify)
     if [[ "${candidate}" == *"broken.bin" ]] && [[ ! -f "${marker}" ]]; then
-      printf 'broken signature\\n' >&2
+      printf 'broken signature\n' >&2
       exit 1
     fi
     ;;
