@@ -34,3 +34,7 @@
 - Draft 不表示 Ready、可合并、可替换 `main` 或可发布 Release。
 - R4 只能使用空库、fixture 或脱敏副本；R6 正式数据必须单独授权。
 - R5 Windows 验收只从固定 PR Head 新建隔离目录，不恢复或复用已消失的旧目录。
+
+## Work2 / R3.6 Windows 便携安全更新（2026-07-30）
+
+Work1 已永久关闭；PR #3 已合并且 R3.1–R3.5 已进入 main。Work2 从 `0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9` 以独立分支和独立 Draft PR 接管 R3.6。实现范围与证据见 `docs/pp02/R3_6_WINDOWS_PORTABLE_UPDATE_IMPLEMENTATION.md`。R5 Windows 真机验收仍为后续授权门，本轮不进入 R3.7。

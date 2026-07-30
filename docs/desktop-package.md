@@ -347,3 +347,7 @@ Windows 分发现在有两种方式：
 1. 解压文件夹
 2. 编辑 `.env` 配置 API Key 和股票列表
 3. 双击 `PP02 AI Daily Stock Analysis.exe` 启动
+
+## PP02 Windows 便携安全更新（R3.6）
+
+Windows NSIS 安装版仍由 `electron-updater` 自动下载，并由用户确认重启安装。PP02 便携版必须在包根目录带有 `pp02-portable-release.json`；启动时仅检查元数据，用户点击“安全更新”后才下载和校验。详细安全契约、清单字段、回滚与验证边界见 [`pp02/R3_6_WINDOWS_PORTABLE_UPDATE_IMPLEMENTATION.md`](pp02/R3_6_WINDOWS_PORTABLE_UPDATE_IMPLEMENTATION.md)。便携资产为 `pp02-ai-daily-stock-analysis-windows-noinstall-vX.Y.Z.zip` 及同名 `.zip.sha256`。

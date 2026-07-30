@@ -148,3 +148,21 @@ Judge、阻塞、`SCOPE_DRIFT`、超授权检查和下一决定。
 - Web 阻断套件：`55/55 passed`；Lint 与 Production Build 成功。
 - 未新增 AI 调用、定时器、自动通知、事实表、基金或多用户功能。
 - 当前只待本次 Judge 文档收口 Head 的完整 CI；成功后 R3.5 一次性回传总控。
+
+## WORK-002｜R3.6 Windows 便携安全更新
+
+Work1 已永久关闭；Work2 从已合并 PR #3 的 main 基线 `0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9` 接管 R3.6，继承而不重做 R3.1–R3.5。批准方案为复用旧 Portable-M2 安全思想并按 PP02 当前边界重建。允许独立分支 Commit、Draft PR 和 CI 修复；禁止 Ready、合并、Tag、Release、真实数据和进入 R3.7。Plan Challenge：0 个问题，通过。
+
+### R3.6 最终收口授权
+
+只更新现有 Draft PR `#6` / `codex-xbl3c5`。已验证 Head `71404954407a9a3a6362a398465fc822b1351c72` 的 Run `30547333980` 为 8/8 success；PR #5 已关闭并由 PR #6 取代。本轮只允许更新五份唯一台账，并在 Windows CI 上传经同一 Job 验证的 ZIP/SHA 临时候选 artifact（14 天保留）；不得修改业务行为、升版本、创建新 PR、Ready、Merge、Tag、Release、main 直写或进入 R3.7。完成后保持 `IMPLEMENTATION PASS — R5 WINDOWS VALIDATION REQUIRED` / `DRAFT_HOLD`。
+
+
+### PR #7 R5 基础启动返工授权
+
+只修复现有 Draft PR #7。范围限于约束 `fake-useragent` 兼容上限、Windows/macOS PyInstaller 完整收集、能实际加载浏览器数据并触发 `data_provider.efinance_fetcher` 的冻结探针、Windows 候选上传前以隔离 `.env`/数据库和动态端口真实启动冻结 EXE并验证健康与主页，以及六份台账。失败 Head `d489a795b6089575a1fd61a27c9b28e2f3cb1b03` 和 Artifact `203e41a3…` 作废。禁止新 PR、Ready、Merge、Tag、Release、main 直写、真实数据/密钥及 R3.7。
+
+
+### PR #8 CI 环境修复授权
+
+只更新现有 Draft PR #8。不得删除 `main.py` 的 `GITHUB_ACTIONS` 保护条件；只允许在 `scripts/verify-frozen-backend.ps1` 启动冻结 EXE 前保存并临时覆盖 `GITHUB_ACTIONS=false`、`PYTHONUTF8=1`、`PYTHONIOENCODING=utf-8`，继续验证动态端口健康和主页 HTTP 200，并在 finally 恢复环境与清理进程树。记录 Run `30576678660` 失败并等待新 Head CI/Artifact。禁止新 PR、Ready、Merge、Tag、Release、main 直写和 R3.7。

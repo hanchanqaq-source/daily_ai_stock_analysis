@@ -341,3 +341,7 @@ R3.2 产品范围。
 - R3.1–R3.4 已完成。
 - R3.5 已有实现 Head 完整 CI 证据，当前只待 Judge 文档收口后的最终 Head CI。
 - R3.5 收口后停止并回传总控；不得自行启动 R3.6。
+
+## Work2 / R3.6 Windows 便携安全更新（2026-07-30）
+
+Work1 已永久关闭；PR #3 已合并且 R3.1–R3.5 已进入 main。Work2 从 `0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9` 以独立分支和独立 Draft PR 接管 R3.6。实现范围与证据见 `docs/pp02/R3_6_WINDOWS_PORTABLE_UPDATE_IMPLEMENTATION.md`。R5 Windows 真机验收仍为后续授权门，本轮不进入 R3.7。

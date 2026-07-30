@@ -1513,3 +1513,22 @@ test('desktop package and release workflow use the PP02 technical identity', () 
   assert.match(macosBuildScript, /PP02 AI Daily Stock Analysis\.app/);
   assert.doesNotMatch(macosBuildScript, /["/]Daily Stock Analysis\.app/);
 });
+
+test('portable readiness writes the explicit dynamic port signal without scanning backup directories', (t) => {
+  const mainModule = loadMainModule(t);
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pp02-ready-signal-'));
+  const planPath = path.join(root, 'plan.json');
+  const readySignal = path.join(root, 'ready.json');
+  const plan = { token: 'fixed-token', productId: 'com.hanchanqaq.pp02.aidailystockanalysis', targetVersion: '3.22.0', readySignal };
+  fs.writeFileSync(planPath, JSON.stringify(plan));
+  const result = mainModule.writePortableReadySignal({
+    argv: ['app.exe', '--pp02-update-token', plan.token, '--pp02-update-plan', planPath, '--pp02-ready-signal', readySignal],
+    runtime: { portableEligible: true, manifest: { productId: plan.productId } },
+    version: '3.22.0',
+    port: 8077,
+    backendPid: 123,
+    electronPid: 456,
+  });
+  assert.equal(result, true);
+  assert.deepEqual(JSON.parse(fs.readFileSync(readySignal, 'utf8')), { token: plan.token, productId: plan.productId, version: '3.22.0', port: 8077, backendPid: 123, electronPid: 456, homeLoaded: true });
+});
