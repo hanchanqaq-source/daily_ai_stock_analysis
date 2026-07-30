@@ -220,11 +220,11 @@ R3.5 功能、事实源、手动边界、快照追溯和实现 Head 完整 CI �
 回传仍要求本次文档收口 Head 自身 8/8。PR #3 保持 Draft，未执行 Ready、合并、
 Release、`main`、真实数据、AI 调用、定时器或自动推送。
 
-## WORK-002 / R3.6 执行回传（待最终 CI）
+## WORK-002 / R3.6 执行回传（历史发布检查点）
 
 - 身份：Work2；Work1 CLOSED；PR #3 MERGED_AND_CLOSED。
 - 起点：`0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9`。
-- 发布分支：`agent/pp02-work2-r3-6-windows-portable-update`；新 Draft PR 编号和最终 CI 待发布后回填。
+- 当时计划发布分支：`agent/pp02-work2-r3-6-windows-portable-update`；当时尚无远端 PR 编号或 CI。
 - 范围：便携身份、Release 资产、下载、ZIP/清单校验、事务计划、隐藏 PowerShell 助手、Desktop/Web 状态、Windows 候选与正式资产流程。
 - Judge 上限：`IMPLEMENTATION PASS — R5 WINDOWS VALIDATION REQUIRED`；`DRAFT_HOLD`。
 
@@ -233,16 +233,121 @@ Release、`main`、真实数据、AI 调用、定时器或自动推送。
 `PUBLISH_BLOCKED`（历史状态，现已解除）：本地 Commit `df3cee8` 已完成，且已通过 `make_pr` 准备 Draft PR 标题和完整正文；但容器没有 GitHub App 写入工具，本地 HTTPS push 又被网络代理以 `CONNECT tunnel failed, response 403` 拒绝，因此没有实际远程分支、PR 编号或 CI Run。不得把该状态表述为已发布或 CI 已通过。
 
 
-## PR #5 Judge 阻断修复（历史，已关闭并由 PR #6 取代）
+## PR #5 Judge 阻断修复（历史，已关闭并由 PR #6 接管）
 
 - 实际分支：`codex`；上一 Head `e5cdb70`；CI Run `30543513470` 为 8/8 success。
 - CI 成功不覆盖 Judge 阻断；该 PR 当时用于修复助手资源、受控重定向、事务顺序、完整回滚、动态端口握手、严格身份和行为测试。
-- PR #5 已关闭并标记为 superseded；当前唯一活动项为下方 PR #6。
+- PR #5 已关闭并标记为 superseded；后续由 PR #6 接管。
 
-## PR #6 最终收口
+## PR #6 收口（历史，已关闭并由 PR #7 取代）
 
-- 唯一活动 Draft PR：`#6`；分支 `codex-xbl3c5`；Base `main@0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9`。
+- 当时活动 Draft PR：`#6`；分支 `codex-xbl3c5`；Base `main@0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9`。
 - 已验证 Head `71404954407a9a3a6362a398465fc822b1351c72`；CI Run `30547333980` 为 8/8 success。
 - PR #5 已关闭，状态为 superseded，仅保留历史。
 - 本轮仅增加 Windows CI 已验证便携 ZIP/SHA 候选 artifact，保留 14 天；它不是 GitHub Release。
-- Judge：`IMPLEMENTATION PASS — R5 WINDOWS VALIDATION REQUIRED`；`DRAFT_HOLD`。
+- 当时 Judge：`IMPLEMENTATION PASS — R5 WINDOWS VALIDATION REQUIRED`；`DRAFT_HOLD`。
+
+## 2026-07-30｜Work1 关闭、Work2 接管与五项治理硬门
+
+> 本节替代上一段 R3.5 “最终 Head CI 待通过、PR #3 保持 Draft”的当前效力；
+> 上述内容保留为当时检查点，不删除历史。
+
+### 已核对事实
+
+- R3.5 最终 Head `508eb268c78d6172dac22160c9dc0550f83653a6` 的 Run
+  `30526590693` 为 8/8 success。
+- PR #3 已合并；当前 `main` 有效检查点为
+  `0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9`。
+- Work1 只负责官方稳定版干净底座，现已完成并永久锁定。
+- R0–R7 后续改造的当前有效归属为 Work2；R3.1–R3.5 已完成，当前任务为 R3.6。
+- 当时规划的 R3.6 分支为
+  `agent/pp02-work2-r3-6-windows-portable-update`；该段仅记录治理 PR #4 创建前
+  的检查点，当前活动项以后续 PR #7 记录为准。
+
+### 当前治理补丁
+
+- 在现有 `AGENTS.md` PP02 Overlay 中增加连续执行、用户规则 Judge、工具恢复、
+  Work 边界、唯一状态源、长任务进度和五项新增 Judge 门。
+- `_ai-dev/PROJECT_STATUS.md` 继续是唯一当前状态真源，没有创建
+  `00_PROJECT_STATUS.md` 或平行版本。
+- `_ai-dev/WORK_TASK.md` 改为当前 Work2 / R3.6 合同，明确 `ACTIVE_GOAL`、
+  允许做、禁止做、验收标准和授权门。
+- `PROJECT_STATUS.md` 与 `AI_HANDOFF.md` 已包含 `CURRENT_WORK`、
+  `LAST_VALID_COMMIT`、`LAST_SUCCESSFUL_TEST`、`ACTIVE_BLOCKER` 和
+  `NEXT_ACTION`。
+- 现有路线、项目入口和追加式变更历史同步纠正 Work1/Work2 归属；不新增框架。
+
+### 用户规则自检
+
+| 硬规则 | 当前结果 |
+| --- | --- |
+| 完整大段执行 | 通过；Plan、Build、Test、CI、Judge 连续处理 |
+| 减少重复确认 | 通过；已批准事项未重新提问 |
+| 中文白话 | 通过 |
+| 英文界面中文含义 | 不适用；本段无界面操作 |
+| 技术操作优先由 Codex 完成 | 通过 |
+| 显示真实进度 | 通过；未声称后台继续 |
+| 完整文件或复制块 | 通过；修改落在现有完整文件 |
+| 默认用户不是程序员 | 通过 |
+
+### 当前 Test / CI / Judge
+
+- Test：通过；`git diff --check`、`python scripts/check_ai_assets.py`、唯一状态文件、
+  必填恢复字段、Work 合同标题、Overlay 内容、修改白名单和官方 Overlay 外全文
+  对比均通过。
+- CI：治理实现/恢复检查点 `6ab647a7…` 的 Run `30540208702` 成功；
+  状态/Judge 收口检查点 `d45bdfad…` 的 Run `30540784009` 也成功。
+  Change Detection、AI Governance、Backend Gate、Docker Build 通过，Backend 为
+  `5005 passed, 4 deselected, 51 warnings, 494 subtests passed`；Web/Desktop
+  因文档路径按规则跳过。
+- 当前 Blocker：无。
+- 工具恢复：当前环境没有 `gh`，已从同一检查点切换到已连接 GitHub App /
+  Git Data API；未重跑整个 Work，未要求用户安装工具或重新认证。
+- 发布异常：首次 Git Data Commit `d846af7c…` 的超长 `docs/CHANGELOG.md`
+  被终端输出上限截断；远端/本地逐文件比较确认其余 11 个文件一致。
+- 恢复结果：Commit `6ab647a7…` 已用 GitHub `main` 的完整内容恢复 Changelog；
+  12 个远端 Blob SHA 与本地逐一一致，Run `30540208702` 成功；后续状态收口
+  Run `30540784009` 也成功。
+- Judge：`PASS`；只代表五项治理硬门和 Work2 接管检查点通过，不代表 R3.6
+  Windows 便携更新业务实现完成。
+
+### 新增五项验收
+
+1. 用户没有承担不必要的人工中转：通过。
+2. 用户规则全部执行：通过。
+3. 工具异常有恢复检查点：已建立。
+4. Work 范围没有串段或跑偏：已拦截并纠正。
+5. `PROJECT_STATUS` 与 Git、测试和 CI 一致：通过。
+
+准确停止点：
+
+`WORK2_R3_6_GOVERNANCE_HARD_GATES_JUDGED_R3_6_BUILD_READY`
+
+## 2026-07-30｜PR #7 治理一致性修正
+
+### 根因与范围
+
+- PR #7 与治理 PR #4 都从
+  `main@0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9` 独立分叉。
+- PR #7 的 R3.6 业务实现和 CI 已通过，但没有包含 PR #4 的治理提交，且现行台账
+  仍把已关闭的 PR #6 写成唯一活动项。
+- 本轮只归并治理提交、解决四个真实台账冲突、更新 PR/Head/CI 和恢复检查点；
+  未修改便携更新业务逻辑、版本、NSIS 更新链路或 R3.7。
+
+### 当前证据
+
+- PR #7 实现检查点：`7104bbc5b1f5a1c6ed9863f87472014c72eb79e8`；
+  CI Run `30552446534` 为 8/8 success。
+- 本地 AI 治理：通过。
+- 本地 Desktop：`60/60 passed`；首次失败来自隔离 Worktree 缺少依赖，随后按
+  lockfile 使用临时 npm 缓存和 `--ignore-scripts` 完成单测依赖安装。
+- Windows 候选已存在，但包内版本仍为 `3.21.0`，不能代替真实升级与回滚验收。
+- 归并后的最终 Head CI：待推送后回填到下一次非自引用状态收口。
+
+### 当前 Judge
+
+`PENDING_FINAL_HEAD_CI — R5 WINDOWS VALIDATION REQUIRED — DRAFT_HOLD`
+
+目标停止点：
+
+`WORK2_R3_6_IMPLEMENTATION_JUDGED — R5_WINDOWS_VALIDATION_REQUIRED — DRAFT_HOLD`
