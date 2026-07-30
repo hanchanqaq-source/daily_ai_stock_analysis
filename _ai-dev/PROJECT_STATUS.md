@@ -11,14 +11,14 @@ ROLE_LOCK=TRUE
 APPLICATION_BASE_VERSION=3.28.0
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-CURRENT_STAGE=R3.2 / Final Head CI
-CURRENT_WORK=手动默认、云端调度关闭和自动通知总开关已实现并通过实现Head完整CI
-ACTIVE_GOAL=追加R3.2 Judge台账并验证文档收口后的最终PR Head
-CURRENT_STATUS=R3_2_IMPLEMENTATION_CI_PASSED_FINAL_HEAD_CI_PENDING
+CURRENT_STAGE=R3.3 / Final Head CI
+CURRENT_WORK=官方事件账本快捷持仓已实现并通过实现Head完整CI
+ACTIVE_GOAL=追加R3.3 Judge台账并验证文档收口后的最终PR Head
+CURRENT_STATUS=R3_3_IMPLEMENTATION_CI_PASSED_FINAL_HEAD_CI_PENDING
 ACTIVE_BLOCKER=NONE
-NEXT_ACTION=最终Head CI通过后保持Draft；下一迁移切片为R3.3官方账本快捷持仓
+NEXT_ACTION=最终Head CI通过后保持Draft；下一迁移切片为R3.4股票专用备份与恢复
 AUTHORIZATION_REQUIRED=FALSE_FOR_FINAL_HEAD_VALIDATION; READY/MERGE/MAIN/RELEASE/REAL_DATA_REQUIRE_NEW_AUTHORIZATION
-LAST_UPDATED=2026-07-29
+LAST_UPDATED=2026-07-30
 ```
 
 ## 已验证基线
@@ -35,7 +35,7 @@ LAST_UPDATED=2026-07-29
 - R1：需求、保留/调整/不迁移分类和冲突处理已确认。
 - PP02 保持单用户；旧用户档案、切换、隔离和用户级备份全部不迁移。
 - 官方账户/组合事件账本是持仓唯一事实源。
-- R2：迁移拆为 R3.1–R3.7；R3.1 已完成，当前收口 R3.2 手动默认与自动通知总开关。
+- R2：迁移拆为 R3.1–R3.7；R3.1、R3.2 已完成，当前收口 R3.3 官方账本快捷持仓。
 - Windows 实机验收为 `Deferred`，不把 D 盘目录缺失登记为云端阻塞。
 
 ## 当前保护边界
@@ -43,7 +43,7 @@ LAST_UPDATED=2026-07-29
 - PR #3 不转 Ready、不合并、不发布 Release。
 - 不接触真实 `.env`、Token、API Key、Webhook 或真实数据库。
 - 不迁移基金、多用户或旧平行持仓表。
-- R3.2 只允许手动默认、自动调度/发送安全门、设置帮助、对应测试和文档。
+- R3.3 只允许快捷持仓预览/确认、官方交易事件写入、对应 Web/API、测试和文档。
 
 ## R3.1 实现与验证证据
 
@@ -72,4 +72,19 @@ LAST_UPDATED=2026-07-29
   `4976 passed, 4 deselected`，Web、Docker、Desktop 单测及 Windows/macOS 包门均通过。
 - 手动“测试通知”保持独立；关闭总开关时分析、报告持久化和告警记录继续执行，
   仅抑制外部自动发送。
+- 收口 Head `e879f0692d2bd330b166df561cd8a90d4542a5ce` 的 Run
+  `30494219667` 为 8/8 success；R3.2 Judge 已完成。
 - Windows 实机仍为 Deferred；未使用真实通知渠道、凭据、付费服务或真实数据。
+
+## R3.3 实现与验证证据
+
+- RED：Commit `f1ebae02f21a97d97418649c23db8401a8b3fc8f`；补充 Web
+  专项测试门的 Commit `93d2a59b8eab77a2d6633898c4cbb5e93fb95d33`。
+- RED Run `30513770957`：后端 5 项预期失败、其余 `4976 passed`；
+  PortfolioPage 新测试按预期失败，原有 28 项通过。
+- GREEN：Commit `311664759a51f8eb8ec700417b20c2e17fa155e8`。
+- 实现 Head Run `30514223674`：8/8 success；后端
+  `4981 passed, 4 deselected`，PortfolioPage `29/29 passed`。
+- 预览只读；确认在原子事务内做过期检查和去重，只追加官方交易事件；
+  现金变化由官方重放计算，不直接写 `portfolio_positions`。
+- Windows 实机仍为 Deferred；未使用真实持仓、券商账户或真实数据库。

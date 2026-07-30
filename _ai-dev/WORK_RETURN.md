@@ -118,3 +118,31 @@ PR 必须保持 Draft，不构成 Ready 或合并授权。外部最终回传只�
 R3.2 功能实现和实现 Head 完整 CI 已通过；本次只追加 Judge 台账。最终外部回传
 仍要求该文档收口后的 PR Head CI 通过。PR #3 保持 Draft，Windows 实机为
 Deferred；Ready、合并、Release、真实数据与真实通知渠道均未执行。
+
+
+## 2026-07-30 R3.3｜官方账本上的快捷持仓
+
+### 实际改动
+
+- 新增目标持仓预览与确认 API；预览不写库，确认才写入。
+- 确认在官方组合写事务中重新计算当前数量，拒绝过期预览和重复确认。
+- 成功确认只追加一条官方交易事件；现金余额、持仓、成本和缓存失效继续由官方
+  事件重放完成，未直接写 `portfolio_positions`。
+- Web 新增“快捷持仓调整”，必须先预览差额，再人工确认写入。
+- `web-gate` 新增 PortfolioPage 专项 Vitest 阻断步骤。
+
+### 测试与 CI
+
+- RED Run `30513770957`：后端 5 项预期失败、`4976 passed`；
+  PortfolioPage 新测试预期失败、28 项旧测试通过。
+- GREEN Head `311664759a51f8eb8ec700417b20c2e17fa155e8`，
+  Run `30514223674`：8/8 success。
+- 后端：`4981 passed, 4 deselected`；PortfolioPage：`29/29 passed`。
+- Windows/macOS 冻结与 unsigned 包门通过；Windows 实机仍为 Deferred。
+
+### Judge
+
+`PASS — FINAL_HEAD_CI_PENDING`
+
+R3.3 功能、事实源边界和实现 Head 完整 CI 已通过；最终外部回传仍要求本次文档
+收口 Head 自身 8/8。PR #3 保持 Draft，未执行 Ready、合并、Release 或真实数据。

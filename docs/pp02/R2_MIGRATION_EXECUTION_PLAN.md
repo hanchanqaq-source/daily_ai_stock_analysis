@@ -122,32 +122,49 @@ R3.2 产品范围。
   首轮 Run `30492811439` 暴露 2 项集成/帮助元数据回归。
 - 根因修正：Commit `5316b5ea2ececd9aff0ced556e897f0738dad317`，
   Run `30493475960` 为 8/8 success；后端 `4976 passed`。
-- 状态：`PASS — FINAL_HEAD_CI_PENDING`。
+- 收口 Head Run `30494219667` 再次 8/8 success。
+- 状态：`PASS`。
 
 ## R3.3｜官方账本上的快捷持仓
 
-**结果：** 用户可快捷新增或调整持仓，但每次确认都会生成官方交易/现金事件；
-`portfolio_positions` 仍只作为重放缓存。
+**结果：** 用户可输入目标数量，先查看当前数量、买卖差额和预计现金变化，再明确
+确认；确认只向官方账本追加一条交易事件。现金变化由该交易事件在官方重放中计算，
+不得再写一条资金流水造成重复扣款；`portfolio_positions` 仍只作为重放缓存。
 
-**修改文件：**
+**实际修改文件：**
 
+- `.github/workflows/ci.yml`
 - `api/v1/schemas/portfolio.py`
 - `api/v1/endpoints/portfolio.py`
 - `src/services/portfolio_service.py`
-- `src/repositories/portfolio_repo.py`
 - `apps/dsa-web/src/api/portfolio.ts`
 - `apps/dsa-web/src/types/portfolio.ts`
 - `apps/dsa-web/src/pages/PortfolioPage.tsx`
-- `tests/test_portfolio_service.py`
-- `tests/test_portfolio_api.py`
+- `tests/test_pp02_quick_positions.py`
 - `apps/dsa-web/src/pages/__tests__/PortfolioPage.test.tsx`
 
 **契约：**
 
-- 快捷调整先返回事件预览，用户确认后写入。
-- 禁止直接写 `portfolio_positions`。
-- 超卖、币种、市场、日期和重复事件沿用官方校验。
-- 删除或修正通过正式事件历史完成，并可重新重放。
+- 预览只读取正式事件，不写交易、现金流水或派生持仓缓存。
+- 确认在同一写事务内重新核对预览时的当前数量；账本变化后旧预览返回冲突。
+- 成功确认只追加一条带唯一 `trade_uid` 的官方交易事件。
+- 重复确认沿用官方去重冲突；卖出、币种、市场、日期和缓存失效继续走官方校验。
+- 删除或修正仍通过正式事件历史完成，并可重新重放。
+- Web 必须先预览，再由用户点击“确认写入账本”，不得调用旧直接交易接口绕过确认。
+
+**执行证据：**
+
+- RED：Commit `f1ebae02f21a97d97418649c23db8401a8b3fc8f` 与测试门 Commit
+  `93d2a59b8eab77a2d6633898c4cbb5e93fb95d33`；Run `30513770957`
+  后端 5 项按预期失败，其余 `4976 passed`；PortfolioPage 新测试因表单不存在失败，
+  原有 28 项通过。
+- CI 盘点发现原 `web-gate` 未运行 Vitest；R3.3 新增 PortfolioPage 专项阻断测试。
+- 首次全量 Web 测试同时暴露 AlertRuleForm 日/韩市场选项的既有失败；该问题与
+  R3.3 无关，未越界修改告警功能，已写入 `docs/ERRORS_AND_LESSONS.md`。
+- GREEN：Commit `311664759a51f8eb8ec700417b20c2e17fa155e8`；Run
+  `30514223674` 为 8/8 success，后端 `4981 passed, 4 deselected`，
+  PortfolioPage `29/29 passed`。
+- 状态：`PASS — FINAL_HEAD_CI_PENDING`。
 
 ## R3.4｜股票专用备份与恢复
 
@@ -220,5 +237,6 @@ R3.2 产品范围。
 
 - 每个迁移能力都有唯一事实源、依赖、文件边界和验收出口。
 - 单用户决定已贯穿所有切片。
-- 当前无 R3.1 产品决策阻塞。
-- 下一执行切片固定为 R3.1。
+- R3.1、R3.2 和 R3.3 均已有实现 Head 完整 CI 证据。
+- 当前无 R3.4 产品决策阻塞。
+- 下一执行切片固定为 R3.4。
