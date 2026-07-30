@@ -3,6 +3,7 @@ param(
   [int]$TimeoutSeconds = 90
 )
 $ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.Net.Http
 
 function Get-FreeTcpPort {
   $listener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
@@ -18,6 +19,8 @@ New-Item -ItemType Directory -Path $dataDir,$logDir -Force | Out-Null
 Set-Content -LiteralPath $envFile -Value "WEBUI_HOST=127.0.0.1`nWEBUI_ENABLED=false`nBOT_ENABLED=false`n" -Encoding UTF8
 $port = Get-FreeTcpPort
 $stdout = Join-Path $tempRoot 'stdout.log'; $stderr = Join-Path $tempRoot 'stderr.log'; $process = $null
+$httpHandler = [Net.Http.HttpClientHandler]::new(); $httpHandler.UseProxy = $false
+$httpClient = [Net.Http.HttpClient]::new($httpHandler); $httpClient.Timeout = [TimeSpan]::FromSeconds(3)
 $saved = @{}
 foreach ($name in @('GITHUB_ACTIONS','PYTHONUTF8','PYTHONIOENCODING','ENV_FILE','DATABASE_PATH','LOG_DIR','WEBUI_HOST','WEBUI_PORT','WEBUI_ENABLED','BOT_ENABLED','DSA_DESKTOP_MODE')) { $saved[$name] = [Environment]::GetEnvironmentVariable($name, 'Process') }
 try {
@@ -26,19 +29,26 @@ try {
   $env:WEBUI_HOST = '127.0.0.1'; $env:WEBUI_PORT = [string]$port; $env:WEBUI_ENABLED = 'false'; $env:BOT_ENABLED = 'false'; $env:DSA_DESKTOP_MODE = 'true'
   $process = Start-Process -FilePath $entry -ArgumentList @('--serve-only','--host','127.0.0.1','--port',[string]$port) -WorkingDirectory ([IO.Path]::GetDirectoryName($entry)) -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru -WindowStyle Hidden
   $deadline = (Get-Date).AddSeconds($TimeoutSeconds); $healthy = $false
+  $healthDiagnostic = 'not attempted'; $homeDiagnostic = 'not attempted'
   do {
     if ($process.HasExited) { throw "Frozen backend exited early with code $($process.ExitCode).`n$(Get-Content -LiteralPath $stderr -Raw -ErrorAction SilentlyContinue)" }
     try {
-      $health = Invoke-WebRequest -Uri "http://127.0.0.1:$port/api/health" -UseBasicParsing -TimeoutSec 3
-      $home = Invoke-WebRequest -Uri "http://127.0.0.1:$port/" -UseBasicParsing -TimeoutSec 3
-      if ($health.StatusCode -eq 200 -and $home.StatusCode -eq 200) { $healthy = $true; break }
-    } catch { Start-Sleep -Milliseconds 500 }
+      $health = $httpClient.GetAsync("http://127.0.0.1:$port/api/health").GetAwaiter().GetResult()
+      $healthDiagnostic = "HTTP $([int]$health.StatusCode)"
+    } catch { $health = $null; $healthDiagnostic = "$($_.Exception.GetType().Name): $($_.Exception.Message)" }
+    try {
+      $home = $httpClient.GetAsync("http://127.0.0.1:$port/").GetAwaiter().GetResult()
+      $homeDiagnostic = "HTTP $([int]$home.StatusCode)"
+    } catch { $home = $null; $homeDiagnostic = "$($_.Exception.GetType().Name): $($_.Exception.Message)" }
+    if ($health -and $home -and [int]$health.StatusCode -eq 200 -and [int]$home.StatusCode -eq 200) { $healthy = $true; break }
+    Start-Sleep -Milliseconds 500
   } while ((Get-Date) -lt $deadline)
-  if (-not $healthy) { throw "Frozen backend did not become healthy on dynamic port $port.`n$(Get-Content -LiteralPath $stderr -Raw -ErrorAction SilentlyContinue)" }
+  if (-not $healthy) { throw "Frozen backend HTTP probes failed on dynamic port $port: health=$healthDiagnostic; home=$homeDiagnostic.`n$(Get-Content -LiteralPath $stderr -Raw -ErrorAction SilentlyContinue)" }
   Write-Host "Frozen backend smoke passed on dynamic port $port."
 } finally {
   if ($process -and -not $process.HasExited) { & taskkill.exe /PID $process.Id /T /F | Out-Null; try { Wait-Process -Id $process.Id -Timeout 15 -ErrorAction SilentlyContinue } catch {} }
   if ($process -and -not $process.HasExited) { throw "Frozen backend process tree did not stop: PID $($process.Id)" }
   foreach ($name in $saved.Keys) { [Environment]::SetEnvironmentVariable($name, $saved[$name], 'Process') }
+  $httpClient.Dispose(); $httpHandler.Dispose()
   Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
