@@ -106,6 +106,22 @@ npm run build
   `portfolio_positions`、lots 或快照。
 - 空库/fixture 可在 R3 使用；真实用户持仓继续等待 R6 精确授权。
 
+## 5.1 股票备份与恢复验收边界
+
+- 在持仓页点击导出后才生成 `pp02-stock-portfolio-backup.json`；不得把备份文件、
+  真实数据库或截图提交到 GitHub。
+- 恢复必须先选择 JSON 并查看替换预览；只有用户再次明确确认后才写库。
+- 预览令牌绑定备份内容和当前账本；预览后任一方变化都必须重新预览。
+- 恢复采用整套 `replace`，不是静默合并；写入在官方组合写锁和单事务内完成，
+  失败时原账本不变。
+- 只恢复账户、交易、资金和公司行动；`portfolio_positions`、lots 和快照会被
+  清除并从官方事件重新计算。
+- API 验收入口：
+  `GET /api/v1/portfolio/backup/export`、
+  `POST /api/v1/portfolio/backup/preview`、
+  `POST /api/v1/portfolio/backup/restore`。
+- R3 只使用空库或 fixture；真实备份导出、覆盖和迁移仍等待 R6 精确授权。
+
 ## 6. 本地启动
 
 仅启动 API 与 Web 服务、由用户手动触发分析：

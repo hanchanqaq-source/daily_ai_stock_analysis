@@ -113,11 +113,12 @@ PR 必须保持 Draft，不构成 Ready 或合并授权。外部最终回传只�
 
 ### Judge
 
-`PASS — FINAL_HEAD_CI_PENDING`
+`PASS`
 
-R3.2 功能实现和实现 Head 完整 CI 已通过；本次只追加 Judge 台账。最终外部回传
-仍要求该文档收口后的 PR Head CI 通过。PR #3 保持 Draft，Windows 实机为
-Deferred；Ready、合并、Release、真实数据与真实通知渠道均未执行。
+R3.2 功能实现和实现 Head 完整 CI 已通过；收口 Head
+`e879f0692d2bd330b166df561cd8a90d4542a5ce` 的 Run `30494219667`
+再次 8/8 success。PR #3 保持 Draft，Windows 实机为 Deferred；Ready、合并、
+Release、真实数据与真实通知渠道均未执行。
 
 
 ## 2026-07-30 R3.3｜官方账本上的快捷持仓
@@ -142,7 +143,45 @@ Deferred；Ready、合并、Release、真实数据与真实通知渠道均未执
 
 ### Judge
 
+`PASS`
+
+R3.3 功能、事实源边界和实现 Head 完整 CI 已通过；收口 Head
+`d4615cd407ba88ed43f9da129c8c89583358a98a` 的 Run `30514843576`
+再次 8/8 success。PR #3 保持 Draft，未执行 Ready、合并、Release 或真实数据。
+
+
+## 2026-07-30 R3.4｜股票专用备份与恢复
+
+### 实际改动
+
+- 导出带格式版本、PP02 身份、应用基线和数据库 Schema 元数据的 JSON。
+- 只导出活跃/停用账户、交易、资金和公司行动；排除用户档案、基金、密钥、
+  `.env`、日志和可重建派生数据。
+- 导入先做严格字段、引用、ID、交易去重、日期和数值校验，再生成只读替换预览。
+- 预览令牌绑定备份与当前账本摘要；任一方变化后拒绝旧令牌。
+- 确认在官方写锁内用单事务整套替换；失败回滚，成功后由官方事件重放持仓。
+- Web 必须选择 JSON、查看预览，再点击危险确认；导出只在用户明确点击后发生。
+
+### 测试与 CI
+
+- RED Run `30516073073`：后端 6 项预期失败、`4981 passed`；
+  PortfolioPage 新增 2 项预期失败、29 项旧测试通过。
+- 私有仓库免费 Actions 分钟耗尽导致 Run `30516696130` 零 Step 阻塞；
+  公开前安全审计通过并获用户授权改为 Public 后，标准 Runner 恢复。
+- 公开库重跑暴露 4 项 `date/datetime` 摘要序列化失败；Commit
+  `8355d92a81b8f951a8ee7bcb703e89585cb8de5e` 从摘要源头做 ISO 规范化。
+- 同轮 Web 暴露 1 条既有异步等待竞态；Commit
+  `56c887502e218efa146a20ab86c928008e9035d6` 只修正测试等待，不改业务逻辑。
+- 最终实现 Run `30519559480`：8/8 success。
+- 后端：`4987 passed, 4 deselected, 50 warnings, 487 subtests passed`；
+  PortfolioPage：`31/31 passed`；Web Build、Docker、Desktop 单测及
+  Windows/macOS 冻结/包门全部通过。
+- Windows 实机仍为 Deferred；未使用真实数据库、真实账户或真实备份。
+
+### Judge
+
 `PASS — FINAL_HEAD_CI_PENDING`
 
-R3.3 功能、事实源边界和实现 Head 完整 CI 已通过；最终外部回传仍要求本次文档
-收口 Head 自身 8/8。PR #3 保持 Draft，未执行 Ready、合并、Release 或真实数据。
+R3.4 功能、事务边界、排除范围和实现 Head 完整 CI 已通过；最终外部回传仍要求
+本次文档收口 Head 自身 8/8。PR #3 保持 Draft，未执行 Ready、合并、Release、
+真实数据导出或恢复。

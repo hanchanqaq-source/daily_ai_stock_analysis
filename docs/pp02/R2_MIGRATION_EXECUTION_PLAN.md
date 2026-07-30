@@ -164,7 +164,10 @@ R3.2 产品范围。
 - GREEN：Commit `311664759a51f8eb8ec700417b20c2e17fa155e8`；Run
   `30514223674` 为 8/8 success，后端 `4981 passed, 4 deselected`，
   PortfolioPage `29/29 passed`。
-- 状态：`PASS — FINAL_HEAD_CI_PENDING`。
+- 异步测试稳定性修复 Head `d4615cd407ba88ed43f9da129c8c89583358a98a`；
+  最终 Run `30514843576` 为 8/8 success，后端 `4981 passed, 4 deselected`，
+  PortfolioPage `29/29 passed`。
+- 状态：`PASS`。
 
 ## R3.4｜股票专用备份与恢复
 
@@ -187,6 +190,36 @@ R3.2 产品范围。
 
 **明确排除：** 用户档案、基金、密钥、`.env`、日志、分析缓存、
 `portfolio_positions`、lots 和快照等可重建派生数据。
+
+**恢复契约：**
+
+- 预览只读，必须同时显示备份与当前账本计数，不得在预览阶段写库。
+- 预览令牌同时绑定规范化备份摘要和当前账本摘要；任一方变化后旧令牌失效。
+- 确认恢复采用 `replace` 语义，在官方组合写锁内用一个事务完成整套替换。
+- 校验、删除或写入任一步失败时事务回滚，原账本保持不变。
+- 恢复后只从账户、交易、资金和公司行动重放持仓，不导入派生缓存。
+- Web 必须“选择 JSON → 预览 → 危险确认”，不得选择文件后直接写入。
+
+**执行证据：**
+
+- RED：Commit `15e48e6000bd1a39e7db082e20897052affa558c` 与
+  `b6a2cd2f02e2ebc3955bfb6276e1ffd63b3c6eac`；Run `30516073073`
+  后端 6 项按预期失败、其余 `4981 passed`；PortfolioPage 新增 2 项按预期失败，
+  原有 29 项通过。
+- 初始 GREEN Head `85dbe71a26d175b6c2557900770b3260fea4a419` 在私有仓库
+  Actions 免费分钟耗尽时出现零 Step 阻塞；公开前只读安全审计未发现密钥或真实
+  数据，用户授权后仓库改为 Public，标准 Runner 恢复运行。
+- 公开库重跑 Run `30516696130` 暴露 4 项确定性日期摘要失败：
+  规范化后的 `date/datetime` 尚未转换为 JSON 标量。
+- 日期摘要修复 Head `8355d92a81b8f951a8ee7bcb703e89585cb8de5e`；
+  Run `30518936016` 后端 `4987 passed, 4 deselected`，同时暴露 1 条既有
+  PortfolioPage 异步等待竞态。
+- 最终实现 Head `56c887502e218efa146a20ab86c928008e9035d6`；
+  Run `30519559480` 为 8/8 success，后端
+  `4987 passed, 4 deselected, 50 warnings, 487 subtests passed`，
+  PortfolioPage `31/31 passed`，Web Build、Docker、Desktop 单测及
+  Windows/macOS 包门全部通过。
+- 状态：`PASS — FINAL_HEAD_CI_PENDING`。
 
 ## R3.5｜应用内手动周期报告
 
@@ -237,6 +270,6 @@ R3.2 产品范围。
 
 - 每个迁移能力都有唯一事实源、依赖、文件边界和验收出口。
 - 单用户决定已贯穿所有切片。
-- R3.1、R3.2 和 R3.3 均已有实现 Head 完整 CI 证据。
-- 当前无 R3.4 产品决策阻塞。
-- 下一执行切片固定为 R3.4。
+- R3.1、R3.2 和 R3.3 已完成；R3.4 已有实现 Head 完整 CI 证据。
+- 当前只待 R3.4 Judge 文档收口后的最终 Head CI。
+- R3.4 收口后，下一执行切片固定为 R3.5。

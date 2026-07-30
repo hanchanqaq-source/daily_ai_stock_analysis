@@ -12,6 +12,7 @@
 | WORK-001-AUTH-003 | 2026-07-23 | 授权将 PR #2 转为 Ready 并合并到 `main`；合并后复核 `main` 并更新最终进度，不发布 Release | 正式 CI 权限修复已通过完整 CI，需要完成合并与台账收口 | Work 1.6；已合并为 `a6bdfb55827080e196c2103292aaedfadc224dc7`，Release 未发布 |
 | WORK-PP02-CLOUD-REBUILD-001-DECISION-001 | 2026-07-26 | Work 1 的 v3.27.0 管理底座作为历史保留；当前 R0 从官方 `v3.28.0` 固定提交重建，并叠加 P000/P001 V1.5.6 控制层 | 消除旧基线、旧状态真源和空白模板覆盖风险，同时保持官方业务树完整 | 当前 Work 只执行 R0；R1–R7 不启动 |
 | WORK-PP02-CLOUD-REBUILD-001-AUTH-001 | 2026-07-26 | 授权在同一 Work 内恢复性重建，并通过已连接的 GitHub App/Git Data API 创建原子 Commit、独立分支、Draft PR、检查真实 CI 和修复范围内问题 | 已验证候选未持久化，需要先建立可恢复的远程检查点再运行完整验证 | 不含 Ready、合并、改写 `main`、Release、真实数据或重复设备认证 |
+| WORK-PP02-CLOUD-REBUILD-001-AUTH-002 | 2026-07-30 | 授权对 PP02 做公开前只读安全审计，审计通过后把仓库从 Private 改为 Public 并继续 R3.4 CI | 私有仓库 2000 分钟免费 Actions 额度已耗尽；公开库标准 Runner 可继续验证 | 公开代码、分支、PR 和 Actions 历史；不包含 Ready、合并、Release、真实数据或密钥 |
 
 ## 记录规则
 
