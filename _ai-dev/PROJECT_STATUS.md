@@ -11,13 +11,13 @@ ROLE_LOCK=TRUE
 APPLICATION_BASE_VERSION=3.28.0
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-CURRENT_STAGE=R3.4 / Final Head CI
-CURRENT_WORK=股票专用备份与恢复已实现并通过实现Head完整CI
-ACTIVE_GOAL=追加R3.4 Judge台账并验证文档收口后的最终PR Head
-CURRENT_STATUS=R3_4_IMPLEMENTATION_CI_PASSED_FINAL_HEAD_CI_PENDING
+CURRENT_STAGE=R3.5 / Plan
+CURRENT_WORK=应用内手动周期报告与下周参考展望
+ACTIVE_GOAL=按已确认方案A完成周期历史聚合、下周展望快照、API、Web、测试与CI
+CURRENT_STATUS=R3_5_PLAN_ACTIVE
 ACTIVE_BLOCKER=NONE
-NEXT_ACTION=最终Head CI通过后保持Draft；下一迁移切片为R3.5应用内手动周期报告
-AUTHORIZATION_REQUIRED=FALSE_FOR_FINAL_HEAD_VALIDATION; READY/MERGE/MAIN/RELEASE/REAL_DATA_REQUIRE_NEW_AUTHORIZATION
+NEXT_ACTION=完成R3.5测试先行施工并验证Draft PR Head完整CI
+AUTHORIZATION_REQUIRED=FALSE_FOR_R3_5_BUILD_TEST_CI; READY/MERGE/MAIN/RELEASE/REAL_DATA_REQUIRE_NEW_AUTHORIZATION
 LAST_UPDATED=2026-07-30
 ```
 
@@ -35,7 +35,8 @@ LAST_UPDATED=2026-07-30
 - R1：需求、保留/调整/不迁移分类和冲突处理已确认。
 - PP02 保持单用户；旧用户档案、切换、隔离和用户级备份全部不迁移。
 - 官方账户/组合事件账本是持仓唯一事实源。
-- R2：迁移拆为 R3.1–R3.7；R3.1–R3.3 已完成，当前收口 R3.4 股票专用备份与恢复。
+- R2：迁移拆为 R3.1–R3.7；R3.1–R3.4 已完成，当前执行 R3.5
+  应用内手动周期报告与下周参考展望。
 - Windows 实机验收为 `Deferred`，不把 D 盘目录缺失登记为云端阻塞。
 
 ## 当前保护边界
@@ -43,8 +44,9 @@ LAST_UPDATED=2026-07-30
 - PR #3 不转 Ready、不合并、不发布 Release。
 - 不接触真实 `.env`、Token、API Key、Webhook 或真实数据库。
 - 不迁移基金、多用户或旧平行持仓表。
-- R3.4 只允许股票账本备份导出、恢复预览/确认、原子替换、对应 Web/API、
-  测试和文档。
+- R3.5 只允许正式分析/市场复盘历史聚合、条件化下周展望、展望快照、
+  对应 Web/API、测试和文档。
+- 不新增事实表、不调用 AI、不新增定时器或自动通知，不迁移基金或多用户。
 - 仓库经只读安全审计和用户授权后已改为 Public；PR、分支和 Actions 历史公开，
   但真实数据、密钥和备份文件仍不得进入仓库。
 
@@ -114,4 +116,24 @@ LAST_UPDATED=2026-07-30
   失败回滚，恢复后由官方账本重放派生持仓。
 - Windows 实机仍为 Deferred；未导出、读取或恢复真实备份。
 
-`PASS — FINAL_HEAD_CI_PENDING`
+## R3.4 最终收口
+
+- 最终 Head `a5b999717e57fe3c78da5c65adadcb1f05b71f95` 的 Run
+  `30520589917` 为 8/8 success；后端 `4987 passed, 4 deselected`，
+  PortfolioPage `31/31 passed`，Web Build 与双平台打包门全部通过。
+- R3.4 Judge：`PASS`；PR #3 保持 Draft，`main` 未改变。
+
+## R3.5 已确认产品契约
+
+- 七个手动入口：本周至今、上一周、下周展望、5周、10周、1个月、2个月。
+- 周期事实只来自 `HistoryService.get_history_list()` 和现有
+  `AnalysisHistory`；股票/ETF 与市场复盘分区展示。
+- 下周展望只使用最近 14 个自然日内的合格历史，不调用 AI；数据不足时固定显示
+  “近期有效数据不足，暂不能形成下周展望。”
+- 展望使用 `report_type=period_outlook` 写回现有分析历史，保存目标周、生成时间、
+  来源记录 ID、方向、置信度、依据、风险与失效条件。
+- 进入下一周后，上一周周期汇总可读取日期完全匹配的旧展望快照并列复盘。
+- 页面免责声明固定为：
+  “下周展望基于已有历史分析形成，仅供参考，不代表确定结果。”
+
+`R3_5_PLAN_ACTIVE`
