@@ -13,6 +13,10 @@
 | WORK-PP02-CLOUD-REBUILD-001-DECISION-001 | 2026-07-26 | Work 1 的 v3.27.0 管理底座作为历史保留；当前 R0 从官方 `v3.28.0` 固定提交重建，并叠加 P000/P001 V1.5.6 控制层 | 消除旧基线、旧状态真源和空白模板覆盖风险，同时保持官方业务树完整 | 当前 Work 只执行 R0；R1–R7 不启动 |
 | WORK-PP02-CLOUD-REBUILD-001-AUTH-001 | 2026-07-26 | 授权在同一 Work 内恢复性重建，并通过已连接的 GitHub App/Git Data API 创建原子 Commit、独立分支、Draft PR、检查真实 CI 和修复范围内问题 | 已验证候选未持久化，需要先建立可恢复的远程检查点再运行完整验证 | 不含 Ready、合并、改写 `main`、Release、真实数据或重复设备认证 |
 | WORK-PP02-CLOUD-REBUILD-001-AUTH-002 | 2026-07-30 | 授权对 PP02 做公开前只读安全审计，审计通过后把仓库从 Private 改为 Public 并继续 R3.4 CI | 私有仓库 2000 分钟免费 Actions 额度已耗尽；公开库标准 Runner 可继续验证 | 公开代码、分支、PR 和 Actions 历史；不包含 Ready、合并、Release、真实数据或密钥 |
+| WORK-002-DECISION-001 | 2026-07-30 | Work1 永久关闭；R0–R7 后续改造按当前有效口径归属 Work2，当前任务为 R3.6 | 旧聊天窗口名被误当成顶层 Work 编号，导致 Work1 同时显示完成和进行中 | 只纠正当前与未来归属；不重做 R3.1–R3.5，不倒改历史 Commit、测试或 CI |
+| WORK-002-AUTH-001 | 2026-07-30 | R3.6 从已合并 PR #3 后的 `main@0f9afe8b…` 建立独立分支、普通 Commit/Push、新 Draft PR 和范围内 CI 修复 | PR #3 已合并，不能继续把 R3.6 写入旧 PR 或旧分支 | 不含 Ready、Merge、修改 `main`、Tag、Release、真实数据、密钥或付费服务 |
+| PP02-GOVERNANCE-DECISION-001 | 2026-07-30 | 在现有 PP02 Overlay 和唯一台账中增加五项治理硬门 | 防止人工中转、用户规则失效、工具异常重跑、Work 串段及平行状态真源复发 | 不改变 v3.28.0 业务底座，不创建复杂验证系统或平行状态文件 |
+| WORK-002-AUTH-002 | 2026-07-30 | 继续修正现有 Draft PR #7：归并 PR #4 治理提交、纠正 PR #6 过期状态、运行最终 CI，并在验证通过后关闭被取代的 PR #4 | R3.6 代码和候选 CI 已通过，但治理与唯一状态未进入当前活动 PR | 只限 Work2/R3.6；PR #7 保持 Draft，不含 Ready、Merge、`main`、Tag、Release、真实数据或 R3.7 |
 
 ## 记录规则
 
@@ -39,3 +43,38 @@
   `R2_MIGRATION_EXECUTION_PLAN.md` 为准。
 - Ready、合并、Release、默认分支、真实数据、本机重要文件、大型依赖、
   付费服务和范围扩大仍须单独授权。
+
+## Change PP02-GOVERNANCE-001：五项核心治理硬门
+
+- Request and user value：减少用户人工中转，让用户规则、异常恢复、Work 边界、
+  唯一状态和长任务进度成为可核验 Judge 条件。
+- Evidence state：Confirmed；用户已提供完整规则与验收要求。
+- Affected current and future items：Work2 / R3.6 及后续 Work 的治理过程。
+- Schedule and complexity impact：只增加现有文件内的治理检查，不增加业务施工段。
+- Architecture, data, security, and operations impact：无业务架构或数据变化；强化授权、
+  恢复、范围和状态一致性。
+- Duplicate or conflict check：复用 `AGENTS.md` Overlay、四份 `_ai-dev` 文件和现有
+  路线/变更台账；不创建第二套框架。
+- Classification：Current-step substep。
+- Decision and reason：批准最小增补；治理缺口会直接影响 R3.6 的可恢复性和 Judge。
+- What changes：连续执行、用户规则 Judge、异常检查点、范围漂移拦截、状态优先级、
+  进度显示和五项新增验收。
+- What remains unchanged：官方 v3.28.0 业务底座、R3.1–R3.5 成果、R3.6 产品方案、
+  R5 Windows 实机门、真实数据和 Release 授权边界。
+- Revised acceptance evidence：治理一致性本地检查、AI 资产检查、新 Draft PR CI 和
+  `PROJECT_STATUS` 与 Git/测试/CI 对照。
+- Acceptance result：Draft PR #4 Head `6ab647a7…` 的 Run `30540208702` 成功；
+  Backend `5005 passed`，Docker 与 AI Governance 通过；远端 12 个 Blob SHA
+  与本地一致。状态/Judge 收口 Commit `d45bdfad…` 的 Run `30540784009` 也成功。
+  治理子步通过，不代表 R3.6 业务实现完成。
+
+## Change WORK-002-R3.6-PR7-GOVERNANCE-RECONCILIATION
+
+- Request and user value：把已通过的治理硬门合入当前唯一活动 PR #7，消除 PR #6、
+  PR #4 与 PR #7 的现行状态冲突，避免 Work2 越界。
+- Evidence state：Confirmed；PR #7 Head `7104bbc5…` 的 Run `30552446534`
+  为 8/8 success，PR #4 Head `9c136a46…` 为独立治理分支。
+- Scope：只归并治理提交、解决四个台账冲突、更新现有状态与验证证据。
+- Exclusions：不改便携更新业务逻辑、NSIS、版本、Release、真实数据或 R3.7。
+- Acceptance：本地治理与 Desktop 测试、PR #7 最终 Head CI、Draft 状态和
+  `_ai-dev/PROJECT_STATUS.md` 一致；通过后关闭被取代的 PR #4。
