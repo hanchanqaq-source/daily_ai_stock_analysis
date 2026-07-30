@@ -39,3 +39,7 @@
 
 - Windows `mimetypes` 启动卡死修复
 - 美股、港股英文新闻相关性修复
+
+## Work2 / R3.6 Windows 便携安全更新（2026-07-30）
+
+Work1 已永久关闭；PR #3 已合并且 R3.1–R3.5 已进入 main。Work2 从 `0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9` 以独立分支和独立 Draft PR 接管 R3.6。实现范围与证据见 `docs/pp02/R3_6_WINDOWS_PORTABLE_UPDATE_IMPLEMENTATION.md`。R5 Windows 真机验收仍为后续授权门，本轮不进入 R3.7。

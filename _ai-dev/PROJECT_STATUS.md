@@ -6,18 +6,18 @@
 PROJECT_ID=PP02
 PROJECT_NAME=AI 每日股票分析
 CHAT_ROLE=WORK
-WORK_ID=WORK-PP02-CLOUD-REBUILD-001
+WORK_ID=WORK-002
 ROLE_LOCK=TRUE
 APPLICATION_BASE_VERSION=3.28.0
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-CURRENT_STAGE=R3.5 / Judge
-CURRENT_WORK=应用内手动周期报告与下周参考展望
-ACTIVE_GOAL=验证R3.5文档收口Head完整CI并完成Judge回传
-CURRENT_STATUS=R3_5_IMPLEMENTATION_CI_PASSED_FINAL_HEAD_CI_PENDING
+CURRENT_STAGE=R3.6 / Review Fix Commit-CI
+CURRENT_WORK=Windows 便携安全更新
+ACTIVE_GOAL=修复Draft PR #5 Judge阻断并验证新Head完整CI
+CURRENT_STATUS=R3_6_PR5_REVIEW_FIX_LOCAL_TESTS_PASSED
 ACTIVE_BLOCKER=NONE
-NEXT_ACTION=验证R3.5文档收口Head完整CI；成功后停止并回传总控
-AUTHORIZATION_REQUIRED=FALSE_FOR_R3_5_BUILD_TEST_CI; READY/MERGE/MAIN/RELEASE/REAL_DATA_REQUIRE_NEW_AUTHORIZATION
+NEXT_ACTION=完成行为测试与修复后Commit并推送同一Draft PR #5，等待完整CI
+AUTHORIZATION_REQUIRED=FALSE_FOR_R3_6_BUILD_TEST_COMMIT_DRAFT_PR_CI; READY/MERGE/MAIN/RELEASE/REAL_DATA_REQUIRE_NEW_AUTHORIZATION
 LAST_UPDATED=2026-07-30
 ```
 
@@ -157,3 +157,14 @@ LAST_UPDATED=2026-07-30
   模型、通知渠道或自动入口。
 
 `R3_5_IMPLEMENTATION_CI_PASSED_FINAL_HEAD_CI_PENDING`
+
+## 2026-07-30 Work2 / R3.6 接管
+
+`WORK_ID=WORK-002`；`CURRENT_STAGE=R3.6 / Build-Test-Publish-CI`；`ACTIVE_GOAL=Windows 便携安全更新`。Work1 已永久关闭，PR #3 已合并，R3.1–R3.5 已进入 `main`。本轮基线 `0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9`，独立分支 `agent/pp02-work2-r3-6-windows-portable-update`，只创建独立 Draft PR。Windows R5 真机验收、Ready、合并、Tag、Release 和真实数据继续禁止。
+
+## 2026-07-30 Work2 / R3.6 Review 修复
+
+- 当前 Draft PR：`#5`；实际分支：`codex`；保持 Draft。
+- 上一 Head：`e5cdb70`；CI Run `30543513470` 为 8/8 success，但 Work2 Judge 发现更新事务与真实运行行为阻断，不能据此判定通过。
+- 先前 `PUBLISH_BLOCKED` 仅保留为历史说明，当前不再是 Active Blocker。
+- 当前动作：收敛助手资源、下载重定向/超时、停止后备份、完整回滚、动态端口握手、严格便携身份和真实行为测试；随后更新同一 PR #5。

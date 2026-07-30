@@ -134,3 +134,7 @@
 - 当前只待 Judge 文档收口后的最终 Head CI；PR #3 保持 Draft。
 - Windows 实机、真实历史/数据库、模型调用、定时器和自动推送均未执行；
   R3.6 只能由总控审核 R3.5 后另行下发。
+
+## 2026-07-30 Work2 / R3.6 新交接
+
+Work1 已永久关闭，旧“PR #3 保持 Draft”只在合并前有效；PR #3 现已合并。R3.1–R3.5 已进入 main。Work2 在 `0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9` 上以独立分支和独立 Draft PR 实现 Windows 便携安全更新。云端最高 Judge 为 `IMPLEMENTATION PASS — R5 WINDOWS VALIDATION REQUIRED`，不得自行进入 R3.7。
