@@ -14,8 +14,8 @@
 | 当前官方基线 | `v3.28.0` / `905c339d80ad2daa6fd2bab3bb10267b23c7ac1c` |
 | 项目控制框架 | `P000/P001 V1.5.6` |
 | 当前 Work | `WORK-002｜功能改造与验收` |
-| 当前阶段 | R3.1–R3.5 完成；R3.6 实现与候选 CI 已通过，正在 PR #7 内归并治理硬门；R5 实机待授权 |
-| 当前 Git 检查点 | `main@0f9afe8b…`；Draft PR #7 实现检查点 `7104bbc5…` 的 Run `30552446534` 为 8/8 success；治理来源 PR #4 Head `9c136a46…`；实际 Head 以 GitHub 为准 |
+| 当前阶段 | R3.1–R3.5 完成；R3.6 实现、治理归并与云端 Judge 已完成；Draft Hold，R5 实机待精确授权 |
+| 当前 Git 检查点 | `main@0f9afe8b…`；Draft PR #7 检查点 `f39cc552…` 的 Run `30561670644` 为 8/8 success；PR #4 已关闭且未合并；实际 Head 以 GitHub 为准 |
 | 后续路线 | [`pp02/REBUILD_ROADMAP.md`](pp02/REBUILD_ROADMAP.md)；Windows 验收 Deferred |
 
 ## Work 1 历史身份
