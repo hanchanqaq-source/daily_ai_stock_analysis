@@ -35,6 +35,8 @@ import type {
 } from '../types/decisionSignals';
 import type {
   PortfolioAccountItem,
+  PortfolioBackupDocument,
+  PortfolioBackupPreviewResponse,
   PortfolioCashDirection,
   PortfolioCashLedgerListItem,
   PortfolioCorporateActionListItem,
@@ -270,6 +272,10 @@ const PortfolioPage: React.FC = () => {
   const [quickPreviewing, setQuickPreviewing] = useState(false);
   const [quickConfirming, setQuickConfirming] = useState(false);
   const [quickMessage, setQuickMessage] = useState<string | null>(null);
+  const [backupDocument, setBackupDocument] = useState<PortfolioBackupDocument | null>(null);
+  const [backupPreview, setBackupPreview] = useState<PortfolioBackupPreviewResponse | null>(null);
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [backupMessage, setBackupMessage] = useState<string | null>(null);
   const [cashForm, setCashForm] = useState({
     eventDate: getTodayIso(),
     direction: 'in' as PortfolioCashDirection,
@@ -693,6 +699,75 @@ const PortfolioPage: React.FC = () => {
       setError(getParsedApiError(err));
     } finally {
       setQuickConfirming(false);
+    }
+  };
+
+
+  const handleExportBackup = async () => {
+    try {
+      setBackupLoading(true);
+      setBackupMessage(null);
+      setError(null);
+      const result = await portfolioApi.exportBackup();
+      if (typeof URL.createObjectURL === 'function') {
+        const blob = new Blob([JSON.stringify(result.backup, null, 2)], {
+          type: 'application/json',
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = result.fileName;
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+      setBackupMessage('股票备份已导出。');
+    } catch (err) {
+      setError(getParsedApiError(err));
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const handleBackupFile = async (file: File | null) => {
+    setBackupDocument(null);
+    setBackupPreview(null);
+    setBackupMessage(null);
+    if (!file) return;
+    try {
+      setBackupLoading(true);
+      setError(null);
+      const parsed = JSON.parse(await file.text()) as PortfolioBackupDocument;
+      const preview = await portfolioApi.previewBackup(parsed);
+      setBackupDocument(parsed);
+      setBackupPreview(preview);
+    } catch (err) {
+      setError(getParsedApiError(err));
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const handleRestoreBackup = async () => {
+    if (!backupDocument || !backupPreview || backupLoading) return;
+    try {
+      setBackupLoading(true);
+      setBackupMessage(null);
+      setError(null);
+      await portfolioApi.restoreBackup({
+        backup: backupDocument,
+        previewToken: backupPreview.previewToken,
+      });
+      setBackupDocument(null);
+      setBackupPreview(null);
+      setSelectedAccount('all');
+      setEventPage(1);
+      setPortfolioSignalsRefreshKey((value) => value + 1);
+      await loadAccounts();
+      setBackupMessage('股票备份恢复完成。');
+    } catch (err) {
+      setError(getParsedApiError(err));
+    } finally {
+      setBackupLoading(false);
     }
   };
 
@@ -1651,6 +1726,61 @@ const PortfolioPage: React.FC = () => {
       </section>
 
       <section className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+        <Card padding="md">
+          <h3 className="text-sm font-semibold text-foreground mb-3">股票备份与恢复</h3>
+          <div className="space-y-3">
+            <p className="text-xs text-secondary">
+              仅包含账户、交易、资金和公司行动；不包含密钥、配置、基金或派生持仓缓存。
+            </p>
+            <button
+              type="button"
+              className="btn-secondary w-full"
+              disabled={backupLoading}
+              onClick={() => void handleExportBackup()}
+            >
+              {backupLoading ? '处理中...' : '导出股票备份'}
+            </button>
+            <label className={PORTFOLIO_FILE_PICKER_CLASS}>
+              选择股票备份 JSON
+              <input
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                onChange={(event) => void handleBackupFile(event.target.files?.[0] || null)}
+              />
+            </label>
+            {backupPreview ? (
+              <div className="space-y-2 rounded-lg border border-amber-400/30 bg-amber-500/5 p-3">
+                <p className="text-sm font-medium text-foreground">
+                  将恢复 {backupPreview.incomingCounts.accounts} 个账户、
+                  {backupPreview.incomingCounts.trades} 条交易事件
+                </p>
+                <p className="text-xs text-secondary">
+                  当前 {backupPreview.currentCounts.accounts} 个账户及其正式事件将被整套替换。
+                </p>
+                {backupPreview.warnings.map((warning) => (
+                  <p key={warning} className="text-xs text-amber-200">{warning}</p>
+                ))}
+                <button
+                  type="button"
+                  className="btn-secondary w-full border-red-400/40 text-red-100 hover:bg-red-500/15"
+                  disabled={backupLoading}
+                  onClick={() => void handleRestoreBackup()}
+                >
+                  确认替换当前股票账本
+                </button>
+              </div>
+            ) : null}
+            {backupMessage ? (
+              <InlineAlert
+                variant="success"
+                message={backupMessage}
+                className="rounded-lg px-3 py-2 text-xs shadow-none"
+              />
+            ) : null}
+          </div>
+        </Card>
+
         <Card padding="md">
           <h3 className="text-sm font-semibold text-foreground mb-3">券商 CSV 导入</h3>
           <div className="space-y-2">
