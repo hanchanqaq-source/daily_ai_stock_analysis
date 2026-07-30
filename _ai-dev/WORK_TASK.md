@@ -143,21 +143,22 @@ Blocker 和用户是否需要操作，不得假装回复结束后仍在后台执
 
 ```text
 CURRENT_WORK=R3.6 Windows便携更新
-LAST_VALID_COMMIT=7104bbc5b1f5a1c6ed9863f87472014c72eb79e8
-LAST_SUCCESSFUL_TEST=PR7_HEAD_7104BBC5_CI_RUN_30552446534_SUCCESS_8_OF_8
+LAST_VALID_COMMIT=f39cc552c60a1e8e5014e8640cbd7a9a7d2c6d5a
+LAST_SUCCESSFUL_TEST=PR7_HEAD_F39CC552_CI_RUN_30561670644_SUCCESS_8_OF_8
 ACTIVE_BLOCKER=NONE
-NEXT_ACTION=完成PR7治理归并、本地验证、最终Head CI和Judge；之后停在R5 Windows实机验收授权门
+NEXT_ACTION=等待R5 Windows实机验收精确授权；不得进入R3.7
 ```
 
 ## 当前 PR #7 纠正范围
 
 - PR #7 是 Work2 / R3.6 当前唯一活动 Draft；PR #6 已关闭，只保留历史证据。
-- 合入治理 PR #4 的提交历史，解决
+- 已合入治理 PR #4 的等价内容并解决
   `PROJECT_STATUS`、`WORK_TASK`、`WORK_RETURN`、`ERRORS_AND_LESSONS`
   四个真实冲突。
 - 更新现有状态、交接、回传、实现说明、路线和追加式变更记录，使其与 PR #7 的
   实际 Head 和 CI 一致。
-- PR #7 最终 Head CI 通过后关闭被取代的 PR #4；不转 Ready、不合并 PR #7。
+- PR #7 检查点 `f39cc552…` 的 Run `30561670644` 已 8/8 success；被取代的
+  PR #4 已关闭且未合并。PR #7 不转 Ready、不合并。
 
 准确停止点：
 
