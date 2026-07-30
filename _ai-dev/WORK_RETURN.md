@@ -336,18 +336,20 @@ Release、`main`、真实数据、AI 调用、定时器或自动推送。
 
 ### 当前证据
 
-- PR #7 实现检查点：`7104bbc5b1f5a1c6ed9863f87472014c72eb79e8`；
-  CI Run `30552446534` 为 8/8 success。
+- PR #7 实现与治理检查点：
+  `f39cc552c60a1e8e5014e8640cbd7a9a7d2c6d5a`；CI Run
+  `30561670644` 为 8/8 success。
 - 本地 AI 治理：通过。
 - 本地 Desktop：`60/60 passed`；首次失败来自隔离 Worktree 缺少依赖，随后按
   lockfile 使用临时 npm 缓存和 `--ignore-scripts` 完成单测依赖安装。
 - Windows 候选已存在，但包内版本仍为 `3.21.0`，不能代替真实升级与回滚验收。
-- 归并后的最终 Head CI：待推送后回填到下一次非自引用状态收口。
+- 治理内容已经逐文件归并，13 个远端 Blob 与本地目标值一致；被取代的 PR #4
+  已关闭且未合并。
 
 ### 当前 Judge
 
-`PENDING_FINAL_HEAD_CI — R5 WINDOWS VALIDATION REQUIRED — DRAFT_HOLD`
+`IMPLEMENTATION PASS — R5 WINDOWS VALIDATION REQUIRED — DRAFT_HOLD`
 
-目标停止点：
+准确停止点：
 
 `WORK2_R3_6_IMPLEMENTATION_JUDGED — R5_WINDOWS_VALIDATION_REQUIRED — DRAFT_HOLD`
