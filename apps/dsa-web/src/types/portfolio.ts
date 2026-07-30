@@ -193,6 +193,47 @@ export interface PortfolioTradeCreateRequest {
   note?: string;
 }
 
+export interface PortfolioQuickPositionPreviewRequest {
+  accountId: number;
+  symbol: string;
+  targetQuantity: number;
+  tradeDate: string;
+  price: number;
+  fee?: number;
+  tax?: number;
+  market?: 'cn' | 'hk' | 'us' | 'jp' | 'kr' | 'tw';
+  currency?: string;
+  note?: string;
+}
+
+export interface PortfolioQuickPositionConfirmRequest extends PortfolioQuickPositionPreviewRequest {
+  previewUid: string;
+  expectedCurrentQuantity: number;
+}
+
+export interface PortfolioQuickPositionPreviewResponse {
+  previewUid: string;
+  accountId: number;
+  symbol: string;
+  market: string;
+  currency: string;
+  tradeDate: string;
+  currentQuantity: number;
+  targetQuantity: number;
+  deltaQuantity: number;
+  side: PortfolioSide | null;
+  tradeQuantity: number;
+  price: number;
+  fee: number;
+  tax: number;
+  cashChange: number;
+  requiresEvent: boolean;
+}
+
+export interface PortfolioQuickPositionConfirmResponse extends PortfolioQuickPositionPreviewResponse {
+  tradeId: number;
+}
+
 export interface PortfolioCashLedgerCreateRequest {
   accountId: number;
   eventDate: string;

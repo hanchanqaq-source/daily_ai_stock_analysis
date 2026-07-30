@@ -17,6 +17,10 @@ import type {
   PortfolioImportCommitResponse,
   PortfolioImportParseResponse,
   PortfolioPositionAnalysisRequest,
+  PortfolioQuickPositionConfirmRequest,
+  PortfolioQuickPositionConfirmResponse,
+  PortfolioQuickPositionPreviewRequest,
+  PortfolioQuickPositionPreviewResponse,
   PortfolioRiskResponse,
   PortfolioSnapshotResponse,
   PortfolioTradeCreateRequest,
@@ -134,6 +138,50 @@ export const portfolioApi = {
       params: buildSnapshotParams(query),
     });
     return toCamelCase<PortfolioSnapshotResponse>(response.data);
+  },
+
+  async previewPositionAdjustment(
+    payload: PortfolioQuickPositionPreviewRequest,
+  ): Promise<PortfolioQuickPositionPreviewResponse> {
+    const response = await apiClient.post<Record<string, unknown>>(
+      '/api/v1/portfolio/positions/quick-adjust/preview',
+      {
+        account_id: payload.accountId,
+        symbol: payload.symbol,
+        target_quantity: payload.targetQuantity,
+        trade_date: payload.tradeDate,
+        price: payload.price,
+        fee: payload.fee ?? 0,
+        tax: payload.tax ?? 0,
+        market: payload.market,
+        currency: payload.currency,
+        note: payload.note,
+      },
+    );
+    return toCamelCase<PortfolioQuickPositionPreviewResponse>(response.data);
+  },
+
+  async confirmPositionAdjustment(
+    payload: PortfolioQuickPositionConfirmRequest,
+  ): Promise<PortfolioQuickPositionConfirmResponse> {
+    const response = await apiClient.post<Record<string, unknown>>(
+      '/api/v1/portfolio/positions/quick-adjust/confirm',
+      {
+        account_id: payload.accountId,
+        symbol: payload.symbol,
+        target_quantity: payload.targetQuantity,
+        trade_date: payload.tradeDate,
+        price: payload.price,
+        fee: payload.fee ?? 0,
+        tax: payload.tax ?? 0,
+        market: payload.market,
+        currency: payload.currency,
+        note: payload.note,
+        preview_uid: payload.previewUid,
+        expected_current_quantity: payload.expectedCurrentQuantity,
+      },
+    );
+    return toCamelCase<PortfolioQuickPositionConfirmResponse>(response.data);
   },
 
   async analyzePosition(symbol: string, payload: PortfolioPositionAnalysisRequest = {}): Promise<TaskAccepted> {

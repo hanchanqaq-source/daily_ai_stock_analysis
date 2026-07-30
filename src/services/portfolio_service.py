@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
+from uuid import uuid4
 
 from data_provider.base import canonical_stock_code, normalize_stock_code
 from src.config import get_config
@@ -250,6 +251,120 @@ class PortfolioService:
                     dedup_hash=dedup_hash_norm,
                 )
                 return {"id": int(row.id)}
+        except (DuplicateTradeUidError, DuplicateTradeDedupHashError) as exc:
+            raise PortfolioConflictError(str(exc)) from exc
+
+    def preview_position_adjustment(
+        self,
+        *,
+        account_id: int,
+        symbol: str,
+        target_quantity: float,
+        trade_date: date,
+        price: float,
+        fee: float = 0.0,
+        tax: float = 0.0,
+        market: Optional[str] = None,
+        currency: Optional[str] = None,
+        note: Optional[str] = None,
+        preview_uid: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Build a read-only event preview for a target position quantity."""
+
+        account = self._require_active_account(account_id)
+        uid = self._normalize_preview_uid(preview_uid or uuid4().hex)
+        return self._build_position_adjustment_preview(
+            account=account,
+            account_id=account_id,
+            symbol=symbol,
+            target_quantity=target_quantity,
+            trade_date=trade_date,
+            price=price,
+            fee=fee,
+            tax=tax,
+            market=market,
+            currency=currency,
+            preview_uid=uid,
+            session=None,
+        )
+
+    def confirm_position_adjustment(
+        self,
+        *,
+        account_id: int,
+        symbol: str,
+        target_quantity: float,
+        trade_date: date,
+        price: float,
+        preview_uid: str,
+        expected_current_quantity: float,
+        fee: float = 0.0,
+        tax: float = 0.0,
+        market: Optional[str] = None,
+        currency: Optional[str] = None,
+        note: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Atomically verify a preview and append one official trade event."""
+
+        uid = self._normalize_preview_uid(preview_uid)
+        trade_uid = f"pp02-quick:{uid}"
+        try:
+            with self.repo.portfolio_write_session() as session:
+                account = self._require_active_account_in_session(
+                    session=session,
+                    account_id=account_id,
+                )
+                # Keep duplicate confirmation semantics stable even after the first
+                # confirmation has already changed the current position.
+                self._validate_trade_identity(
+                    account_id=account_id,
+                    trade_uid=trade_uid,
+                    dedup_hash=None,
+                    session=session,
+                )
+                preview = self._build_position_adjustment_preview(
+                    account=account,
+                    account_id=account_id,
+                    symbol=symbol,
+                    target_quantity=target_quantity,
+                    trade_date=trade_date,
+                    price=price,
+                    fee=fee,
+                    tax=tax,
+                    market=market,
+                    currency=currency,
+                    preview_uid=uid,
+                    session=session,
+                )
+                expected = float(expected_current_quantity)
+                if expected < 0:
+                    raise ValueError("expected_current_quantity must be >= 0")
+                if abs(preview["current_quantity"] - expected) > EPS:
+                    raise PortfolioConflictError(
+                        "Position changed after preview; refresh and preview again."
+                    )
+                if not preview["requires_event"] or preview["side"] is None:
+                    raise ValueError("Target quantity already matches the current position")
+
+                row = self.repo.add_trade_in_session(
+                    session=session,
+                    account_id=account_id,
+                    trade_uid=trade_uid,
+                    symbol=self._normalize_symbol_for_storage(symbol),
+                    market=preview["market"],
+                    currency=preview["currency"],
+                    trade_date=trade_date,
+                    side=preview["side"],
+                    quantity=preview["trade_quantity"],
+                    price=float(price),
+                    fee=float(fee),
+                    tax=float(tax),
+                    note=(note or "").strip() or "PP02 quick position adjustment",
+                    dedup_hash=None,
+                )
+                result = dict(preview)
+                result["trade_id"] = int(row.id)
+                return result
         except (DuplicateTradeUidError, DuplicateTradeDedupHashError) as exc:
             raise PortfolioConflictError(str(exc)) from exc
 
@@ -773,6 +888,95 @@ class PortfolioService:
                 quantity_held = 0.0
 
         return quantity_held
+
+    def _build_position_adjustment_preview(
+        self,
+        *,
+        account: Any,
+        account_id: int,
+        symbol: str,
+        target_quantity: float,
+        trade_date: date,
+        price: float,
+        fee: float,
+        tax: float,
+        market: Optional[str],
+        currency: Optional[str],
+        preview_uid: str,
+        session: Optional[Any],
+    ) -> Dict[str, Any]:
+        symbol_norm = self._normalize_symbol_for_storage(symbol)
+        if not symbol_norm:
+            raise ValueError("symbol is required")
+
+        target = float(target_quantity)
+        trade_price = float(price)
+        trade_fee = float(fee)
+        trade_tax = float(tax)
+        if target < 0:
+            raise ValueError("target_quantity must be >= 0")
+        if trade_price <= 0:
+            raise ValueError("price must be > 0")
+        if trade_fee < 0 or trade_tax < 0:
+            raise ValueError("fee and tax must be >= 0")
+
+        market_norm = self._normalize_market(market or account.market)
+        currency_norm = self._normalize_currency(
+            currency or self._default_currency_for_market(market_norm)
+        )
+        key = (
+            self._normalize_symbol_for_position(symbol),
+            market_norm,
+            currency_norm,
+        )
+        current = self._calculate_available_quantity(
+            account_id=account_id,
+            key=key,
+            as_of_date=trade_date,
+            session=session,
+        )
+        delta = target - current
+        requires_event = abs(delta) > EPS
+        side: Optional[str] = None
+        trade_quantity = 0.0
+        cash_change = 0.0
+        if requires_event:
+            side = "buy" if delta > 0 else "sell"
+            trade_quantity = abs(delta)
+            gross = trade_quantity * trade_price
+            cash_change = (
+                -(gross + trade_fee + trade_tax)
+                if side == "buy"
+                else gross - trade_fee - trade_tax
+            )
+
+        return {
+            "preview_uid": self._normalize_preview_uid(preview_uid),
+            "account_id": int(account_id),
+            "symbol": symbol_norm,
+            "market": market_norm,
+            "currency": currency_norm,
+            "trade_date": trade_date,
+            "current_quantity": float(current),
+            "target_quantity": target,
+            "delta_quantity": float(delta),
+            "side": side,
+            "trade_quantity": float(trade_quantity),
+            "price": trade_price,
+            "fee": trade_fee,
+            "tax": trade_tax,
+            "cash_change": float(cash_change),
+            "requires_event": requires_event,
+        }
+
+    @staticmethod
+    def _normalize_preview_uid(value: str) -> str:
+        normalized = (value or "").strip()
+        if not normalized:
+            raise ValueError("preview_uid is required")
+        if len(normalized) > 96:
+            raise ValueError("preview_uid must be at most 96 characters")
+        return normalized
 
     def _replay_account(
         self,

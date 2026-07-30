@@ -57,6 +57,47 @@ class PortfolioTradeCreateRequest(BaseModel):
     note: Optional[str] = Field(None, max_length=255)
 
 
+class PortfolioQuickPositionPreviewRequest(BaseModel):
+    account_id: int
+    symbol: str = Field(..., min_length=1, max_length=16)
+    target_quantity: float = Field(..., ge=0)
+    trade_date: date
+    price: float = Field(..., gt=0)
+    fee: float = Field(0.0, ge=0)
+    tax: float = Field(0.0, ge=0)
+    market: Optional[Literal["cn", "hk", "us", "jp", "kr", "tw"]] = None
+    currency: Optional[str] = Field(None, min_length=3, max_length=8)
+    note: Optional[str] = Field(None, max_length=255)
+
+
+class PortfolioQuickPositionConfirmRequest(PortfolioQuickPositionPreviewRequest):
+    preview_uid: str = Field(..., min_length=1, max_length=96)
+    expected_current_quantity: float = Field(..., ge=0)
+
+
+class PortfolioQuickPositionPreviewResponse(BaseModel):
+    preview_uid: str
+    account_id: int
+    symbol: str
+    market: str
+    currency: str
+    trade_date: date
+    current_quantity: float
+    target_quantity: float
+    delta_quantity: float
+    side: Optional[Literal["buy", "sell"]] = None
+    trade_quantity: float
+    price: float
+    fee: float
+    tax: float
+    cash_change: float
+    requires_event: bool
+
+
+class PortfolioQuickPositionConfirmResponse(PortfolioQuickPositionPreviewResponse):
+    trade_id: int
+
+
 class PortfolioCashLedgerCreateRequest(BaseModel):
     account_id: int
     event_date: date

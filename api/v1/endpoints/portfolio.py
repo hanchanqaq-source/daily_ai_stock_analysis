@@ -30,6 +30,10 @@ from api.v1.schemas.portfolio import (
     PortfolioImportParseResponse,
     PortfolioImportTradeItem,
     PortfolioPositionAnalysisRequest,
+    PortfolioQuickPositionConfirmRequest,
+    PortfolioQuickPositionConfirmResponse,
+    PortfolioQuickPositionPreviewRequest,
+    PortfolioQuickPositionPreviewResponse,
     PortfolioRiskResponse,
     PortfolioSnapshotResponse,
     PortfolioTradeListResponse,
@@ -439,6 +443,74 @@ def get_snapshot(
         raise _bad_request(exc)
     except Exception as exc:
         raise _internal_error("Get snapshot failed", exc)
+
+
+@router.post(
+    "/positions/quick-adjust/preview",
+    response_model=PortfolioQuickPositionPreviewResponse,
+    responses={400: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
+    summary="Preview a target position adjustment without writing",
+)
+def preview_position_adjustment(
+    request: PortfolioQuickPositionPreviewRequest,
+) -> PortfolioQuickPositionPreviewResponse:
+    service = PortfolioService()
+    try:
+        data = service.preview_position_adjustment(
+            account_id=request.account_id,
+            symbol=request.symbol,
+            target_quantity=request.target_quantity,
+            trade_date=request.trade_date,
+            price=request.price,
+            fee=request.fee,
+            tax=request.tax,
+            market=request.market,
+            currency=request.currency,
+            note=request.note,
+        )
+        return PortfolioQuickPositionPreviewResponse(**data)
+    except ValueError as exc:
+        raise _bad_request(exc)
+    except Exception as exc:
+        raise _internal_error("Preview position adjustment failed", exc)
+
+
+@router.post(
+    "/positions/quick-adjust/confirm",
+    response_model=PortfolioQuickPositionConfirmResponse,
+    responses={400: {"model": ErrorResponse}, 409: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
+    summary="Confirm a target position adjustment as one official trade event",
+)
+def confirm_position_adjustment(
+    request: PortfolioQuickPositionConfirmRequest,
+) -> PortfolioQuickPositionConfirmResponse:
+    service = PortfolioService()
+    try:
+        data = service.confirm_position_adjustment(
+            account_id=request.account_id,
+            symbol=request.symbol,
+            target_quantity=request.target_quantity,
+            trade_date=request.trade_date,
+            price=request.price,
+            fee=request.fee,
+            tax=request.tax,
+            market=request.market,
+            currency=request.currency,
+            note=request.note,
+            preview_uid=request.preview_uid,
+            expected_current_quantity=request.expected_current_quantity,
+        )
+        return PortfolioQuickPositionConfirmResponse(**data)
+    except PortfolioBusyError as exc:
+        raise _conflict_error(error="portfolio_busy", message=str(exc))
+    except PortfolioOversellError as exc:
+        raise _conflict_error(error="portfolio_oversell", message=str(exc))
+    except PortfolioConflictError as exc:
+        raise _conflict_error(error="conflict", message=str(exc))
+    except ValueError as exc:
+        raise _bad_request(exc)
+    except Exception as exc:
+        raise _internal_error("Confirm position adjustment failed", exc)
 
 
 @router.post(
