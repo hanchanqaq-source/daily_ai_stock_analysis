@@ -18,6 +18,10 @@ from api.v1.schemas.portfolio import (
     PortfolioAccountItem,
     PortfolioAccountListResponse,
     PortfolioAccountUpdateRequest,
+    PortfolioBackupDocument,
+    PortfolioBackupPreviewResponse,
+    PortfolioBackupRestoreRequest,
+    PortfolioBackupRestoreResponse,
     PortfolioCashLedgerListResponse,
     PortfolioCashLedgerCreateRequest,
     PortfolioCorporateActionListResponse,
@@ -40,6 +44,11 @@ from api.v1.schemas.portfolio import (
     PortfolioTradeCreateRequest,
 )
 from src.services.task_queue import get_task_queue
+from src.services.portfolio_backup_service import (
+    PortfolioBackupConflictError,
+    PortfolioBackupService,
+    PortfolioBackupValidationError,
+)
 from src.services.portfolio_import_service import PortfolioImportService
 from src.services.portfolio_risk_service import PortfolioRiskService
 from src.services.portfolio_service import (
@@ -75,6 +84,82 @@ def _serialize_import_record(item: dict) -> PortfolioImportTradeItem:
     else:
         payload["trade_date"] = str(trade_date)
     return PortfolioImportTradeItem(**payload)
+
+
+def _schema_dict(value: object) -> dict:
+    if hasattr(value, "model_dump"):
+        return value.model_dump()
+    return value.dict()
+
+
+@router.get(
+    "/backup/export",
+    response_model=PortfolioBackupDocument,
+    responses={500: {"model": ErrorResponse}},
+    summary="Export the versioned PP02 stock portfolio backup",
+)
+def export_portfolio_backup() -> JSONResponse:
+    try:
+        backup = PortfolioBackupService().export_backup()
+        compact_time = (
+            str(backup["metadata"]["created_at"])
+            .replace("-", "")
+            .replace(":", "")
+        )
+        filename = "pp02-stock-portfolio-backup-" + compact_time + ".json"
+        return JSONResponse(
+            content=backup,
+            headers={"Content-Disposition": 'attachment; filename="' + filename + '"'},
+        )
+    except Exception as exc:
+        raise _internal_error("Export portfolio backup failed", exc)
+
+
+@router.post(
+    "/backup/preview",
+    response_model=PortfolioBackupPreviewResponse,
+    responses={400: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
+    summary="Validate and preview replacement from a PP02 portfolio backup",
+)
+def preview_portfolio_backup(
+    request: PortfolioBackupDocument,
+) -> PortfolioBackupPreviewResponse:
+    try:
+        data = PortfolioBackupService().preview_restore(_schema_dict(request))
+        return PortfolioBackupPreviewResponse(**data)
+    except PortfolioBackupValidationError as exc:
+        raise _bad_request(exc)
+    except Exception as exc:
+        raise _internal_error("Preview portfolio backup failed", exc)
+
+
+@router.post(
+    "/backup/restore",
+    response_model=PortfolioBackupRestoreResponse,
+    responses={
+        400: {"model": ErrorResponse},
+        409: {"model": ErrorResponse},
+        500: {"model": ErrorResponse},
+    },
+    summary="Atomically replace the official ledger from a previewed backup",
+)
+def restore_portfolio_backup(
+    request: PortfolioBackupRestoreRequest,
+) -> PortfolioBackupRestoreResponse:
+    try:
+        data = PortfolioBackupService().restore_backup(
+            _schema_dict(request.backup),
+            preview_token=request.preview_token,
+        )
+        return PortfolioBackupRestoreResponse(**data)
+    except PortfolioBackupValidationError as exc:
+        raise _bad_request(exc)
+    except PortfolioBackupConflictError as exc:
+        raise _conflict_error(error="backup_conflict", message=str(exc))
+    except PortfolioBusyError as exc:
+        raise _conflict_error(error="portfolio_busy", message=str(exc))
+    except Exception as exc:
+        raise _internal_error("Restore portfolio backup failed", exc)
 
 
 @router.post(
