@@ -1109,7 +1109,7 @@ describe('PortfolioPage FX refresh', () => {
     const costMethodSelect = screen.getAllByRole('combobox')[1];
 
     fireEvent.click(screen.getByRole('button', { name: '刷新汇率' }));
-    expect(await screen.findByRole('button', { name: '刷新中...' })).toBeDisabled();
+    await waitFor(() => expect(screen.getByRole('button', { name: '刷新中...' })).toBeDisabled());
 
     fireEvent.change(costMethodSelect, { target: { value: 'avg' } });
     await waitFor(() => expect(getSnapshot).toHaveBeenLastCalledWith({ accountId: undefined, costMethod: 'avg', includeRealtime: false }));
