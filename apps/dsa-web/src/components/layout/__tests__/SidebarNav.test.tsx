@@ -71,7 +71,14 @@ describe('SidebarNav', () => {
 
     await screen.findByRole('link', { name: '选股' });
     const hrefs = screen.getAllByRole('link').map((link) => link.getAttribute('href'));
-    expect(hrefs.slice(0, 5)).toEqual(['/', '/chat', '/screening', '/portfolio', '/decision-signals']);
+    expect(hrefs.slice(0, 6)).toEqual([
+      '/',
+      '/chat',
+      '/screening',
+      '/portfolio',
+      '/period-report',
+      '/decision-signals',
+    ]);
   });
 
   it('refreshes the screening navigation item after any config save event', async () => {
@@ -149,6 +156,18 @@ describe('SidebarNav', () => {
     const signalsLink = screen.getByRole('link', { name: 'AI 建议' });
     expect(signalsLink).toHaveAttribute('href', '/decision-signals');
     expect(signalsLink).toHaveClass('font-medium');
+  });
+
+  it('renders the period report navigation item and marks it active', () => {
+    render(
+      <MemoryRouter initialEntries={['/period-report']}>
+        <SidebarNav />
+      </MemoryRouter>,
+    );
+
+    const periodReportLink = screen.getByRole('link', { name: '周期报告' });
+    expect(periodReportLink).toHaveAttribute('href', '/period-report');
+    expect(periodReportLink).toHaveClass('font-medium');
   });
 
   it('opens the logout confirmation and confirms logout', async () => {

@@ -44,6 +44,10 @@ vi.mock('./pages/PortfolioPage', () => ({
   default: () => <div data-testid="portfolio-page">Portfolio</div>,
 }));
 
+vi.mock('./pages/PeriodReportPage', () => ({
+  default: () => <div data-testid="period-report-page">Period report</div>,
+}));
+
 vi.mock('./pages/DecisionSignalsPage', () => ({
   default: () => <div data-testid="decision-signals-page">Decision signals</div>,
 }));
@@ -139,6 +143,16 @@ describe('App routing behavior', () => {
 
     expect(await screen.findByTestId('token-usage-page')).toBeInTheDocument();
     expect(setCurrentRoute).toHaveBeenCalledWith('/usage');
+    expect(screen.queryByTestId('home-page')).not.toBeInTheDocument();
+  });
+
+  it('routes /period-report to the manual period report page after auth is ready', async () => {
+    window.history.pushState({}, '', '/period-report');
+
+    render(<App />);
+
+    expect(await screen.findByTestId('period-report-page')).toBeInTheDocument();
+    expect(setCurrentRoute).toHaveBeenCalledWith('/period-report');
     expect(screen.queryByTestId('home-page')).not.toBeInTheDocument();
   });
 

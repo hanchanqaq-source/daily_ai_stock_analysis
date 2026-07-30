@@ -222,7 +222,12 @@ jobs:
         run: npm ci
       - name: 🔎 Lint
         run: npm run lint
-      - name: 🧪 Portfolio unit tests
-        run: npm test -- src/pages/__tests__/PortfolioPage.test.tsx
+      - name: 🧪 Web blocking unit tests
+        run: >-
+          npm test --
+          src/pages/__tests__/PortfolioPage.test.tsx
+          src/pages/__tests__/PeriodReportPage.test.tsx
+          src/App.test.tsx
+          src/components/layout/__tests__/SidebarNav.test.tsx
       - name: 🏗️ Build
         run: npm run build
