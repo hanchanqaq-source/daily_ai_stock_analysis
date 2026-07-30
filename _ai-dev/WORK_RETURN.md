@@ -180,8 +180,42 @@ R3.3 功能、事实源边界和实现 Head 完整 CI 已通过；收口 Head
 
 ### Judge
 
+`PASS`
+
+R3.4 功能、事务边界、排除范围和实现 Head 完整 CI 已通过；收口 Head
+`a5b999717e57fe3c78da5c65adadcb1f05b71f95` 的 Run `30520589917`
+再次 8/8 success。PR #3 保持 Draft，未执行 Ready、合并、Release、真实数据
+导出或恢复。
+
+## 2026-07-30 R3.5｜应用内手动周期报告与下周展望
+
+### 实际改动
+
+- 新增本周至今、上一周、下周展望、5周、10周、1个月和2个月七个手动入口。
+- 通过正式历史服务聚合股票、ETF 与市场复盘，三个分区不混合统计。
+- 下周展望复用 14 日内趋势、策略、置信、支撑/压力和风险字段；数据不足时不
+  生成方向，并显示固定不足提示和免责声明。
+- `period_outlook` 快照保存目标周、生成时间、来源记录 ID 和展望字段；进入下周
+  后可与实际上一周汇总并列。
+- Web 初次打开不发请求；只有用户选择周期并点击后才调用人工 POST。
+- 未新增事实表、数据库列、模型调用、后台任务、cron 或自动通知。
+
+### 测试与 CI
+
+- 本地服务/API 专项：`18 passed`；旧历史/回测兼容：`3 passed`。
+- 本地 Web 正式阻断套件：`55 passed`；Lint 和 Production Build 成功。
+- 额外全量 Web 基线：`1044 passed, 2 skipped, 1 failed`；唯一失败为既有
+  `AlertRuleForm` JP/KR 选项测试与相邻测试契约矛盾，未纳入 R3.5 改动。
+- 实现 Head `4b563bc63e9638731f2a17ed25129de095046ef4` 的 Run
+  `30525590779`：8/8 success。
+- Backend：`5005 passed, 4 deselected, 51 warnings, 494 subtests passed`；
+  Web：`55/55 passed`；Build、Docker、Desktop、Windows/macOS 包门全绿。
+- Windows 实机仍为 Deferred；未使用真实历史、真实数据库、密钥或模型服务。
+
+### Judge
+
 `PASS — FINAL_HEAD_CI_PENDING`
 
-R3.4 功能、事务边界、排除范围和实现 Head 完整 CI 已通过；最终外部回传仍要求
-本次文档收口 Head 自身 8/8。PR #3 保持 Draft，未执行 Ready、合并、Release、
-真实数据导出或恢复。
+R3.5 功能、事实源、手动边界、快照追溯和实现 Head 完整 CI 已通过；最终外部
+回传仍要求本次文档收口 Head 自身 8/8。PR #3 保持 Draft，未执行 Ready、合并、
+Release、`main`、真实数据、AI 调用、定时器或自动推送。

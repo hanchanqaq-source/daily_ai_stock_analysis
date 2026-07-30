@@ -50,19 +50,19 @@ TypeScript, Axios, Vitest, Testing Library, Vite.
 - Consumes:
   `HistoryService.get_history_list(start_date, end_date, page, limit)`
 
-- [ ] Write table-driven RED tests for all seven windows, including
+- [x] Write table-driven RED tests for all seven windows, including
   `2026-01-01`, a month end, and a year-crossing previous week.
-- [ ] Run
+- [x] Run
   `python -m pytest tests/test_period_report_service.py -q`; verify failures
   are missing service/import behavior.
-- [ ] Implement immutable `PeriodWindow(period, start_date, end_date)` and
+- [x] Implement immutable `PeriodWindow(period, start_date, end_date)` and
   calendar-month subtraction without adding a dependency.
-- [ ] Write RED fixtures containing stock, ETF, market-review, and
+- [x] Write RED fixtures containing stock, ETF, market-review, and
   `period_outlook` rows; assert stock/ETF and market reviews remain separate
   and outlook rows are excluded.
-- [ ] Implement paginated history reads through `HistoryService` only, with
+- [x] Implement paginated history reads through `HistoryService` only, with
   formal report types limited to `simple`, `detailed`, and `full`.
-- [ ] Re-run the service tests and keep them GREEN.
+- [x] Re-run the service tests and keep them GREEN.
 
 ### Task 2: Conditional next-week outlook and traceable snapshot
 
@@ -82,23 +82,23 @@ TypeScript, Axios, Vitest, Testing Library, Vite.
   `historical_signals`, `risks`, `invalidation_conditions`,
   `data_as_of`, `source_record_count`, `source_record_ids`.
 
-- [ ] Write RED tests proving records older than 14 calendar days and records
+- [x] Write RED tests proving records older than 14 calendar days and records
   without an interpretable direction cannot create an outlook.
-- [ ] Write RED tests for bullish, neutral, and bearish mappings; confidence;
+- [x] Write RED tests for bullish, neutral, and bearish mappings; confidence;
   source IDs; risks; support/resistance-based invalidation; and the exact
   insufficient-data message.
-- [ ] Implement strict signal extraction from persisted list/detail fields.
+- [x] Implement strict signal extraction from persisted list/detail fields.
   Never synthesize a target price or deterministic wording.
-- [ ] Write a RED persistence test proving `next_week` creates one
+- [x] Write a RED persistence test proving `next_week` creates one
   `AnalysisHistory(report_type="period_outlook", code="PERIOD")` row whose
   snapshot contains the target week and all source IDs.
-- [ ] Implement the dedicated storage write using the existing transaction
+- [x] Implement the dedicated storage write using the existing transaction
   helper and table; do not add schema.
-- [ ] Write a RED test proving a later `previous_week` report returns the
+- [x] Write a RED test proving a later `previous_week` report returns the
   latest stored snapshot whose target dates exactly match that week.
-- [ ] Implement readback and comparison without including snapshot rows in
+- [x] Implement readback and comparison without including snapshot rows in
   actual-period aggregation.
-- [ ] Re-run service tests and keep them GREEN.
+- [x] Re-run service tests and keep them GREEN.
 
 ### Task 3: Manual FastAPI contract
 
@@ -117,14 +117,14 @@ TypeScript, Axios, Vitest, Testing Library, Vite.
 - Request: `{ "period": "week_to_date" | "previous_week" | "next_week" |
   "weeks_5" | "weeks_10" | "month_1" | "months_2" }`
 
-- [ ] Write RED API tests for the seven accepted values, invalid values,
+- [x] Write RED API tests for the seven accepted values, invalid values,
   dependency injection, separated response sections, and the insufficient
   outlook message.
-- [ ] Add strict Pydantic response models for period metadata, asset summaries,
+- [x] Add strict Pydantic response models for period metadata, asset summaries,
   market reviews, outlook items, snapshot metadata, and matched prior outlook.
-- [ ] Implement one POST route. It must not import or call analyzer, LLM,
+- [x] Implement one POST route. It must not import or call analyzer, LLM,
   notifier, scheduler, or market data modules.
-- [ ] Run
+- [x] Run
   `python -m pytest tests/test_period_report_api.py tests/test_period_report_service.py -q`
   and keep it GREEN.
 
@@ -148,19 +148,19 @@ TypeScript, Axios, Vitest, Testing Library, Vite.
 - Route: `/period-report`
 - Navigation label: `周期报告` / `Period report`
 
-- [ ] Write RED page tests proving all seven entrances render, initial mount
+- [x] Write RED page tests proving all seven entrances render, initial mount
   performs zero API calls, and clicking the action sends exactly one request.
-- [ ] Write RED render tests for stock/ETF separation, market-review separation,
+- [x] Write RED render tests for stock/ETF separation, market-review separation,
   insufficient data, prior-outlook comparison, disclaimer, loading, and API
   failure.
-- [ ] Implement typed API conversion through the existing Axios client and
+- [x] Implement typed API conversion through the existing Axios client and
   `toCamelCase`.
-- [ ] Implement the page with existing `Card`, `Badge`, `EmptyState`,
+- [x] Implement the page with existing `Card`, `Badge`, `EmptyState`,
   `ApiErrorAlert`, and button styles. Do not expose internal rule IDs.
-- [ ] Add lazy route, sidebar item, and bilingual UI text.
-- [ ] Run
+- [x] Add lazy route, sidebar item, and bilingual UI text.
+- [x] Run
   `npm test -- --run src/pages/__tests__/PeriodReportPage.test.tsx src/App.test.tsx`.
-- [ ] Run `npm run lint` and `npm run build`.
+- [x] Run `npm run lint` and `npm run build`.
 
 ### Task 5: Blocking gates, documentation, and Draft PR evidence
 
@@ -175,16 +175,21 @@ TypeScript, Axios, Vitest, Testing Library, Vite.
 - Modify: `_ai-dev/WORK_RETURN.md`
 - Modify: `docs/pp02/R2_MIGRATION_EXECUTION_PLAN.md`
 
-- [ ] Confirm the Web CI test step includes
+- [x] Confirm the Web CI test step includes
   `PeriodReportPage.test.tsx`; write a workflow change only when required.
-- [ ] Run Python compile checks for all changed Python files.
-- [ ] Run service/API专项 tests, Web page tests, Web lint/build, AI governance,
+- [x] Run Python compile checks for all changed Python files.
+- [x] Run service/API专项 tests, Web page tests, Web lint/build, AI governance,
   `git diff --check`, and `./scripts/ci_gate.sh`.
-- [ ] Review the full diff for no scheduler, model, notifier, fund, profile,
+- [x] Review the full diff for no scheduler, model, notifier, fund, profile,
   or second-table changes.
-- [ ] Commit intended files with English messages and push the existing branch.
-- [ ] Verify the new PR Head and all blocking GitHub Actions jobs.
-- [ ] If CI fails, use `superpowers:systematic-debugging`, reproduce the root
+- [x] Commit intended files with English messages and push the existing branch.
+- [x] Verify the new PR Head and all blocking GitHub Actions jobs.
+- [x] If CI fails, use `superpowers:systematic-debugging`, reproduce the root
   cause, add a RED regression test, and make the smallest in-scope fix.
-- [ ] Record exact test counts, final Commit/Head, CI run, Draft state, no-AI
+- [x] Record exact test counts, final Commit/Head, CI run, Draft state, no-AI
   and no-automation evidence, then run the final Head CI before Judge `PASS`.
+
+Implementation evidence: Head `4b563bc63e9638731f2a17ed25129de095046ef4`,
+Run `30525590779` 8/8 success; Backend `5005 passed, 4 deselected`; Web
+blocking suite `55/55 passed` and Production Build succeeded. The final Judge
+documentation Head still requires its own 8/8 run.

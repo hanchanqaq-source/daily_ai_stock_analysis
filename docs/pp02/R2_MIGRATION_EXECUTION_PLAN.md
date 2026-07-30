@@ -219,7 +219,8 @@ R3.2 产品范围。
   `4987 passed, 4 deselected, 50 warnings, 487 subtests passed`，
   PortfolioPage `31/31 passed`，Web Build、Docker、Desktop 单测及
   Windows/macOS 包门全部通过。
-- 状态：`PASS — FINAL_HEAD_CI_PENDING`。
+- 状态：`PASS`；收口 Head `a5b999717e57fe3c78da5c65adadcb1f05b71f95`
+  的 Run `30520589917` 为 8/8 success。
 
 ## R3.5｜应用内手动周期报告
 
@@ -294,6 +295,19 @@ R3.2 产品范围。
 - Web 专项证明七个入口、初始不请求、点击生成、分区展示、免责声明与错误态。
 - Web CI 必须运行 PeriodReportPage 专项测试后再执行 Build。
 
+**实现证据：**
+
+- 计划/服务/API/隔离/Web 五个逻辑 Commit 已连续落在 Draft PR #3；实现 Head
+  为 `4b563bc63e9638731f2a17ed25129de095046ef4`。
+- Run `30525590779` 为 8/8 success；Backend
+  `5005 passed, 4 deselected, 51 warnings, 494 subtests passed`；
+  Web 阻断套件 `55/55 passed` 且 Production Build 成功。
+- 专项测试覆盖七个日期边界、跨月/跨年、14 日过期、数据不足、来源追溯、
+  股票/ETF/市场复盘分区与旧展望并列复盘。
+- 普通股票历史和回测显式排除 `period_outlook`，避免持久化快照进入正式分析
+  事实统计。
+- 状态：`PASS — FINAL_HEAD_CI_PENDING`。
+
 ## R3.6｜Windows 便携更新
 
 - NSIS 安装版继续作为第一发布形态。
@@ -324,6 +338,6 @@ R3.2 产品范围。
 
 - 每个迁移能力都有唯一事实源、依赖、文件边界和验收出口。
 - 单用户决定已贯穿所有切片。
-- R3.1、R3.2 和 R3.3 已完成；R3.4 已有实现 Head 完整 CI 证据。
-- 当前只待 R3.4 Judge 文档收口后的最终 Head CI。
-- R3.4 收口后，下一执行切片固定为 R3.5。
+- R3.1–R3.4 已完成。
+- R3.5 已有实现 Head 完整 CI 证据，当前只待 Judge 文档收口后的最终 Head CI。
+- R3.5 收口后停止并回传总控；不得自行启动 R3.6。

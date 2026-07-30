@@ -11,12 +11,12 @@ ROLE_LOCK=TRUE
 APPLICATION_BASE_VERSION=3.28.0
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-CURRENT_STAGE=R3.5 / Plan
+CURRENT_STAGE=R3.5 / Judge
 CURRENT_WORK=应用内手动周期报告与下周参考展望
-ACTIVE_GOAL=按已确认方案A完成周期历史聚合、下周展望快照、API、Web、测试与CI
-CURRENT_STATUS=R3_5_PLAN_ACTIVE
+ACTIVE_GOAL=验证R3.5文档收口Head完整CI并完成Judge回传
+CURRENT_STATUS=R3_5_IMPLEMENTATION_CI_PASSED_FINAL_HEAD_CI_PENDING
 ACTIVE_BLOCKER=NONE
-NEXT_ACTION=完成R3.5测试先行施工并验证Draft PR Head完整CI
+NEXT_ACTION=验证R3.5文档收口Head完整CI；成功后停止并回传总控
 AUTHORIZATION_REQUIRED=FALSE_FOR_R3_5_BUILD_TEST_CI; READY/MERGE/MAIN/RELEASE/REAL_DATA_REQUIRE_NEW_AUTHORIZATION
 LAST_UPDATED=2026-07-30
 ```
@@ -136,4 +136,24 @@ LAST_UPDATED=2026-07-30
 - 页面免责声明固定为：
   “下周展望基于已有历史分析形成，仅供参考，不代表确定结果。”
 
-`R3_5_PLAN_ACTIVE`
+## R3.5 实现与验证证据
+
+- 计划 Commit `e7a71a806c8b5ac852348b58cd3c0d742410a17a`；服务、
+  API、历史隔离和 Web 施工合并为后续四个逻辑 Commit。
+- 实现 Head `4b563bc63e9638731f2a17ed25129de095046ef4` 的 Run
+  `30525590779` 为 8/8 success。
+- 后端 `5005 passed, 4 deselected, 51 warnings, 494 subtests passed`；
+  Web 阻断套件 `55/55 passed`，Web Production Build 成功。
+- 七个周期边界、跨月/跨年、14 日有效期、股票/ETF/市场复盘分区、数据不足、
+  来源追溯和上周展望并列复盘均有专项测试。
+- 生成人工入口只有 `POST /api/v1/period-report/generate`；页面初次打开不请求，
+  周期生成不调用模型、行情、新闻、通知或调度入口。
+- 展望快照继续使用 `AnalysisHistory(report_type=period_outlook)`，未增加表或列；
+  普通股票历史与回测显式排除该报告类型。
+- 额外全量 Web 基线为 `1044 passed, 2 skipped, 1 failed`；唯一失败是既有
+  `AlertRuleForm` JP/KR 选项测试与相邻既有“不显示 JP/KR”测试契约矛盾，
+  不在 R3.5 正式 Web 阻断门内，未修改产品或旧测试掩盖该基线债。
+- PR #3 保持 Draft；Windows 实机仍为 Deferred；未使用真实历史、真实数据库、
+  模型、通知渠道或自动入口。
+
+`R3_5_IMPLEMENTATION_CI_PASSED_FINAL_HEAD_CI_PENDING`

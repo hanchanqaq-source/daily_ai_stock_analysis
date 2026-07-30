@@ -139,3 +139,12 @@ Judge、阻塞、`SCOPE_DRIFT`、超授权检查和下一决定。
 | 快照边界 | `report_type=period_outlook`，保留来源记录 ID |
 | 自动化边界 | 仅应用内手动触发；无定时、模型调用或推送 |
 | 允许进入 Build | 是 |
+
+### R3.5 执行结果
+
+- 实现 Head `4b563bc63e9638731f2a17ed25129de095046ef4` 的 Run
+  `30525590779` 已 8/8 success。
+- Backend：`5005 passed, 4 deselected, 51 warnings, 494 subtests passed`。
+- Web 阻断套件：`55/55 passed`；Lint 与 Production Build 成功。
+- 未新增 AI 调用、定时器、自动通知、事实表、基金或多用户功能。
+- 当前只待本次 Judge 文档收口 Head 的完整 CI；成功后 R3.5 一次性回传总控。
