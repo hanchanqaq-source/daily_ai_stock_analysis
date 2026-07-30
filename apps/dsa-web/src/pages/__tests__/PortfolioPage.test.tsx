@@ -30,6 +30,9 @@ const {
   analyzePosition,
   previewPositionAdjustment,
   confirmPositionAdjustment,
+  exportBackup,
+  previewBackup,
+  restoreBackup,
   listDecisionSignals,
   getLatestDecisionSignals,
 } = vi.hoisted(() => ({
@@ -54,6 +57,9 @@ const {
   analyzePosition: vi.fn(),
   previewPositionAdjustment: vi.fn(),
   confirmPositionAdjustment: vi.fn(),
+  exportBackup: vi.fn(),
+  previewBackup: vi.fn(),
+  restoreBackup: vi.fn(),
   listDecisionSignals: vi.fn(),
   getLatestDecisionSignals: vi.fn(),
 }));
@@ -88,6 +94,9 @@ vi.mock('../../api/portfolio', () => ({
     analyzePosition,
     previewPositionAdjustment,
     confirmPositionAdjustment,
+    exportBackup,
+    previewBackup,
+    restoreBackup,
   },
 }));
 
@@ -1205,6 +1214,93 @@ describe('PortfolioPage FX refresh', () => {
     }));
     expect(createTrade).not.toHaveBeenCalled();
     expect(await screen.findByText('快捷持仓已写入官方交易账本。')).toBeInTheDocument();
+  });
+
+
+  it('previews a stock backup and restores only after explicit confirmation', async () => {
+    const backup = {
+      format: 'pp02.portfolio.backup',
+      formatVersion: 1,
+      metadata: {
+        createdAt: '2026-07-30T03:00:00Z',
+        projectId: 'PP02',
+        projectName: 'AI 每日股票分析',
+        applicationBaseVersion: '3.28.0',
+        databaseSchemaVersion: 'test-schema',
+      },
+      portfolio: {
+        accounts: [],
+        trades: [],
+        cashLedger: [],
+        corporateActions: [],
+      },
+    };
+    previewBackup.mockResolvedValue({
+      mode: 'replace',
+      previewToken: 'backup-preview-1',
+      requiresConfirmation: true,
+      incomingCounts: { accounts: 2, trades: 3, cashLedger: 1, corporateActions: 0 },
+      currentCounts: { accounts: 1, trades: 1, cashLedger: 1, corporateActions: 0 },
+      warnings: ['恢复会替换当前股票组合账本。'],
+    });
+    restoreBackup.mockResolvedValue({
+      restoredCounts: { accounts: 2, trades: 3, cashLedger: 1, corporateActions: 0 },
+    });
+
+    render(<PortfolioPage />);
+    await waitForInitialLoad();
+
+    const file = new File([JSON.stringify(backup)], 'pp02-stock-backup.json', {
+      type: 'application/json',
+    });
+    Object.defineProperty(file, 'text', {
+      value: vi.fn().mockResolvedValue(JSON.stringify(backup)),
+    });
+    fireEvent.change(screen.getByLabelText('选择股票备份 JSON'), {
+      target: { files: [file] },
+    });
+
+    await waitFor(() => expect(previewBackup).toHaveBeenCalledWith(backup));
+    expect(restoreBackup).not.toHaveBeenCalled();
+    expect(screen.getByText('将恢复 2 个账户、3 条交易事件')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '确认替换当前股票账本' }));
+
+    await waitFor(() => expect(restoreBackup).toHaveBeenCalledWith({
+      backup,
+      previewToken: 'backup-preview-1',
+    }));
+    expect(await screen.findByText('股票备份恢复完成。')).toBeInTheDocument();
+  });
+
+  it('exports a versioned stock backup only after an explicit click', async () => {
+    exportBackup.mockResolvedValue({
+      fileName: 'pp02-stock-portfolio-backup-20260730T030000Z.json',
+      backup: {
+        format: 'pp02.portfolio.backup',
+        formatVersion: 1,
+        metadata: {
+          createdAt: '2026-07-30T03:00:00Z',
+          projectId: 'PP02',
+          projectName: 'AI 每日股票分析',
+          applicationBaseVersion: '3.28.0',
+          databaseSchemaVersion: 'test-schema',
+        },
+        portfolio: {
+          accounts: [],
+          trades: [],
+          cashLedger: [],
+          corporateActions: [],
+        },
+      },
+    });
+
+    render(<PortfolioPage />);
+    await waitForInitialLoad();
+    fireEvent.click(screen.getByRole('button', { name: '导出股票备份' }));
+
+    await waitFor(() => expect(exportBackup).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText('股票备份已导出。')).toBeInTheDocument();
   });
 
 });
