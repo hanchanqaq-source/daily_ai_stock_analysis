@@ -62,3 +62,6 @@
   R5 Windows 实机门、真实数据和 Release 授权边界。
 - Revised acceptance evidence：治理一致性本地检查、AI 资产检查、新 Draft PR CI 和
   `PROJECT_STATUS` 与 Git/测试/CI 对照。
+- Acceptance result：Draft PR #4 Head `6ab647a7…` 的 Run `30540208702` 成功；
+  Backend `5005 passed`，Docker 与 AI Governance 通过；远端 12 个 Blob SHA
+  与本地一致。治理子步通过，不代表 R3.6 业务实现完成。

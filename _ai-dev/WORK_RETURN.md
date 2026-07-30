@@ -268,26 +268,28 @@ Release、`main`、真实数据、AI 调用、定时器或自动推送。
 - Test：通过；`git diff --check`、`python scripts/check_ai_assets.py`、唯一状态文件、
   必填恢复字段、Work 合同标题、Overlay 内容、修改白名单和官方 Overlay 外全文
   对比均通过。
-- CI：新 Draft PR 尚未创建，必须保持 `未触发`，不得复用旧 PR #3 的 CI。
+- CI：Draft PR #4 Head `6ab647a7…` 的 Run `30540208702` 成功；Change Detection、
+  AI Governance、Backend Gate、Docker Build 通过，Backend 为
+  `5005 passed, 4 deselected, 51 warnings, 494 subtests passed`；Web/Desktop
+  因文档路径按规则跳过。
 - 当前 Blocker：无。
 - 工具恢复：当前环境没有 `gh`，已从同一检查点切换到已连接 GitHub App /
   Git Data API；未重跑整个 Work，未要求用户安装工具或重新认证。
 - 发布异常：首次 Git Data Commit `d846af7c…` 的超长 `docs/CHANGELOG.md`
   被终端输出上限截断；远端/本地逐文件比较确认其余 11 个文件一致。
-- 已保存状态：PR #4 为 Draft；有效恢复点仍是 `main@0f9afe8b…`，不把异常
-  Commit 当作通过证据。
-- 恢复条件：从 `main` 直接读取完整 Changelog 生成修复 Blob，追加 Commit 后
-  重新执行远端树一致性和新 Head CI。
-- Judge：`PENDING`；只有本地检查和新 Draft PR CI 与状态文件一致后才能通过。
+- 恢复结果：Commit `6ab647a7…` 已用 GitHub `main` 的完整内容恢复 Changelog；
+  12 个远端 Blob SHA 与本地逐一一致，Run `30540208702` 成功。
+- Judge：`PASS`；只代表五项治理硬门和 Work2 接管检查点通过，不代表 R3.6
+  Windows 便携更新业务实现完成。
 
 ### 新增五项验收
 
-1. 用户没有承担不必要的人工中转：待 Judge 最终确认。
-2. 用户规则全部执行：待 Judge 最终确认。
+1. 用户没有承担不必要的人工中转：通过。
+2. 用户规则全部执行：通过。
 3. 工具异常有恢复检查点：已建立。
 4. Work 范围没有串段或跑偏：已拦截并纠正。
-5. `PROJECT_STATUS` 与 Git、测试和 CI 一致：待 Test/CI 后最终确认。
+5. `PROJECT_STATUS` 与 Git、测试和 CI 一致：通过。
 
 准确停止点：
 
-`WORK2_R3_6_GOVERNANCE_HARD_GATES_LOCAL_TEST_PASSED_CI_NOT_TRIGGERED`
+`WORK2_R3_6_GOVERNANCE_HARD_GATES_JUDGED_R3_6_BUILD_READY`

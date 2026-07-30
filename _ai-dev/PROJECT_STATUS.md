@@ -13,14 +13,14 @@ ROLE_LOCK=TRUE
 APPLICATION_BASE_VERSION=3.28.0
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-work2-r3.6
-CURRENT_STAGE=Work2 / R3.6 / Governance Gate CI Recovery
+CURRENT_STAGE=Work2 / R3.6 / Build Ready
 CURRENT_WORK=R3.6 Windows便携更新
 ACTIVE_GOAL=在不改变v3.28.0业务底座的前提下应用五项治理硬门，并从main合并检查点接续R3.6
-CURRENT_STATUS=WORK2_R3_6_GOVERNANCE_REMOTE_CHANGELOG_RECOVERY_IN_PROGRESS
-LAST_VALID_COMMIT=0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9
-LAST_SUCCESSFUL_TEST=GOVERNANCE_DIFF_CHECK_AI_ASSETS_SCOPE_AND_STATUS_CONSISTENCY_PASS_2026_07_30
-ACTIVE_BLOCKER=REMOTE_CHANGELOG_TRUNCATION_RECOVERY_IN_PROGRESS
-NEXT_ACTION=从main读取完整CHANGELOG并在同一分支追加恢复Commit；确认远端树与本地完全一致后重新检查CI
+CURRENT_STATUS=WORK2_R3_6_GOVERNANCE_HARD_GATES_JUDGED_R3_6_BUILD_READY
+LAST_VALID_COMMIT=6ab647a7c2c2dca90c3a0c1626f270860073b443
+LAST_SUCCESSFUL_TEST=CI_RUN_30540208702_SUCCESS_BACKEND_5005_PASSED_DOCKER_AND_AI_GOVERNANCE_SUCCESS
+ACTIVE_BLOCKER=NONE
+NEXT_ACTION=在同一Work2分支和Draft PR4内继续R3.6方案A业务施工；不得进入R3.7
 AUTHORIZATION_REQUIRED=FALSE_FOR_APPROVED_R3_6_BRANCH_COMMIT_DRAFT_PR_AND_CI; READY/MERGE/MAIN/RELEASE/REAL_DATA_REQUIRE_NEW_AUTHORIZATION
 LAST_UPDATED=2026-07-30
 ```
@@ -34,7 +34,12 @@ LAST_UPDATED=2026-07-30
 - R3.5 最终 Head `508eb268c78d6172dac22160c9dc0550f83653a6` 的 GitHub Actions
   Run `30526590693` 为 8/8 success。
 - R3.6 使用独立分支 `agent/pp02-work2-r3-6-windows-portable-update`；
-  Draft PR 在治理补丁发布前不得写成已创建。
+  Draft PR `#4` 当前 Head 为
+  `6ab647a7c2c2dca90c3a0c1626f270860073b443`。
+- Head Run `30540208702` 成功：Change Detection、AI Governance、Backend Gate
+  和 Docker Build 通过；Backend 为
+  `5005 passed, 4 deselected, 51 warnings, 494 subtests passed`。Web/Desktop
+  因本段仅修改治理文档而按路径规则跳过。
 
 ## Work 边界纠正与治理检查点
 
@@ -56,11 +61,13 @@ LAST_UPDATED=2026-07-30
   不发起设备登录、不让用户承担技术恢复。
 - 第一次 Git Data 发布 Commit `d846af7ce50b892d9f5e16222b4e544ef01b1d46`
   中，超长 `docs/CHANGELOG.md` 经终端文本转发被截断；其余 11 个文件与本地一致。
-- 当前有效恢复点仍是
-  `LAST_VALID_COMMIT=0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9`；不得把
-  `d846af7c…` 登记为有效检查点。
 - 恢复路线：从 GitHub `main` 直接读取完整 Changelog，插入本次单条文档记录，
   在同一分支追加修复 Commit，再逐文件比较远端树。
+- 恢复结果：Commit `6ab647a7c2c2dca90c3a0c1626f270860073b443`
+  已恢复完整 Changelog；12 个远端 Blob SHA 与本地逐一一致。
+- 本地 `git diff` 在超长文件比较时发生段错误，已改用逐文件 Blob SHA 作为备用
+  验证；`python scripts/check_ai_assets.py` 与 `git diff --check` 同时通过。
+- Blocker 已解除；没有重跑整个 Work，没有让用户安装 `gh` 或重新认证。
 
 ## R1/R2 当前裁决
 
@@ -188,4 +195,4 @@ LAST_UPDATED=2026-07-30
 - PR #3 保持 Draft；Windows 实机仍为 Deferred；未使用真实历史、真实数据库、
   模型、通知渠道或自动入口。
 
-`WORK2_R3_6_GOVERNANCE_REMOTE_CHANGELOG_RECOVERY_IN_PROGRESS`
+`WORK2_R3_6_GOVERNANCE_HARD_GATES_JUDGED_R3_6_BUILD_READY`
