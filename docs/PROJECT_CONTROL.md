@@ -106,5 +106,16 @@ Windows 实机验收完成前，不得进入 Work 2。
 | Build | 完成 | `safeStorage`/DPAPI vault、版本绑定、窄 IPC、backend 环境注入、导入导出与泄漏扫描 |
 | Test | 本地通过 | Python/契约 `340/340`，Desktop `80/80`，Web 阻断 `127/127`，Lint/Build/治理/根目录假密钥扫描通过 |
 | Review | 通过 | 四次独立安全复审后未发现 Critical/Important；批准发布到现有 Draft PR `#11` |
-| CI | 待验证 | 下一发布 Head 必须八项完整通过；Windows Job 必须同 Head 执行假凭据 safeStorage 与 artifact 扫描 |
+| CI | 首轮固定 Head 通过 | `b23c698` / Run `30640475137` 8/8 success；Windows Job `91189042298` 同 Head 完成 safeStorage 与最终产物扫描；待证据提交自身最终 CI |
 | Judge | `DRAFT_HOLD` | 不得 Ready、合并、main 直写、Tag、Release、真实凭据/数据或后续阶段 |
+
+### WORK-003 已复审实现 Head CI 证据
+
+| 项目 | 结果 |
+| --- | --- |
+| Head / Run | `b23c698b32b09749e907f1f4f7be1c056445a52e` / `30640475137` |
+| 完整 CI | 8/8 success |
+| Backend | `5027 passed, 4 deselected, 51 warnings, 499 subtests passed` |
+| Windows | Job `91189042298`；精确 Head checkout；`safeStorage` validation PASS；source/artifact scan PASS |
+| 泄漏检查 | 完整 Windows Job 日志不含派生假凭据明文；ZIP、解包目录与 `win-unpacked` 均在上传前扫描 |
+| 最终门 | 证据收口会改变 Head，必须再跑一次完整 CI；新 Run 只记录到 Draft PR 元数据 |

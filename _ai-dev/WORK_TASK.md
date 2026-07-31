@@ -74,6 +74,12 @@ Draft PR、真实 CI 和 Judge。
 | 证据位置 | 本文件、`docs/pp02/`、正式重建任务书和追加式台账 |
 | 允许进入 Build | 是 |
 
+### 已复审实现 Head 验收进展
+
+- Head `b23c698b32b09749e907f1f4f7be1c056445a52e` 的 Run `30640475137` 已
+  8/8 success，且同 Head Windows safeStorage/source/artifact 假凭据门通过。
+- 现仅发布证据收口 Head 并完整复验，随后停止；所有授权禁止边界不变。
+
 ### 执行进展（2026-07-31）
 
 - 独立 Draft PR `#11` 已建立；RED Head/Run 已证明新契约在实现前失败。

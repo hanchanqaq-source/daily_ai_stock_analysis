@@ -101,6 +101,13 @@ Actions 额度阻塞及其解除证据。真实凭据/数据、Ready、合并、
 | 项目 | 当前事实 |
 | --- | --- |
 | 活动阻塞 | 无 |
-| 已完成 | 威胁模型、RED→GREEN、四轮独立安全复审、本地 Python/Desktop/Web/治理/泄漏扫描 |
-| 待完成验收 | 发布已复审 Head，完成八项 CI，并从同一 Windows Job 核验 checkout Head、safeStorage PASS 与 artifact scan Head |
+| 已完成 | 威胁模型、RED→GREEN、四轮独立安全复审、本地验证，以及 `b23c698` 的 8/8 CI 和同 Head Windows safeStorage/产物扫描 |
+| 待完成验收 | 发布首轮固定 Head 证据，并完成证据提交自身的八项最终 CI |
 | 授权外 | 真实凭据/数据、PR Ready/合并、main 写入、Tag、Release、R3.8 或后续阶段 |
+
+### WORK-003 验收门进展
+
+- 已复审实现 Head `b23c698b32b09749e907f1f4f7be1c056445a52e` / Run
+  `30640475137` 已完成 8/8 CI 与同 Head Windows 假凭据验收。
+- 当前无活动阻塞；本证据收口 Head 仍必须完整复验。最终 Run 作为 Draft PR
+  元数据证据，不再为记录 Run ID 制造新 Head。

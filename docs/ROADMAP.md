@@ -50,5 +50,7 @@ Work2/R5 已完成并进入 `main`。Work3 从固定基线
 `097bb5d60aa42f13737ac4d9db2f582bde50f995` 建立独立 Draft PR `#11`，完成
 `safeStorage` / DPAPI 版本化 vault、窄 IPC、backend 内存注入、导入导出边界和
 固定 Head 假凭据验收门。威胁模型与四次独立安全复审已无
-Critical/Important；当前只等待最终 Head 完整 CI 与 Windows Job 证据。
+Critical/Important；首轮固定 Head `b23c698` 的 Run `30640475137` 已 8/8
+success，Windows Job 已同 Head 完成 safeStorage 和最终产物扫描。当前只等待
+证据提交自身的最终完整 CI。
 Judge 上限仍为 `DRAFT_HOLD`，不进入后续阶段。
