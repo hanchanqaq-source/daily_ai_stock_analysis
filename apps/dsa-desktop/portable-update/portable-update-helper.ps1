@@ -50,8 +50,8 @@ New-Item -ItemType Directory -Path $programBackup -Force | Out-Null
       $ready = Get-Content -LiteralPath $plan.readySignal -Raw | ConvertFrom-Json
       if ($ready.token -ceq $Token -and $ready.productId -eq $ProductId -and $ready.version -eq $plan.targetVersion -and $ready.homeLoaded -eq $true -and $ready.port -ge 1 -and $ready.port -le 65535) {
         $health = Invoke-WebRequest -Uri "http://127.0.0.1:$($ready.port)/api/health" -UseBasicParsing -TimeoutSec 5
-        $home = Invoke-WebRequest -Uri "http://127.0.0.1:$($ready.port)/" -UseBasicParsing -TimeoutSec 5
-        if ($health.StatusCode -eq 200 -and $home.StatusCode -eq 200) { Write-Result 'success' @(); exit 0 }
+        $homeResponse = Invoke-WebRequest -Uri "http://127.0.0.1:$($ready.port)/" -UseBasicParsing -TimeoutSec 5
+        if ($health.StatusCode -eq 200 -and $homeResponse.StatusCode -eq 200) { Write-Result 'success' @(); exit 0 }
       }
     }
   } while ((Get-Date) -lt $deadline)
