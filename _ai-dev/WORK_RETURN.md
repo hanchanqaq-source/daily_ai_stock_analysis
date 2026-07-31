@@ -263,3 +263,15 @@ Release、`main`、真实数据、AI 调用、定时器或自动推送。
 - 根因：Windows 冻结 smoke 继承 `GITHUB_ACTIONS=true`，`main.py` 按既有安全条件不启动 serve-only 服务；仅观察进程存活不足以证明服务已启动。
 - 修复：保留 `main.py` 保护条件；启动门保存/覆盖/恢复 `GITHUB_ACTIONS`、`PYTHONUTF8`、`PYTHONIOENCODING`，继续强制动态端口健康与主页均为 HTTP 200，并在 finally 清理进程树。
 - 状态：`R5_WINDOWS_BASIC_VALIDATION_FAILED — REWORK_REQUIRED — DRAFT_HOLD`；待新 Head 完整 CI 与新 Artifact。
+
+
+## 2026-07-31 PR #9｜R5 Windows 最终真机验收
+
+- 当前活动项：Draft PR `#9`；分支 `codex-2ka919`；Base `main@0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9`。
+- Windows 验收实现 Head：`958b64de78c50bd2ebb2f9b10a15409ee7040eea`；CI Run `30615265618` 为 8/8 success。
+- 验收 Artifact：`8787591352`；外层 SHA-256 `ef4025618b3de9ba8cc45c487518e54340088a69b6eca388d4da5aaa25e30971`；内层便携候选 ZIP SHA-256 `8cc00e59414d418362418ba817271adfef81bbdadf4dfb92549db34555652e45`。
+- Windows 隔离目录基础启动复验通过：PP02 主界面完整打开，`/api/health` 与主页均返回 HTTP 200，人工确认后正常关闭窗口；`R5_WINDOWS_BASIC_VALIDATION=PASS`。
+- 隔离回滚模拟通过：故障注入确认部分替换会失败，正式候选 `portable-update-helper.ps1` 随后恢复首个被替换程序文件；`.env`、DB、WAL、SHM 与旧 manifest 哈希保持不变；隔离旧入口探针成功重启；`R5_WINDOWS_ROLLBACK_SIMULATION=PASS`。
+- 模拟未访问正式安装目录、正式数据库、真实凭据或网络 Release；一次性验收截图不进入仓库。
+- Judge：`PASS — R5 WINDOWS VALIDATION COMPLETED — DRAFT_HOLD`。
+- PR 继续保持 Draft；未执行 Ready、Merge、main 直写、Tag、Release、真实数据或 R3.7。
