@@ -73,7 +73,7 @@ def test_windows_backend_collects_and_exercises_fake_useragent_runtime() -> None
     assert "foreach ($name in $saved.Keys)" in verifier
     assert "SetEnvironmentVariable($name, $saved[$name], 'Process')" in verifier
     assert "if (-not $healthy)" in verifier
-    assert "[int]$health.StatusCode -eq 200 -and [int]$home.StatusCode -eq 200" in verifier
+    assert "[int]$health.StatusCode -eq 200 -and [int]$homeResponse.StatusCode -eq 200" in verifier
     assert "UseProxy = $false" in verifier
     assert "$healthDiagnostic" in verifier
     assert "$homeDiagnostic" in verifier
