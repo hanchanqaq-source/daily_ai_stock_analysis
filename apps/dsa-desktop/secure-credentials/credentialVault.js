@@ -15,6 +15,7 @@ const MAX_CREDENTIAL_VALUE_BYTES = 65536;
 const MAX_CIPHERTEXT_BYTES = 262144;
 const DEFAULT_TRANSACTION_TTL_MS = 5 * 60 * 1000;
 const BASE64_PATTERN = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+const CONFIG_VERSION_PATTERN = /^(?:missing:0|[0-9]+:[a-f0-9]{64})$/;
 
 const ERROR_MESSAGES = Object.freeze({
   decrypt_failed: 'Secure credential decryption failed.',
@@ -25,6 +26,7 @@ const ERROR_MESSAGES = Object.freeze({
   transaction_invalid: 'Secure credential transaction is invalid or expired.',
   value_too_large: 'Secure credential value exceeds the supported limit.',
   vault_corrupt: 'Secure credential vault is invalid.',
+  vault_config_mismatch: 'Secure credentials do not match the active configuration.',
   vault_identity_mismatch: 'Secure credential vault belongs to a different product.',
   vault_version_unsupported: 'Secure credential vault version is unsupported.',
   vault_write_failed: 'Secure credential vault could not be updated.',
@@ -94,6 +96,10 @@ class CredentialVault {
 
   prepare(items, maskToken = '******') {
     this._assertSupported();
+    this._pruneExpiredTransactions();
+    if (this.transactions.size > 0) {
+      throw new SecureCredentialError('transaction_invalid');
+    }
     if (!Array.isArray(items)) {
       throw new SecureCredentialError('invalid_items');
     }
@@ -158,24 +164,36 @@ class CredentialVault {
       public: transaction,
       beforeExists: before.exists,
       beforeRaw: before.raw,
+      beforeDocument: before.document,
       nextDocument: {
         version: VAULT_VERSION,
         productId: this.productId,
+        configVersion: before.document.configVersion,
         entries: Object.fromEntries(Object.entries(nextEntries).sort(([a], [b]) => a.localeCompare(b))),
       },
       committed: false,
+      wroteDocument: false,
       createdAt: this.now(),
     });
     return transaction;
   }
 
-  commit(transaction) {
+  commit(transaction, configVersion) {
     const internal = this._resolveTransaction(transaction);
     if (internal.committed) {
       return internal.public;
     }
-    if (internal.public.changedKeys.length > 0) {
+    if (typeof configVersion !== 'string' || !CONFIG_VERSION_PATTERN.test(configVersion)) {
+      throw new SecureCredentialError('transaction_invalid');
+    }
+    internal.nextDocument.configVersion = configVersion;
+    if (
+      internal.public.changedKeys.length > 0
+      || !internal.beforeExists
+      || internal.beforeDocument.configVersion !== configVersion
+    ) {
       this._writeDocument(internal.nextDocument);
+      internal.wroteDocument = true;
     }
     internal.committed = true;
     return internal.public;
@@ -183,7 +201,7 @@ class CredentialVault {
 
   rollback(transaction) {
     const internal = this._resolveTransaction(transaction);
-    if (internal.committed && internal.public.changedKeys.length > 0) {
+    if (internal.committed && internal.wroteDocument) {
       if (internal.beforeExists) {
         this._atomicWrite(internal.beforeRaw);
       } else {
@@ -201,17 +219,29 @@ class CredentialVault {
   }
 
   finalize(transaction) {
-    const internal = this._resolveTransaction(transaction);
-    if (!internal.committed) {
-      throw new SecureCredentialError('transaction_invalid');
-    }
+    const internal = this._assertFinalizableInternal(transaction);
     this.transactions.delete(internal.public.id);
     return internal.public;
   }
 
-  buildEnvironment() {
+  assertFinalizable(transaction) {
+    return this._assertFinalizableInternal(transaction).public;
+  }
+
+  buildEnvironment(configVersion) {
     this._assertSupported();
-    const document = this._readDocument().document;
+    const stored = this._readDocument();
+    const document = stored.document;
+    if (
+      stored.exists
+      && (
+        typeof configVersion !== 'string'
+        || !CONFIG_VERSION_PATTERN.test(configVersion)
+        || document.configVersion !== configVersion
+      )
+    ) {
+      throw new SecureCredentialError('vault_config_mismatch');
+    }
     const values = {};
     const keys = Object.keys(document.entries).sort();
     for (const key of keys) {
@@ -249,12 +279,33 @@ class CredentialVault {
     return internal;
   }
 
+  _assertFinalizableInternal(transaction) {
+    const internal = this._resolveTransaction(transaction);
+    if (!internal.committed) {
+      throw new SecureCredentialError('transaction_invalid');
+    }
+    return internal;
+  }
+
+  _pruneExpiredTransactions() {
+    for (const [id, internal] of this.transactions) {
+      if (!internal.committed && this.now() - internal.createdAt > this.transactionTtlMs) {
+        this.transactions.delete(id);
+      }
+    }
+  }
+
   _readDocument() {
     if (!this.fs.existsSync(this.vaultPath)) {
       return {
         exists: false,
         raw: null,
-        document: { version: VAULT_VERSION, productId: this.productId, entries: {} },
+        document: {
+          version: VAULT_VERSION,
+          productId: this.productId,
+          configVersion: null,
+          entries: {},
+        },
       };
     }
 
@@ -274,6 +325,12 @@ class CredentialVault {
     }
     if (document.productId !== this.productId) {
       throw new SecureCredentialError('vault_identity_mismatch');
+    }
+    if (
+      typeof document.configVersion !== 'string'
+      || !CONFIG_VERSION_PATTERN.test(document.configVersion)
+    ) {
+      throw new SecureCredentialError('vault_corrupt');
     }
     if (!document.entries || typeof document.entries !== 'object' || Array.isArray(document.entries)) {
       throw new SecureCredentialError('vault_corrupt');
@@ -313,10 +370,10 @@ class CredentialVault {
       this.fs.fsyncSync(descriptor);
       this.fs.closeSync(descriptor);
       descriptor = null;
-      this.fs.renameSync(tempPath, this.vaultPath);
       if (typeof this.fs.chmodSync === 'function') {
-        this.fs.chmodSync(this.vaultPath, 0o600);
+        this.fs.chmodSync(tempPath, 0o600);
       }
+      this.fs.renameSync(tempPath, this.vaultPath);
     } catch (_error) {
       if (descriptor !== null) {
         try {

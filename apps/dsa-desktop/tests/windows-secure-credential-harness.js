@@ -21,6 +21,16 @@ function sameSecret(left, right) {
   return crypto.timingSafeEqual(leftDigest, rightDigest);
 }
 
+function fileVersion(filePath) {
+  if (!fs.existsSync(filePath)) {
+    return 'missing:0';
+  }
+  const content = fs.readFileSync(filePath);
+  const stat = fs.statSync(filePath, { bigint: true });
+  const digest = crypto.createHash('sha256').update(content).digest('hex');
+  return `${stat.mtimeNs}:${digest}`;
+}
+
 async function run() {
   requireGate(process.platform === 'win32');
   requireGate(safeStorage.isEncryptionAvailable() === true);
@@ -28,9 +38,13 @@ async function run() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pp02-r37-safe-storage-'));
   const vaultPath = path.join(root, 'secure-credentials.v1.json');
   const envPath = path.join(root, '.env');
-  const fake = `pp02-r37-${crypto.randomBytes(32).toString('hex')}`;
+  const exportEnvPath = path.join(root, 'export.env');
+  const fake = process.env.DSA_WINDOWS_TEST_FAKE_CREDENTIAL || '';
+  requireGate(/^pp02-r37-[0-9a-f]{64}$/.test(fake));
 
   try {
+    fs.writeFileSync(envPath, 'STOCK_LIST=600519\n', { encoding: 'utf8', mode: 0o600 });
+    const configVersion = fileVersion(envPath);
     const vault = new CredentialVault({
       safeStorage,
       platform: process.platform,
@@ -40,22 +54,22 @@ async function run() {
       [{ key: 'OPENAI_API_KEY', value: fake }],
       '******',
     );
-    vault.commit(transaction);
+    vault.commit(transaction, configVersion);
 
     const vaultBytes = fs.readFileSync(vaultPath);
     requireGate(!vaultBytes.includes(Buffer.from(fake, 'utf8')));
-    const environment = vault.buildEnvironment();
+    const environment = vault.buildEnvironment(configVersion);
     requireGate(environment.keys.length === 1);
     requireGate(environment.keys[0] === 'OPENAI_API_KEY');
     requireGate(sameSecret(environment.values.OPENAI_API_KEY, fake));
 
     fs.writeFileSync(
-      envPath,
+      exportEnvPath,
       `# Export candidate\nSTOCK_LIST=600519\nOPENAI_API_KEY=${fake}\n`,
       { encoding: 'utf8', mode: 0o600 },
     );
-    const removed = sanitizeEnvFile(envPath);
-    const sanitized = fs.readFileSync(envPath, 'utf8');
+    const removed = sanitizeEnvFile(exportEnvPath);
+    const sanitized = fs.readFileSync(exportEnvPath, 'utf8');
     requireGate(removed.length === 1 && removed[0] === 'OPENAI_API_KEY');
     requireGate(!sanitized.includes(fake));
     requireGate(!sanitized.includes('OPENAI_API_KEY'));

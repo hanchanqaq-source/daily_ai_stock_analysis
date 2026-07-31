@@ -2,9 +2,14 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:test-driven-development and execute this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> 执行记录（2026-07-31）：Task 1–6 的实现、本地门禁与四次独立安全复审已完成，
+> 未发现未解决 Critical/Important。Task 7 已建立 Draft PR `#11`，尚待文档收口
+> Head 的完整 CI 和固定 Head Windows 假凭据验收。下方 checkbox 保留为原始施工顺序，
+> 当前事实以 `_ai-dev/PROJECT_STATUS.md` 为准。
+
 **Goal:** Store Windows Desktop secrets only through Electron safeStorage/DPAPI, keep plaintext out of `.env` and exports, and prove the contract on a fixed PR Head with fake credentials.
 
-**Architecture:** A focused Electron `CredentialVault` owns encrypted-at-rest secret values in `userData`. The existing backend remains the configuration consumer and receives decrypted values only in its child-process environment; the Web renderer gets narrow write/status IPC and never gets a plaintext read path. The backend continues to own non-sensitive `.env` settings and enforces masking/export rules.
+**Architecture:** A focused Electron `CredentialVault` owns encrypted-at-rest secret values in `userData` and binds them to the exact non-sensitive `.env` byte version. The existing backend remains the configuration consumer and receives decrypted values only in its child-process environment; the Web renderer gets narrow write/status IPC and never gets a plaintext read path. The backend continues to own non-sensitive `.env` settings and enforces masking/export rules; mismatched vault/config versions fail closed before backend launch.
 
 **Tech Stack:** Electron 31 `safeStorage`, Node.js built-ins, React/TypeScript, Python/FastAPI, Node test runner, pytest, GitHub Actions Windows runner.
 
@@ -159,4 +164,3 @@
 - [ ] Confirm the Windows fake-key harness ran in the Windows job on the same final Head.
 - [ ] Re-run final-Head CI if evidence-only commits change the Head.
 - [ ] Record final Head, Run, job results, fake-key acceptance, unresolved review threads, and `DRAFT_HOLD` Judge.
-

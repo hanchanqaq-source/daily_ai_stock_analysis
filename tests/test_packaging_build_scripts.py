@@ -5,6 +5,7 @@ import json
 import os
 import shlex
 import subprocess
+import hashlib
 from pathlib import Path
 
 
@@ -155,6 +156,7 @@ def test_windows_job_runs_head_bound_safe_storage_fake_credential_gate() -> None
         / "tests"
         / "windows-secure-credential-harness.js"
     )
+    scanner_path = REPO_ROOT / "scripts" / "scan-windows-fake-credential.js"
     package = json.loads(
         _read_text(REPO_ROOT / "apps" / "dsa-desktop" / "package.json")
     )
@@ -166,15 +168,61 @@ def test_windows_job_runs_head_bound_safe_storage_fake_credential_gate() -> None
         "Build and verify portable candidate"
     )
     assert package["scripts"]["test:windows-credentials"]
-    assert "GITHUB_SHA" in verifier
+    assert "DSA_EXPECTED_PR_HEAD_SHA" in workflow
+    assert "github.event.pull_request.head.sha" in workflow
+    assert "ref: ${{ env.DSA_EXPECTED_PR_HEAD_SHA }}" in workflow
+    assert "git rev-parse HEAD" in verifier
+    assert "DSA_EXPECTED_PR_HEAD_SHA" in verifier
+    assert "$currentHead -ne $expectedHead" in verifier
+    assert "GITHUB_SHA" not in verifier
     assert "R3_7_WINDOWS_FAKE_CREDENTIAL_VALIDATION=PASS" in verifier
     assert "test:windows-credentials" in verifier
+    assert "scan-windows-fake-credential.js" in verifier
+    assert "--path ." in verifier
+    assert "--path .github --path api" not in verifier
+    assert scanner_path.exists()
+    scanner = _read_text(scanner_path)
+    assert "utf16le" in scanner
+    assert "R3_7_WINDOWS_FAKE_CREDENTIAL_SCAN=PASS" in scanner
+    assert "Scan Windows fake credential leakage" in workflow
+    assert workflow.index("Scan Windows fake credential leakage") < workflow.index(
+        "Upload verified portable candidate"
+    )
+    assert "$finalExtract" in workflow
+    assert "$zip" in workflow
     assert "safeStorage" in harness
     assert "CredentialVault" in harness
     assert "app.whenReady" in harness
     assert "R3_7_WINDOWS_FAKE_CREDENTIAL_VALIDATION=PASS" in harness
     assert "console.log(fake" not in harness
     assert "console.error(fake" not in harness
+
+
+def test_fake_credential_scanner_detects_utf8_and_never_prints_the_value(tmp_path: Path) -> None:
+    head = "a" * 40
+    suffix = hashlib.sha256(f"pp02-r37-fake:{head}".encode()).hexdigest()
+    fake = f"pp02-r37-{suffix}"
+    candidate = tmp_path / "candidate.bin"
+    candidate.write_bytes(b"prefix\x00" + fake.encode("utf-8") + b"\x00suffix")
+
+    result = subprocess.run(
+        [
+            "node",
+            str(REPO_ROOT / "scripts" / "scan-windows-fake-credential.js"),
+            "--head",
+            head,
+            "--path",
+            str(tmp_path),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    self_output = result.stdout + result.stderr
+    assert result.returncode != 0
+    assert fake not in self_output
+    assert "R3_7_WINDOWS_FAKE_CREDENTIAL_SCAN=FAIL" in self_output
 
 
 def _write_fake_macos_signature_tools(fake_bin: Path) -> None:

@@ -12,7 +12,7 @@
 | R0｜云端安全重建基线 | 完成 | 官方 v3.28.0 + V1.5.6 候选、Draft PR 和两轮 CI 已通过 |
 | R1｜需求与旧功能迁移确认 | 完成 | 单用户范围、保留/调整/不迁移和冲突裁决已确认 |
 | R2｜迁移正式候选计划 | 完成 | R3.1–R3.7 文件边界、依赖和验收已固定 |
-| R3｜功能迁移 | 进行中 | R3.1 已完成；R3.2 实现 Head 已通过完整 CI，等待最终 Head 收口 |
+| R3｜功能迁移 | 进行中 | R3.1–R3.6 已完成；R3.7 安全复审已通过，等待最终 Head CI/Windows 假密钥收口 |
 | R4–R7 | 未启动 | 脱敏演练、Windows验收、真实数据和发布分别受授权门控制 |
 
 ## Work 1｜官方稳定版干净底座建立（历史）
@@ -43,3 +43,12 @@
 ## Work2 / R3.6 Windows 便携安全更新（2026-07-30）
 
 Work1 已永久关闭；PR #3 已合并且 R3.1–R3.5 已进入 main。Work2 从 `0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9` 以独立分支和独立 Draft PR 接管 R3.6。实现范围与证据见 `docs/pp02/R3_6_WINDOWS_PORTABLE_UPDATE_IMPLEMENTATION.md`。R5 Windows 真机验收仍为后续授权门，本轮不进入 R3.7。
+
+## Work3 / R3.7 Windows 安全凭据（2026-07-31）
+
+Work2/R5 已完成并进入 `main`。Work3 从固定基线
+`097bb5d60aa42f13737ac4d9db2f582bde50f995` 建立独立 Draft PR `#11`，完成
+`safeStorage` / DPAPI 版本化 vault、窄 IPC、backend 内存注入、导入导出边界和
+固定 Head 假凭据验收门。威胁模型与四次独立安全复审已无
+Critical/Important；当前只等待最终 Head 完整 CI 与 Windows Job 证据。
+Judge 上限仍为 `DRAFT_HOLD`，不进入后续阶段。

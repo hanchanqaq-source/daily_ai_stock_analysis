@@ -74,6 +74,16 @@ Draft PR、真实 CI 和 Judge。
 | 证据位置 | 本文件、`docs/pp02/`、正式重建任务书和追加式台账 |
 | 允许进入 Build | 是 |
 
+### 执行进展（2026-07-31）
+
+- 独立 Draft PR `#11` 已建立；RED Head/Run 已证明新契约在实现前失败。
+- 实现已通过四轮独立安全复审，所有 Critical/Important 已关闭；经复审的
+  本地代码 Head 为 `0627ea85ef14cfb7d0d457937244c2a860fac345`。
+- 本地门禁：Python/契约 `340/340`，Desktop `80/80`，Web `127/127`，Lint、Build、
+  AI 治理、仓库根派生假密钥扫描和全差异检查通过。
+- 下一动作只是把文档收口 Head 发布到同一 Draft PR 并跑完八项 CI/
+  固定 Head Windows 假凭据验收；其余禁止边界不变。
+
 ## 测试要求
 
 - 最低硬门：`git diff --check`、`python scripts/check_ai_assets.py`、业务树完整性、

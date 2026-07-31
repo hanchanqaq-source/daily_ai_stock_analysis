@@ -972,12 +972,57 @@ function ensureCredentialVault() {
   return credentialVault;
 }
 
-function isTrustedSecureCredentialSender(event, expectedWebContents = mainWindow?.webContents) {
+function getEnvFileVersion(envPath, fsImpl = fs) {
+  if (!fsImpl.existsSync(envPath)) {
+    return 'missing:0';
+  }
+  const content = fsImpl.readFileSync(envPath);
+  const stat = fsImpl.statSync(envPath, { bigint: true });
+  const contentHash = crypto.createHash('sha256').update(content).digest('hex');
+  return `${stat.mtimeNs}:${contentHash}`;
+}
+
+function getDesktopBackendOrigin(runtime = activeBackendRuntime) {
+  if (!runtime || !runtime.connectHost || !Number.isInteger(Number(runtime.port))) {
+    return null;
+  }
+  try {
+    return new URL(buildBackendUrl(runtime.connectHost, runtime.port, '/')).origin;
+  } catch (_error) {
+    return null;
+  }
+}
+
+function isAllowedDesktopNavigation(targetUrl, runtime = activeBackendRuntime) {
+  const expectedOrigin = getDesktopBackendOrigin(runtime);
+  if (!expectedOrigin || typeof targetUrl !== 'string') {
+    return false;
+  }
+  try {
+    return new URL(targetUrl).origin === expectedOrigin;
+  } catch (_error) {
+    return false;
+  }
+}
+
+function isTrustedSecureCredentialSender(
+  event,
+  expectedWebContents = mainWindow?.webContents,
+  expectedOrigin = getDesktopBackendOrigin(),
+) {
+  let senderOrigin = null;
+  try {
+    senderOrigin = new URL(event?.senderFrame?.url || '').origin;
+  } catch (_error) {
+    senderOrigin = null;
+  }
   return Boolean(
     event
     && expectedWebContents
+    && expectedOrigin
     && event.sender === expectedWebContents
     && event.senderFrame === expectedWebContents.mainFrame
+    && senderOrigin === expectedOrigin
   );
 }
 
@@ -985,6 +1030,10 @@ function requireTrustedSecureCredentialSender(event) {
   if (!isTrustedSecureCredentialSender(event)) {
     throw new SecureCredentialError('transaction_invalid');
   }
+}
+
+function shouldForwardBackendOutput(secureCredentials) {
+  return secureCredentials == null;
 }
 
 function initLogging() {
@@ -1251,7 +1300,9 @@ function startBackend({ port, envFile, dbPath, logDir, host = null, secureCreden
 
   let resolvedSecureCredentials = secureCredentials;
   if (resolvedSecureCredentials === undefined && isWindows) {
-    resolvedSecureCredentials = ensureCredentialVault().buildEnvironment();
+    resolvedSecureCredentials = ensureCredentialVault().buildEnvironment(
+      getEnvFileVersion(envFile),
+    );
     const removedLegacyCredentialKeys = sanitizeEnvFile(envFile);
     if (removedLegacyCredentialKeys.length > 0) {
       logLine(
@@ -1267,6 +1318,7 @@ function startBackend({ port, envFile, dbPath, logDir, host = null, secureCreden
     host: bindHost,
     secureCredentials: resolvedSecureCredentials,
   });
+  const forwardBackendOutput = shouldForwardBackendOutput(resolvedSecureCredentials);
 
   const args = buildBackendArgs({ host: bindHost, port });
   let launchMode = '';
@@ -1312,21 +1364,29 @@ function startBackend({ port, envFile, dbPath, logDir, host = null, secureCreden
     });
     backendProcess.on('error', (error) => {
       backendStartError = error;
-      logLine(`[backend] failed to start: ${error.message}`);
+      logLine(
+        forwardBackendOutput
+          ? `[backend] failed to start: ${error.message}`
+          : '[backend] failed to start (details suppressed in secure credential mode)'
+      );
     });
     backendProcess.stdout.on('data', (data) => {
       if (!firstStdoutLogged) {
         firstStdoutLogged = true;
         logLine(`[backend] first stdout after ${Date.now() - launchStartedAt}ms`);
       }
-      logLine(`[backend] ${decodeBackendOutput(data, stdoutDecoder)}`);
+      if (forwardBackendOutput) {
+        logLine(`[backend] ${decodeBackendOutput(data, stdoutDecoder)}`);
+      }
     });
     backendProcess.stderr.on('data', (data) => {
       if (!firstStderrLogged) {
         firstStderrLogged = true;
         logLine(`[backend] first stderr after ${Date.now() - launchStartedAt}ms`);
       }
-      logLine(`[backend] ${decodeBackendOutput(data, stderrDecoder)}`);
+      if (forwardBackendOutput) {
+        logLine(`[backend] ${decodeBackendOutput(data, stderrDecoder)}`);
+      }
     });
     backendProcess.on('exit', (code, signal) => {
       logLine(`[backend] exited with code ${code}, signal ${signal || 'none'}`);
@@ -1905,9 +1965,16 @@ ipcMain.handle('desktop:prepare-secure-credential-update', (event, payload = {})
   };
 });
 
-ipcMain.handle('desktop:commit-secure-credential-update', (event, transactionId) => {
+ipcMain.handle('desktop:commit-secure-credential-update', (event, payload = {}) => {
   requireTrustedSecureCredentialSender(event);
-  ensureCredentialVault().commit(transactionId);
+  if (!activeBackendRuntime) {
+    throw new SecureCredentialError('transaction_invalid');
+  }
+  const currentConfigVersion = getEnvFileVersion(activeBackendRuntime.envFile);
+  if (payload.configVersion !== currentConfigVersion) {
+    throw new SecureCredentialError('vault_config_mismatch');
+  }
+  ensureCredentialVault().commit(payload.transactionId, currentConfigVersion);
   return { committed: true };
 });
 
@@ -1922,6 +1989,7 @@ ipcMain.handle('desktop:finalize-secure-credential-update', async (event, transa
   if (!activeBackendRuntime) {
     throw new SecureCredentialError('transaction_invalid');
   }
+  ensureCredentialVault().assertFinalizable(transactionId);
   const removedKeys = sanitizeEnvFile(activeBackendRuntime.envFile);
   await stopBackend();
   if (backendProcess) {
@@ -2036,6 +2104,22 @@ async function createWindow() {
     shell.openExternal(url);
     return { action: 'deny' };
   });
+  const blockUntrustedMainFrameNavigation = (event, url) => {
+    if (isAllowedDesktopNavigation(url)) {
+      return;
+    }
+    event.preventDefault();
+    try {
+      const protocol = new URL(url).protocol;
+      if (protocol === 'http:' || protocol === 'https:') {
+        void shell.openExternal(url);
+      }
+    } catch (_error) {
+      // Invalid or non-web navigation is denied without exposing it to the OS.
+    }
+  };
+  mainWindow.webContents.on('will-navigate', blockUntrustedMainFrameNavigation);
+  mainWindow.webContents.on('will-redirect', blockUntrustedMainFrameNavigation);
 
   const appDir = resolveAppDir();
   const envPath = path.join(appDir, '.env');
@@ -2204,9 +2288,12 @@ module.exports = {
   resolveBackendBindHost,
   resolveDesktopConnectHost,
   restorePackagedRuntimeStateFromBackup,
+  getEnvFileVersion,
+  isAllowedDesktopNavigation,
   isTrustedSecureCredentialSender,
   sanitizeEnvFile,
   sanitizeReleaseUrl,
+  shouldForwardBackendOutput,
   startBackend,
   stopBackend,
   __getBackendProcessForTest() {

@@ -11,12 +11,12 @@ ROLE_LOCK=TRUE
 APPLICATION_BASE_VERSION=3.28.0
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-CURRENT_STAGE=R3.7 / Implementation-GREEN CI
+CURRENT_STAGE=R3.7 / Reviewed Implementation Draft CI
 CURRENT_WORK=Windows 安全凭据
 ACTIVE_GOAL=在独立Draft PR上以safeStorage/DPAPI建立Windows Desktop安全凭据边界
-CURRENT_STATUS=LOCAL_GREEN — REMOTE_IMPLEMENTATION_CI_PENDING — DRAFT_HOLD
+CURRENT_STATUS=SECURITY_REVIEW_PASS — LOCAL_GREEN — PUBLISH_CI_PENDING — DRAFT_HOLD
 ACTIVE_BLOCKER=NONE
-NEXT_ACTION=发布实现Head并完成完整CI、独立代码审查和固定Head Windows假密钥验收
+NEXT_ACTION=发布文档收口Head到现有Draft PR，完成八项CI和固定Head Windows假密钥验收
 AUTHORIZATION_REQUIRED=FALSE_FOR_R3_7_BUILD_TEST_COMMIT_DRAFT_PR_CI_FAKE_CREDENTIAL_VALIDATION; READY/MERGE/MAIN/TAG/RELEASE/REAL_CREDENTIALS/NEXT_STAGE_REQUIRE_NEW_AUTHORIZATION
 LAST_UPDATED=2026-07-31
 ```
@@ -235,5 +235,61 @@ LAST_UPDATED=2026-07-31
   校验、继承环境敏感值清除、后端内存注入、全量敏感项遮罩和无凭据导出。
 - 本地证据：Desktop `73/73`、后端相关模块 `265/265`、跨运行时/CI 契约
   `4/4`、Web 阻断套件 `124/124`，Web Lint 与 Production Build 均通过。
-- 实现 Head 尚未发布；完整远端 CI、独立代码审查与同一固定 Head 的 Windows 真实
-  Electron `safeStorage` 假密钥验收仍待完成。PR 必须持续保持 Draft。
+- 初始实现远端 Head `368566e6125d4ff348be817e638c2e195b474c65` 已由独立安全
+  审查和完整 CI 判定作废；不得作为最终固定 Head 证据。PR 必须持续保持 Draft。
+
+## 2026-07-31 Work3 / R3.7 独立审查返工
+
+- 独立只读审查确认四项阻断：PR workflow 默认使用临时 merge SHA、畸形 dotenv
+  敏感行可绕过导出、Backend 原始异常可能进入日志，以及 vault 先于 `.env` 提交会
+  形成“新凭据/旧 endpoint”崩溃窗口。
+- 同时修复单 vault 并发事务、replace 后权限失败、finalize 验证顺序、可信 origin/
+  主 frame 导航约束，以及源码/日志/最终 ZIP 与解包目录假密钥扫描缺口。
+- 采用 `.env` 精确版本绑定：先持久化非敏感配置，再由 main 校验磁盘版本并提交
+  vault；任一崩溃/外部改写导致版本不一致时，启动必须 fail closed，不注入凭据。
+- 作废 Head Run `30637145300` 的 `backend-gate` 另发现
+  `CUSTOM_WEBHOOK_URLS` 已标记敏感但仍使用 textarea；已改为 password 控件。该 Run
+  即使其余 Job 成功也不计最终 Judge。
+- 审查修复本地证据：Desktop `80/80`；Backend 配置相关 `325/325`；跨运行时、
+  打包和泄漏扫描契约 `14/14`；Web 阻断套件 `127/127`；Lint、Production Build、
+  AI 治理、全差异 whitespace 检查和派生假密钥源码扫描均通过。
+- 审查修复 Head 尚未发布；必须先独立复审，再以新 Head 完整跑八个 CI Job，并从
+  Windows Job 日志证明 checkout Head、safeStorage PASS 与 artifact scan Head 三者一致。
+
+## 2026-07-31 Work3 / R3.7 第二次独立复审返工
+
+- 第二次独立复审确认原有四项 Critical 和五项 Important 全部关闭，无新增
+  Critical。
+- 剩余两项 Important 已以回归测试先行修复：Windows secure mode 在
+  dotenv 解析前识别并拒绝畸形敏感 assignment；Windows 假密钥源码扫描扩大为
+  整个仓库根目录。
+- 两项新回归在修复前均按预期失败，修复后 `2/2` 通过；测试值均为构造的
+  假密钥，拒绝信息不包含假密钥。
+- 修复仍只存在本地分支；第三次独立复审通过前不发布，Draft PR `#11`
+  继续保持 Draft。
+
+## 2026-07-31 Work3 / R3.7 第三次独立复审返工
+
+- 第三次独立复审确认仓库根 source scanner 和此前安全边界均已闭环，无
+  Critical；发现一项 Important：`python-dotenv` 支持单引号键，而初版原始扫描
+  只识别裸键，畸形 value 可使该行被解析器丢弃。
+- 回归矩阵扩大到裸键、单引号键、双引号键及两种引号键的 `export`
+  形式；修复前单引号两种形式均可复现失败，修复后五种形式全部通过。
+- 本地修复仍未发布；必须第四次独立复审无 Critical/Important 后才能更新
+  Draft PR `#11`。
+
+## 2026-07-31 Work3 / R3.7 第四次独立复审通过
+
+- 第四次独立只读复审在固定本地 Head
+  `0627ea85ef14cfb7d0d457937244c2a860fac345` 未发现 Critical 或 Important，
+  结论为 `PUBLISH_TO_EXISTING_DRAFT_PR`。
+- 复审实测裸键、单/双引号键、可选 `export`、BOM、空白/Tab、大小写混合和
+  不完整引号 value 组合均在 dotenv 丢弃前识别敏感键；拒绝信息无假值，
+  `.env` 原始字节不变。
+- 完整 base→Head 的 vault 原子性、版本绑定、单活事务、finalize 预检、
+  IPC origin/navigation、日志抑制、导出过滤和 Windows Head-bound scanner 未发现
+  新的 Critical/Important。
+- 发布前最终本地门禁：Python/契约 `340/340`，Desktop `80/80`，Web `127/127`，
+  Lint、Production Build、AI 治理、仓库根假密钥扫描与全差异 whitespace 检查通过。
+- 下一步只允许发布到现有 Draft PR `#11` 并执行完整 CI/假密钥验收；
+  Ready、合并、main 写入、Tag、Release、真实凭据/数据和后续阶段仍禁止。

@@ -228,6 +228,17 @@ class ConfigManagerTestCase(unittest.TestCase):
         )
         self.assertIn("OPENAI_API_KEY", self.manager.read_config_map())
 
+    def test_assignment_keys_detects_sensitive_names_even_when_dotenv_value_is_malformed(self) -> None:
+        self.env_path.write_text(
+            'OPENAI_API_KEY="unterminated\nSTOCK_LIST=600519\n',
+            encoding="utf-8",
+        )
+
+        self.assertEqual(
+            self.manager.get_assignment_keys(),
+            {"OPENAI_API_KEY", "STOCK_LIST"},
+        )
+
     def test_remove_keys_atomically_removes_duplicates_without_touching_other_values(self) -> None:
         self.env_path.write_text(
             "OPENAI_API_KEY=first-fake\nSTOCK_LIST=600519\nOPENAI_API_KEY=second-fake\n",

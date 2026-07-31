@@ -43,8 +43,8 @@ function createDesktopBridge({
     prepareSecureCredentialUpdate(payload) {
       return renderer.invoke(DESKTOP_PREPARE_SECURE_CREDENTIAL_UPDATE_CHANNEL, payload);
     },
-    commitSecureCredentialUpdate(transactionId) {
-      return renderer.invoke(DESKTOP_COMMIT_SECURE_CREDENTIAL_UPDATE_CHANNEL, transactionId);
+    commitSecureCredentialUpdate(payload) {
+      return renderer.invoke(DESKTOP_COMMIT_SECURE_CREDENTIAL_UPDATE_CHANNEL, payload);
     },
     rollbackSecureCredentialUpdate(transactionId) {
       return renderer.invoke(DESKTOP_ROLLBACK_SECURE_CREDENTIAL_UPDATE_CHANNEL, transactionId);

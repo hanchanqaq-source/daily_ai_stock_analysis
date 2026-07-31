@@ -11,7 +11,7 @@ import threading
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Iterable, List, Literal, Optional, Set, Tuple
+from typing import Callable, Dict, Iterable, List, Literal, Optional, Set, Tuple
 
 from dotenv import dotenv_values
 
@@ -234,16 +234,29 @@ class ConfigManager:
     def render_without_keys(self, excluded_keys: Set[str]) -> str:
         """Render `.env` content without assignments for excluded keys."""
         normalized = {str(key).upper() for key in excluded_keys}
-        entries = [
-            entry
+        return self.render_without_matching_keys(lambda key: key in normalized)
+
+    def render_without_matching_keys(self, should_exclude: Callable[[str], bool]) -> str:
+        """Render one locked `.env` snapshot while excluding matching assignments."""
+        with self._lock:
+            entries = [
+                entry
+                for entry in self._read_entries()
+                if not (
+                    entry.kind == "assignment"
+                    and entry.key is not None
+                    and should_exclude(entry.key.upper())
+                )
+            ]
+            return self._render_entries(entries)
+
+    def get_assignment_keys(self) -> Set[str]:
+        """Return assignment names without parsing their values."""
+        return {
+            entry.key.upper()
             for entry in self._read_entries()
-            if not (
-                entry.kind == "assignment"
-                and entry.key is not None
-                and entry.key.upper() in normalized
-            )
-        ]
-        return self._render_entries(entries)
+            if entry.kind == "assignment" and entry.key is not None
+        }
 
     def remove_keys(self, keys: Set[str]) -> Tuple[List[str], str]:
         """Atomically remove all assignments for the requested keys."""

@@ -122,3 +122,18 @@ PR #7 的 Windows 候选在 CI 8/8 后仍因 PyInstaller 未包含 `fake_userage
 ## R3.6 PR #8｜启动门必须隔离 CI 控制变量
 
 真实启动冻结 EXE 时不能无条件继承 Runner 的 `GITHUB_ACTIONS=true`：该变量会正确触发 `main.py` 的 Actions 服务保护条件，形成“进程存活但服务未启动”。应保留应用保护逻辑，在 smoke 子进程边界临时设置 `GITHUB_ACTIONS=false` 和 Python UTF-8 变量，并在 finally 恢复原环境。启动成功只能由动态端口 `/api/health` 与主页同时返回 HTTP 200 证明，不能由进程未退出推断。
+
+## R3.7｜安全边界不能依赖宽容解析器
+
+`python-dotenv` 可能丢弃引号不闭合的行，而且合法键语法包括裸键、单引号键、
+双引号键和可选 `export`。敏感导入禁止必须在宽容解析前从原始行识别赋值键，
+再进行正常解析；否则“解析不到”会变成静默绕过。识别应保守 fail closed，
+拒绝信息不得包含原始行或值。
+
+## R3.7｜PR Head、凭据事务与泄漏扫描必须绑定同一事实
+
+Pull Request workflow 默认 checkout 可能是临时 merge SHA，不能用 `GITHUB_SHA` 冒充
+PR Head 验收。Windows Job 必须 checkout `pull_request.head.sha`，并用同一精确 Head
+派生假凭据。泄漏扫描要覆盖仓库根目录、日志、ZIP 和解包产物。
+同时，vault 密文与非敏感 `.env` 不能各自拥有未绑定的“最新值”；必须用精确
+配置版本绑定，任一中途失败都在下次启动 fail closed。

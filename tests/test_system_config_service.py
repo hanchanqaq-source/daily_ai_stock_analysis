@@ -1696,6 +1696,19 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         self.assertNotIn("GEMINI_API_KEY", payload["content"])
         self.assertEqual(payload["config_version"], self.manager.get_config_version())
 
+    def test_export_excludes_malformed_sensitive_assignment_not_parsed_by_dotenv(self) -> None:
+        fake_value = "malformed-export-fake-value"
+        self.env_path.write_text(
+            f'OPENAI_API_KEY="{fake_value}\nSTOCK_LIST=600519\n',
+            encoding="utf-8",
+        )
+
+        payload = self.service.export_env()
+
+        self.assertNotIn(fake_value, payload["content"])
+        self.assertNotIn("OPENAI_API_KEY", payload["content"])
+        self.assertIn("STOCK_LIST=600519", payload["content"])
+
     def test_secure_runtime_value_is_masked_without_plaintext_or_env_file_presence(self) -> None:
         self._rewrite_env("STOCK_LIST=600519")
         with patch.dict(
@@ -1763,6 +1776,39 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         self.assertEqual(response["updated_keys"], ["LOG_LEVEL"])
         self.assertIn("安全凭据", context.exception.message)
         self.assertNotIn("imported-fake-value", context.exception.message)
+
+    def test_secure_mode_rejects_malformed_sensitive_import_before_parsing(self) -> None:
+        fake_value = "malformed-import-fake-value"
+        original_content = self.env_path.read_text(encoding="utf-8")
+
+        malformed_contents = (
+            f'export OPENAI_API_KEY="{fake_value}\nSTOCK_LIST=600519\n',
+            f"'OPENAI_API_KEY'=\"{fake_value}\nSTOCK_LIST=600519\n",
+            f"export 'OPENAI_API_KEY'=\"{fake_value}\nSTOCK_LIST=600519\n",
+            f'"OPENAI_API_KEY"=\'{fake_value}\nSTOCK_LIST=600519\n',
+            f'export "OPENAI_API_KEY"=\'{fake_value}\nSTOCK_LIST=600519\n',
+        )
+
+        with patch.dict(
+            os.environ,
+            {
+                "DSA_SECURE_CREDENTIAL_MODE": "windows_dpapi",
+                "DSA_SECURE_CREDENTIAL_KEYS": "OPENAI_API_KEY",
+            },
+            clear=False,
+        ):
+            for content in malformed_contents:
+                with self.subTest(content=content.split("=", 1)[0]):
+                    with self.assertRaises(ConfigImportError) as context:
+                        self.service.import_env(
+                            config_version=self.manager.get_config_version(),
+                            content=content,
+                            reload_now=False,
+                        )
+
+                    self.assertIn("安全凭据", context.exception.message)
+                    self.assertNotIn(fake_value, context.exception.message)
+        self.assertEqual(self.env_path.read_text(encoding="utf-8"), original_content)
 
     def test_export_desktop_env_preserves_hidden_web_settings_keys(self) -> None:
         self.env_path.write_text(
@@ -3116,6 +3162,26 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         self.assertTrue(all(attempt["retryable"] for attempt in payload["attempts"]))
         self.assertNotIn("access_token=first", str(payload))
         self.assertNotIn("token=second", str(payload))
+
+    def test_notification_exception_log_never_contains_capability_url_or_token(self) -> None:
+        fake_url = "https://example.invalid/hook?token=notification-log-fake"
+        with self._notification_test_env(), patch.object(
+            SystemConfigService,
+            "_dispatch_notification_test",
+            side_effect=RuntimeError(f"request failed for {fake_url}"),
+        ), self.assertLogs("src.services.system_config_service", level="WARNING") as captured:
+            payload = self.service.test_notification_channel(
+                channel="custom",
+                items=[{"key": "CUSTOM_WEBHOOK_URLS", "value": fake_url}],
+                title="Test title",
+                content="hello",
+                timeout_seconds=3,
+            )
+
+        logs = "\n".join(captured.output)
+        self.assertNotIn(fake_url, logs)
+        self.assertNotIn("notification-log-fake", logs)
+        self.assertNotIn("notification-log-fake", str(payload))
 
     @patch("src.notification_sender.ntfy_sender.requests.post")
     def test_test_notification_channel_supports_ntfy_and_masks_topic_target(self, mock_post) -> None:

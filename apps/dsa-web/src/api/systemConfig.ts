@@ -78,7 +78,10 @@ interface DesktopSecureCredentialBridge {
     items: UpdateSystemConfigRequest['items'];
     maskToken: string;
   }): Promise<DesktopSecureCredentialPrepareResult>;
-  commitSecureCredentialUpdate(transactionId: string): Promise<unknown>;
+  commitSecureCredentialUpdate(payload: {
+    transactionId: string;
+    configVersion: string;
+  }): Promise<unknown>;
   rollbackSecureCredentialUpdate(transactionId: string): Promise<unknown>;
   finalizeSecureCredentialUpdate(transactionId: string): Promise<unknown>;
 }
@@ -300,6 +303,40 @@ export const systemConfigApi = {
   },
 
   async importEnv(payload: ImportSystemConfigRequest): Promise<UpdateSystemConfigResponse> {
+    const desktopBridge = getDesktopSecureCredentialBridge();
+    if (desktopBridge) {
+      const prepared = await desktopBridge.prepareSecureCredentialUpdate({
+        items: [],
+        maskToken: '******',
+      });
+      if (prepared.supported && prepared.transactionId) {
+        const transactionId = prepared.transactionId;
+        let vaultCommitted = false;
+        try {
+          const response = await apiClient.post<Record<string, unknown>>(
+            '/api/v1/system/config/import',
+            toSnakeImportPayload({ ...payload, reloadNow: false }),
+          );
+          const result = toCamelCase<UpdateSystemConfigResponse>(response.data);
+          await desktopBridge.commitSecureCredentialUpdate({
+            transactionId,
+            configVersion: result.configVersion,
+          });
+          vaultCommitted = true;
+          await desktopBridge.finalizeSecureCredentialUpdate(transactionId);
+          return { ...result, reloadTriggered: true };
+        } catch (error) {
+          if (!vaultCommitted) {
+            try {
+              await desktopBridge.rollbackSecureCredentialUpdate(transactionId);
+            } catch {
+              // Preserve the original failure; secure-storage errors are already generic.
+            }
+          }
+          throw error;
+        }
+      }
+    }
     const response = await apiClient.post<Record<string, unknown>>(
       '/api/v1/system/config/import',
       toSnakeImportPayload(payload),
@@ -354,7 +391,7 @@ export const systemConfigApi = {
           items: payload.items,
           maskToken,
         });
-        if (prepared.supported && prepared.transactionId && prepared.handledKeys.length > 0) {
+        if (prepared.supported && prepared.transactionId) {
           const transactionId = prepared.transactionId;
           const handledKeys = new Set(prepared.handledKeys.map((key) => key.toUpperCase()));
           const publicItems = payload.items.filter((item) => !handledKeys.has(item.key.toUpperCase()));
@@ -367,10 +404,9 @@ export const systemConfigApi = {
             updatedKeys: [],
             warnings: [],
           };
-          let backendPersisted = false;
+          let vaultCommitted = false;
 
           try {
-            await desktopBridge.commitSecureCredentialUpdate(transactionId);
             if (publicItems.length > 0) {
               const response = await apiClient.put<Record<string, unknown>>(
                 '/api/v1/system/config',
@@ -382,10 +418,14 @@ export const systemConfigApi = {
               );
               backendResult = toCamelCase<UpdateSystemConfigResponse>(response.data);
             }
-            backendPersisted = true;
+            await desktopBridge.commitSecureCredentialUpdate({
+              transactionId,
+              configVersion: backendResult.configVersion,
+            });
+            vaultCommitted = true;
             await desktopBridge.finalizeSecureCredentialUpdate(transactionId);
           } catch (error) {
-            if (!backendPersisted) {
+            if (!vaultCommitted) {
               try {
                 await desktopBridge.rollbackSecureCredentialUpdate(transactionId);
               } catch {

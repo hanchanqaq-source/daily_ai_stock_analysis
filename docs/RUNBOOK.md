@@ -175,3 +175,15 @@ Work 1 只允许出现获批的项目管理和文档差异；若出现 `src/`、
 ## R3.6 便携更新排障
 
 便携更新失败时不要删除 `.pp02-update-backup`。先保留更新计划、恢复元数据和本地日志，再确认当前根目录的 `.env`、SQLite DB/WAL/SHM 以及 `pp02-portable-release.json`。云端 CI 只能验证 Windows 候选构建，R5 必须在固定 PR Head 的全新 Windows 隔离目录执行。
+
+## R3.7 Windows 安全凭据
+
+- Windows Desktop 的 API Key、Token、Password 和 capability Webhook 等敏感值由
+  Electron `safeStorage` / DPAPI 加密并保存在 `userData` 下的版本化 vault；
+  不应手工把这些值写回 `.env`。
+- 新建、更换或删除凭据必须通过 Desktop 设置页；配置备份只包含非敏感
+  `.env` 项，恢复备份后需重新输入凭据。
+- 如果日志显示 vault 与 `.env` 版本不匹配、`safeStorage` 不可用或密文不可解，
+  应保留原文件并在设置页重新输入；不得把 vault 解密回写 `.env`。
+- CI/PR 验收只使用由固定 Head 派生的假凭据。禁止在日志、截图、artifact、
+  Issue 或 PR 正文中粘贴任何真实凭据。

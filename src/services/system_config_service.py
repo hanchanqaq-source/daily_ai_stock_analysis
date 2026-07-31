@@ -123,6 +123,15 @@ class _LLMDiagnostic:
 class SystemConfigService:
     """Service layer for reading, validating, and updating runtime configuration."""
 
+    _ENV_ASSIGNMENT_RE = re.compile(
+        r"^\s*(?:export\s+)?(?:"
+        r"'(?P<single_quoted_key>[A-Za-z_][A-Za-z0-9_]*)'|"
+        r'"(?P<double_quoted_key>[A-Za-z_][A-Za-z0-9_]*)"|'
+        r"(?P<bare_key>[A-Za-z_][A-Za-z0-9_]*)"
+        r")\s*=",
+        re.IGNORECASE,
+    )
+
     _GENERATION_BACKEND_STATUS_EXACT_KEYS = {
         "GENERATION_BACKEND",
         "GENERATION_FALLBACK_BACKEND",
@@ -575,7 +584,11 @@ class SystemConfigService:
                 timeout_seconds=float(timeout_seconds),
             )
         except Exception as exc:
-            logger.warning("Notification channel test failed for %s: %s", normalized_channel, exc)
+            logger.warning(
+                "Notification channel test failed for %s (exception=%s)",
+                normalized_channel,
+                type(exc).__name__,
+            )
             error_code, retryable = self._classify_notification_exception(exc)
             return self._build_notification_test_result(
                 success=False,
@@ -711,14 +724,10 @@ class SystemConfigService:
 
     def export_env(self) -> Dict[str, Any]:
         """Return active non-sensitive `.env` content for backup."""
-        saved_map = self._manager.read_config_map()
-        sensitive_keys = {
-            key
-            for key, value in saved_map.items()
-            if bool(get_field_definition(key, value).get("is_sensitive", False))
+        content = self._manager.render_without_matching_keys(
+            lambda key: bool(get_field_definition(key).get("is_sensitive", False))
             or is_sensitive_config_key(key)
-        }
-        content = self._manager.render_without_keys(sensitive_keys)
+        )
 
         return {
             "content": content,
@@ -743,8 +752,20 @@ class SystemConfigService:
         if current_version != config_version:
             raise ConfigConflictError(current_version=current_version)
 
+        secure_mode = self._is_secure_credential_mode()
+        if secure_mode:
+            raw_assignment_keys = self._scan_imported_assignment_keys(content)
+            if any(
+                is_sensitive_config_key(key)
+                or bool(get_field_definition(key, "").get("is_sensitive", False))
+                for key in raw_assignment_keys
+            ):
+                raise ConfigImportError(
+                    "Windows 安全凭据不能从 .env 导入；请在设置页重新输入凭据"
+                )
+
         updates = self._parse_imported_env_content(content)
-        if self._is_secure_credential_mode() and any(
+        if secure_mode and any(
             is_sensitive_config_key(item["key"])
             or bool(get_field_definition(item["key"], item["value"]).get("is_sensitive", False))
             for item in updates
@@ -2112,7 +2133,10 @@ class SystemConfigService:
                 warnings.extend(config.validate())
                 reload_triggered = True
             except Exception as exc:  # pragma: no cover - defensive branch
-                logger.error("Configuration reload failed: %s", exc, exc_info=True)
+                if self._is_secure_credential_mode():
+                    logger.error("Configuration reload failed in secure credential mode")
+                else:
+                    logger.error("Configuration reload failed: %s", exc, exc_info=True)
                 warnings.append("Configuration updated but reload failed")
 
         warnings.extend(
@@ -2144,7 +2168,10 @@ class SystemConfigService:
                     clear_enabled_override="SCHEDULE_ENABLED" in submitted_keys,
                 )
             except Exception as exc:  # pragma: no cover - defensive branch
-                logger.error("Runtime scheduler reconcile failed: %s", exc, exc_info=True)
+                if self._is_secure_credential_mode():
+                    logger.error("Runtime scheduler reconcile failed in secure credential mode")
+                else:
+                    logger.error("Runtime scheduler reconcile failed: %s", exc, exc_info=True)
                 warnings.append("Configuration updated but runtime scheduler reconcile failed")
 
         return {
@@ -2412,6 +2439,22 @@ class SystemConfigService:
             raise ConfigImportError("未识别到有效 .env 配置")
 
         return updates
+
+    @classmethod
+    def _scan_imported_assignment_keys(cls, content: str) -> Set[str]:
+        """Recognize assignment keys before dotenv can discard malformed values."""
+        normalized_content = content.replace("\ufeff", "")
+        keys: Set[str] = set()
+        for line in normalized_content.splitlines():
+            match = cls._ENV_ASSIGNMENT_RE.match(line)
+            if match:
+                key = (
+                    match.group("single_quoted_key")
+                    or match.group("double_quoted_key")
+                    or match.group("bare_key")
+                )
+                keys.add(key.upper())
+        return keys
 
     def _collect_issues(self, items: Sequence[Dict[str, str]], mask_token: str) -> List[Dict[str, Any]]:
         """Collect field-level and cross-field validation issues."""

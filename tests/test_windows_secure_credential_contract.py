@@ -107,3 +107,11 @@ def test_desktop_package_and_preload_expose_write_only_credential_surface() -> N
     assert "DSA_SECURE_CREDENTIAL_MODE" in main
     assert "DSA_SECURE_CREDENTIAL_KEYS" in main
     assert "senderFrame" in main and "mainFrame" in main
+    assert "will-navigate" in main and "will-redirect" in main
+
+    finalize_handler = main.split(
+        "ipcMain.handle('desktop:finalize-secure-credential-update'", 1
+    )[1].split("async function createWindow", 1)[0]
+    assert finalize_handler.index("assertFinalizable") < finalize_handler.index(
+        "sanitizeEnvFile"
+    )

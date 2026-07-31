@@ -275,3 +275,18 @@ Release、`main`、真实数据、AI 调用、定时器或自动推送。
 - 模拟未访问正式安装目录、正式数据库、真实凭据或网络 Release；一次性验收截图不进入仓库。
 - Judge：`PASS — R5 WINDOWS VALIDATION COMPLETED — DRAFT_HOLD`。
 - PR 继续保持 Draft；未执行 Ready、Merge、main 直写、Tag、Release、真实数据或 R3.7。
+
+## 2026-07-31 WORK-003 / R3.7 实现回传（最终 CI 待收口）
+
+- 固定 Base：`main@097bb5d60aa42f13737ac4d9db2f582bde50f995`；活动项是
+  独立 Draft PR `#11` / `agent/pp02-work3-r3-7-windows-secure-credentials`。
+- 已完成版本化 DPAPI 密文 vault、`.env` 精确版本绑定、单活事务、窄 IPC、
+  origin/navigation 校验、backend child environment 注入、敏感项全遮罩和无凭据导出。
+- Windows secure mode 在 dotenv 解析前识别裸键、单/双引号键与可选
+  `export`，畸形敏感导入明确拒绝且不显示值。
+- Windows CI 改为 checkout 精确 PR Head，从 Head 派生一次性假凭据，并扫描仓库根、
+  日志、最终 ZIP 和解包目录；未使用真实凭据。
+- 四次独立安全复审最终未发现 Critical/Important。本地证据：Python/契约
+  `340/340`，Desktop `80/80`，Web `127/127`，Lint/Build/治理/根目录扫描通过。
+- 当前仍非最终验收：文档收口 Head 的八项 CI 与同 Head Windows 日志尚待远端
+  证明；Judge 继续 `DRAFT_HOLD`。

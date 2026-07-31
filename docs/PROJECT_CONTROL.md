@@ -97,3 +97,14 @@ Windows 实机验收完成前，不得进入 Work 2。
 - 完成项只追加验收记录，不倒改成“未完成”。
 - 范围改变只调整未完成步骤，并在 `CHANGE_HISTORY.md` 追加原因。
 - 阻塞解除后保留原始记录和解除证据，不删除历史。
+
+## WORK-003 / R3.7 当前控制摘要
+
+| 阶段 | 状态 | 证据/边界 |
+| --- | --- | --- |
+| Plan | 完成 | 固定 `main@097bb5d60aa42f13737ac4d9db2f582bde50f995`，先冻结威胁模型与 TDD 计划 |
+| Build | 完成 | `safeStorage`/DPAPI vault、版本绑定、窄 IPC、backend 环境注入、导入导出与泄漏扫描 |
+| Test | 本地通过 | Python/契约 `340/340`，Desktop `80/80`，Web 阻断 `127/127`，Lint/Build/治理/根目录假密钥扫描通过 |
+| Review | 通过 | 四次独立安全复审后未发现 Critical/Important；批准发布到现有 Draft PR `#11` |
+| CI | 待验证 | 下一发布 Head 必须八项完整通过；Windows Job 必须同 Head 执行假凭据 safeStorage 与 artifact 扫描 |
+| Judge | `DRAFT_HOLD` | 不得 Ready、合并、main 直写、Tag、Release、真实凭据/数据或后续阶段 |

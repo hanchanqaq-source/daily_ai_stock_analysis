@@ -253,13 +253,15 @@ test('buildBackendEnvironment injects secure credentials after source environmen
 
 test('secure credential IPC trusts only the active window main frame', (t) => {
   const mainModule = loadMainModule(t, { platform: 'win32' });
-  const mainFrame = { routingId: 1 };
+  const expectedOrigin = 'http://127.0.0.1:8123';
+  const mainFrame = { routingId: 1, url: `${expectedOrigin}/settings` };
   const webContents = { mainFrame };
 
   assert.equal(
     mainModule.isTrustedSecureCredentialSender(
       { sender: webContents, senderFrame: mainFrame },
       webContents,
+      expectedOrigin,
     ),
     true,
   );
@@ -267,6 +269,7 @@ test('secure credential IPC trusts only the active window main frame', (t) => {
     mainModule.isTrustedSecureCredentialSender(
       { sender: webContents, senderFrame: { routingId: 2 } },
       webContents,
+      expectedOrigin,
     ),
     false,
   );
@@ -274,9 +277,56 @@ test('secure credential IPC trusts only the active window main frame', (t) => {
     mainModule.isTrustedSecureCredentialSender(
       { sender: { mainFrame }, senderFrame: mainFrame },
       webContents,
+      expectedOrigin,
     ),
     false,
   );
+  mainFrame.url = 'https://attacker.invalid/settings';
+  assert.equal(
+    mainModule.isTrustedSecureCredentialSender(
+      { sender: webContents, senderFrame: mainFrame },
+      webContents,
+      expectedOrigin,
+    ),
+    false,
+  );
+});
+
+test('Desktop navigation allows only the active local backend origin', (t) => {
+  const mainModule = loadMainModule(t, { platform: 'win32' });
+  const runtime = { connectHost: '127.0.0.1', port: 8123 };
+
+  assert.equal(
+    mainModule.isAllowedDesktopNavigation('http://127.0.0.1:8123/settings?tab=llm', runtime),
+    true,
+  );
+  assert.equal(
+    mainModule.isAllowedDesktopNavigation('https://attacker.invalid/', runtime),
+    false,
+  );
+  assert.equal(
+    mainModule.isAllowedDesktopNavigation('http://127.0.0.1:9000/', runtime),
+    false,
+  );
+});
+
+test('env file version changes with bytes and secure mode suppresses backend payload logs', (t) => {
+  const mainModule = loadMainModule(t, { platform: 'win32' });
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pp02-env-version-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const envPath = path.join(root, '.env');
+
+  assert.equal(mainModule.getEnvFileVersion(envPath), 'missing:0');
+  fs.writeFileSync(envPath, 'STOCK_LIST=600519\n', 'utf8');
+  const first = mainModule.getEnvFileVersion(envPath);
+  fs.writeFileSync(envPath, 'STOCK_LIST=000001\n', 'utf8');
+  const second = mainModule.getEnvFileVersion(envPath);
+
+  assert.match(first, /^\d+:[0-9a-f]{64}$/);
+  assert.match(second, /^\d+:[0-9a-f]{64}$/);
+  assert.notEqual(first, second);
+  assert.equal(mainModule.shouldForwardBackendOutput(null), true);
+  assert.equal(mainModule.shouldForwardBackendOutput({ keys: [], values: {} }), false);
 });
 
 test('main registers the narrow secure credential IPC surface without a read handler', (t) => {
