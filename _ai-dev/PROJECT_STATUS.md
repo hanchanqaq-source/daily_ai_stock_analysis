@@ -15,13 +15,13 @@ FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
 ACTIVE_BASE=eb32298c8f3cbec2ff400dda37d3267a7181af40
 ACTIVE_BRANCH=agent/pp02-work4-r4-database-rehearsal
-ACTIVE_PR=PENDING_INITIAL_DRAFT
-CURRENT_STAGE=R4 / Framework Alignment and Design
+ACTIVE_PR=12
+CURRENT_STAGE=R4 / Draft Candidate Publication and CI
 CURRENT_WORK=数据库兼容与脱敏迁移演练
 ACTIVE_GOAL=只用空库和人工假数据建立可重复的兼容检查、股票事件迁移与回滚演练
-CURRENT_STATUS=WORK4_OPTION_A_APPROVED — PLAN_IN_PROGRESS — DRAFT_HOLD
+CURRENT_STATUS=LOCAL_VERIFIED — CI_PENDING — DRAFT_HOLD
 ACTIVE_BLOCKER=NONE
-NEXT_ACTION=写入自动接力规则与R4设计计划，建立初始Draft PR后按TDD实现
+NEXT_ACTION=发布最终候选到Draft PR #12，固定远程Head并验证完整CI
 AUTHORIZATION_REQUIRED=FALSE_FOR_WORK4_FRAMEWORK_STATE_BRANCH_COMMIT_PUSH_DRAFT_PR_CI_SYNTHETIC_DATA; READY/MERGE/MAIN/TAG/RELEASE/REAL_DATABASE/REAL_DATA/REAL_CREDENTIALS/NEXT_STAGE_REQUIRE_NEW_AUTHORIZATION
 LAST_UPDATED=2026-07-31
 ```
@@ -71,6 +71,22 @@ LAST_UPDATED=2026-07-31
   `PP02-WORK-HANDOFF-002` 替代；聊天显示名称保持原样。
 - PR #7/#8 是已被 PR #9 替代的历史 Draft，获准关闭但保留分支和全部历史。
 - R4 只使用动态生成的空库和人工假数据；Judge 上限为 `DRAFT_HOLD`。
+
+## 2026-07-31 Work4 / R4 本地实现证据
+
+- 历史 Draft PR #7/#8 已添加 superseded 说明并关闭；远程分支和全部历史保留。
+- 当前 Draft PR：`#12`；分支 `agent/pp02-work4-r4-database-rehearsal`；保持 Draft。
+- RED：新增 8 项服务契约后全部因实现模块缺失而失败；未混入既有回归失败。
+- GREEN：R4 专项 `13 passed`；服务、CLI、意外异常脱敏和原子报告语法检查通过；
+  存储/备份/R4 联合回归 `43 passed, 17 warnings`，警告与记录基线一致。
+- 全新系统临时目录端到端演练返回 `R4_DATABASE_MIGRATION_REHEARSAL=PASS`；四类事件
+  各迁移 1 条，源 SHA 不变、组合摘要一致、过期预览被拒绝且目标不变；真实数据和
+  备份正文均未使用或落盘。
+- CI 等效 UTC 环境完整离线后端门：`5040 passed, 4 deselected, 47 warnings,
+  499 subtests passed`；Flake8 严重错误为 0，AI 资产、语法、确定性检查和差异格式均通过。
+- Base-to-Head 自审只包含批准的规则、状态、设计、服务、CLI、测试和文档；未跟踪
+  `.db`、`.env`、备份、报告、日志、依赖或 Workflow 变化，报告结构不含行值。
+- 当前尚未发布最终远程候选或验证固定 Head CI，不能宣布 Work4 结束。
 
 ## R3.1 实现与验证证据
 

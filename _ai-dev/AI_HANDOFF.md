@@ -6,11 +6,12 @@
 | --- | --- |
 | 远程 main | `eb32298c8f3cbec2ff400dda37d3267a7181af40` |
 | 当前 Work | `WORK-004｜数据库兼容与脱敏迁移演练` |
-| 当前状态 | `IN_PROGRESS`；一个大段一个 Work；聊天显示名称不得修改 |
+| 当前状态 | `LOCAL_VERIFIED — CI_PENDING — DRAFT_HOLD`；聊天显示名称不得修改 |
 | 分支 | `agent/pp02-work4-r4-database-rehearsal` |
-| Draft PR | 初始规则/设计提交后创建；编号以 GitHub 实际结果回填 |
+| Draft PR | `#12`，必须保持 Draft |
 | 数据边界 | 只允许空库和人工构造的假数据；真实数据库/数据禁止 |
-| 下一动作 | 先发布框架与设计检查点，再按 TDD 实现迁移演练 |
+| 本地验证 | R4 `13 passed`；关联回归 `43 passed`；全量 `5040 passed, 4 deselected` |
+| 下一动作 | 发布最终候选到 Draft PR #12，固定 Head 并等待完整 CI |
 
 新聊天不需要用户复制施工单或回传。必须读取 `AGENTS.md` 和四份 `_ai-dev`
 文件，再核对 GitHub；发现本 Work 仍 Active 时只读报告，不得另起重复施工。

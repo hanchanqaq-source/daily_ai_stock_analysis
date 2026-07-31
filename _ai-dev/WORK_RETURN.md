@@ -9,14 +9,24 @@
 - 已建立隔离分支 `agent/pp02-work4-r4-database-rehearsal`。
 - 已选择并记录 `PP02-WORK-HANDOFF-002`；聊天显示名称保持不变。
 - 已冻结 R4 设计；仅允许空库和人工假数据。
+- 已关闭被 PR #9 替代的历史 Draft PR #7/#8，分支和历史保留；已建立 Draft PR #12。
 - 基线专项：`tests/test_storage.py` + `tests/test_portfolio_backup_service.py` 为
   `30 passed`；`scripts/check_ai_assets.py` 通过。
+- TDD RED：8 项服务契约均因实现模块缺失而失败；意外异常脱敏回归也先证明原始
+  异常会泄漏，再完成修正；GREEN 后 R4 专项为 `13 passed`。
+- R4、备份与存储联合回归：`43 passed, 17 warnings`；警告与既有基线一致。
+- 临时目录全新混合假数据演练：PASS；四类正式事件各 1 条，源 SHA 不变、摘要一致、
+  过期预览被拒绝且目标不变；报告和目标未包含构造的排除值。
+- CI 等效 UTC 环境完整离线后端门：`5040 passed, 4 deselected, 47 warnings,
+  499 subtests passed`；Flake8 严重错误 0，AI 资产、语法、确定性检查和差异格式通过。
+- Base-to-Head 安全自审通过；未跟踪数据库、环境文件、备份、报告、日志、依赖或
+  Workflow 变化，报告不包含行值或备份正文。
 
 ## 当前 Judge
 
-`IN_PROGRESS — DRAFT_HOLD`
+`LOCAL_VERIFIED — CI_PENDING — DRAFT_HOLD`
 
-实现、完整本地门、Draft PR CI 和最终回传尚未完成，不得宣布 Work4 结束。
+Draft PR 固定 Head CI 和最终回传尚未完成，不得宣布 Work4 结束。
 
 ---
 

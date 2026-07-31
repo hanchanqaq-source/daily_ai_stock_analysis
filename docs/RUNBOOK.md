@@ -187,3 +187,48 @@ Work 1 只允许出现获批的项目管理和文档差异；若出现 `src/`、
   应保留原文件并在设置页重新输入；不得把 vault 解密回写 `.env`。
 - CI/PR 验收只使用由固定 Head 派生的假凭据。禁止在日志、截图、artifact、
   Issue 或 PR 正文中粘贴任何真实凭据。
+
+## R4 合成数据库兼容与迁移演练
+
+R4 入口只允许空 SQLite 或完全人工构造的假数据。**不得**把真实数据库、真实备份、
+由真实数据库复制或“脱敏”得到的文件、真实账号或凭据传给本脚本；R4 PASS 也不代表
+R6 真实数据迁移已获授权或已经验证。
+
+输入数据库必须配套一个 JSON 合成证明，且字段只能是：
+
+```json
+{
+  "attestation_version": 1,
+  "project_id": "PP02",
+  "scope": "R4_DATABASE_REHEARSAL",
+  "classification": "synthetic",
+  "contains_real_data": false,
+  "source_sha256": "人工合成 SQLite 文件的 SHA-256"
+}
+```
+
+专项测试会在系统临时目录动态创建合成库和证明，不向仓库提交 `.db`：
+
+```bash
+python -m pytest tests/test_database_migration_rehearsal.py -q
+```
+
+对已核验的合成文件执行演练：
+
+```bash
+python scripts/pp02_database_migration_rehearsal.py \
+  --source /temporary/synthetic.db \
+  --attestation /temporary/attestation.json \
+  --workspace /temporary/rehearsal-workspace \
+  --report /temporary/rehearsal-report.json
+```
+
+成功时标准输出只有 `R4_DATABASE_MIGRATION_REHEARSAL=PASS`。报告只包含版本、状态、
+源 SHA-256、表名、四类正式事件计数、规范化摘要是否一致、回滚布尔证据和隐私布尔
+证据，不包含行值或备份正文。迁移只经过自动清理的源库临时副本，正式目标固定为
+`pp02-r4-migrated.db`；原输入只读且演练前后 SHA-256 必须一致。
+
+失败时标准错误只输出 `R4_DATABASE_MIGRATION_REHEARSAL=FAIL code=<稳定错误码>`。
+未完成的目标及 WAL/SHM 会清理，报告采用同目录临时文件加原子替换；证明缺失、哈希
+不符、真实数据声明、部分股票事件 Schema、损坏 SQLite、已有目标或过期恢复令牌异常
+均不得输出 PASS。遇到失败应保留原合成输入和证明用于排查，不得改用真实库重试。
