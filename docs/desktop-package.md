@@ -345,9 +345,17 @@ Windows 分发现在有两种方式：
 使用 `win-unpacked` 免安装包时，用户只需：
 
 1. 解压文件夹
-2. 编辑 `.env` 配置 API Key 和股票列表
+2. 仅在 `.env` 配置股票列表等非敏感项；API Key 等凭据在首次启动后从
+   Desktop 设置页输入
 3. 双击 `PP02 AI Daily Stock Analysis.exe` 启动
 
 ## PP02 Windows 便携安全更新（R3.6）
 
 Windows NSIS 安装版仍由 `electron-updater` 自动下载，并由用户确认重启安装。PP02 便携版必须在包根目录带有 `pp02-portable-release.json`；启动时仅检查元数据，用户点击“安全更新”后才下载和校验。详细安全契约、清单字段、回滚与验证边界见 [`pp02/R3_6_WINDOWS_PORTABLE_UPDATE_IMPLEMENTATION.md`](pp02/R3_6_WINDOWS_PORTABLE_UPDATE_IMPLEMENTATION.md)。便携资产为 `pp02-ai-daily-stock-analysis-windows-noinstall-vX.Y.Z.zip` 及同名 `.zip.sha256`。
+
+## PP02 Windows 安全凭据（R3.7）
+
+Windows Desktop 的敏感配置保存到 Electron `userData` 下的 `safeStorage` /
+DPAPI 加密 vault。设置页只显示遮罩和存在状态，配置导出不包含凭据或
+vault 密文；恢复 `.env` 备份后需重新输入凭据。详细边界与故障处理见
+[`pp02/R3_7_WINDOWS_SECURE_CREDENTIALS_THREAT_MODEL.md`](pp02/R3_7_WINDOWS_SECURE_CREDENTIALS_THREAT_MODEL.md)。

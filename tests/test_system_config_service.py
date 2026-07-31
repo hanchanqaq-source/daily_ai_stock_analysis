@@ -62,13 +62,13 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         message = SimpleNamespace(content=content, tool_calls=tool_calls or [])
         return SimpleNamespace(choices=[SimpleNamespace(message=message)])
 
-    def test_get_config_keeps_regular_sensitive_values_unmasked(self) -> None:
+    def test_get_config_masks_every_sensitive_value(self) -> None:
         payload = self.service.get_config(include_schema=True)
         items = {item["key"]: item for item in payload["items"]}
 
         self.assertIn("GEMINI_API_KEY", items)
-        self.assertEqual(items["GEMINI_API_KEY"]["value"], "secret-key-value")
-        self.assertFalse(items["GEMINI_API_KEY"]["is_masked"])
+        self.assertEqual(items["GEMINI_API_KEY"]["value"], payload["mask_token"])
+        self.assertTrue(items["GEMINI_API_KEY"]["is_masked"])
         self.assertTrue(items["GEMINI_API_KEY"]["raw_value_exists"])
 
     def _assert_agent_backend_status_matches_runtime(
@@ -514,6 +514,54 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         no_proxy_client.assert_not_called()
         completion.assert_not_called()
 
+    def test_hermes_secure_runtime_saved_secret_is_reusable_without_plaintext_response(self) -> None:
+        self._rewrite_env(
+            "STOCK_LIST=600519,000001",
+            "LLM_CHANNELS=hermes",
+            "LLM_HERMES_PROTOCOL=openai",
+            "LLM_HERMES_BASE_URL=http://127.0.0.1:8642/v1",
+        )
+        secure_value = "secure-runtime-fake"
+
+        class FakeSession:
+            def __init__(self) -> None:
+                self.trust_env = True
+
+            def get(self, _url: str, **kwargs: Any) -> Any:
+                authorization = (kwargs.get("headers") or {}).get("Authorization", "")
+                self_outer.assertTrue(authorization.endswith(secure_value))
+                return SimpleNamespace(
+                    status_code=200,
+                    ok=True,
+                    json=lambda: {"data": [{"id": "hermes-agent"}]},
+                    text="",
+                )
+
+            def close(self) -> None:
+                pass
+
+        self_outer = self
+        with patch.dict(
+            os.environ,
+            {
+                "DSA_SECURE_CREDENTIAL_MODE": "windows_dpapi",
+                "DSA_SECURE_CREDENTIAL_KEYS": "LLM_HERMES_API_KEY",
+                "LLM_HERMES_API_KEY": secure_value,
+            },
+            clear=False,
+        ), patch("src.services.system_config_service.requests.Session", side_effect=FakeSession):
+            result = self.service.discover_llm_channel_models(
+                name="hermes",
+                protocol="openai",
+                base_url="http://127.0.0.1:8642/v1",
+                api_key="******",
+                models=["hermes-agent"],
+                use_saved_secret=True,
+            )
+
+        self.assertTrue(result["success"])
+        self.assertNotIn(secure_value, json.dumps(result, ensure_ascii=False))
+
     def test_hermes_masked_key_is_not_sent_for_model_discovery(self) -> None:
         with patch("src.services.system_config_service.requests.Session") as session_cls:
             result = self.service.discover_llm_channel_models(
@@ -885,7 +933,8 @@ class SystemConfigServiceTestCase(unittest.TestCase):
 
             self.assertEqual(pre_save_items["OPENAI_BASE_URL"]["value"], "https://runtime-openai.v1")
             self.assertFalse(pre_save_items["OPENAI_BASE_URL"]["raw_value_exists"])
-            self.assertEqual(pre_save_items["OPENAI_API_KEY"]["value"], "runtime-openai-key")
+            self.assertEqual(pre_save_items["OPENAI_API_KEY"]["value"], pre_save["mask_token"])
+            self.assertTrue(pre_save_items["OPENAI_API_KEY"]["is_masked"])
             self.assertFalse(pre_save_items["OPENAI_API_KEY"]["raw_value_exists"])
             self.assertEqual(pre_save_items["LITELLM_MODEL"]["value"], "openai/gpt-4o-mini")
             self.assertTrue(pre_save_items["LITELLM_MODEL"]["raw_value_exists"])
@@ -989,9 +1038,11 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         items = {item["key"]: item for item in payload["items"]}
 
         self.assertIn("LLM_CHANNELS", items)
-        self.assertEqual(items["LLM_DEEPSEEK_API_KEY"]["value"], "sk-test-value")
+        self.assertEqual(items["LLM_DEEPSEEK_API_KEY"]["value"], payload["mask_token"])
+        self.assertTrue(items["LLM_DEEPSEEK_API_KEY"]["is_masked"])
         self.assertEqual(items["LLM_DEEPSEEK_MODELS"]["value"], "deepseek-v4-flash,deepseek-v4-pro")
-        self.assertEqual(items["LLM_MY_PROXY_API_KEYS"]["value"], "sk-key-1,sk-key-2")
+        self.assertEqual(items["LLM_MY_PROXY_API_KEYS"]["value"], payload["mask_token"])
+        self.assertTrue(items["LLM_MY_PROXY_API_KEYS"]["is_masked"])
         self.assertEqual(items["LLM_MY_PROXY_MODELS"]["value"], "gpt-5.5")
         self.assertEqual(items["LLM_MY_PROXY_API_KEYS"]["schema"]["category"], "ai_model")
         self.assertNotIn("LLM_UNUSED_API_KEY", items)
@@ -1629,7 +1680,7 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         self.assertEqual(storage_check["status"], "configured")
         self.assertFalse(missing_parent.exists())
 
-    def test_export_desktop_env_returns_raw_text(self) -> None:
+    def test_export_desktop_env_excludes_sensitive_assignments(self) -> None:
         self.env_path.write_text(
             "# Desktop config\nSTOCK_LIST=600519,000001\n\nGEMINI_API_KEY=secret-key-value\n",
             encoding="utf-8",
@@ -1639,9 +1690,125 @@ class SystemConfigServiceTestCase(unittest.TestCase):
 
         self.assertEqual(
             payload["content"],
-            "# Desktop config\nSTOCK_LIST=600519,000001\n\nGEMINI_API_KEY=secret-key-value\n",
+            "# Desktop config\nSTOCK_LIST=600519,000001\n",
         )
+        self.assertTrue(payload["credentials_excluded"])
+        self.assertNotIn("GEMINI_API_KEY", payload["content"])
         self.assertEqual(payload["config_version"], self.manager.get_config_version())
+
+    def test_export_excludes_malformed_sensitive_assignment_not_parsed_by_dotenv(self) -> None:
+        fake_value = "malformed-export-fake-value"
+        self.env_path.write_text(
+            f'OPENAI_API_KEY="{fake_value}\nSTOCK_LIST=600519\n',
+            encoding="utf-8",
+        )
+
+        payload = self.service.export_env()
+
+        self.assertNotIn(fake_value, payload["content"])
+        self.assertNotIn("OPENAI_API_KEY", payload["content"])
+        self.assertIn("STOCK_LIST=600519", payload["content"])
+
+    def test_secure_runtime_value_is_masked_without_plaintext_or_env_file_presence(self) -> None:
+        self._rewrite_env("STOCK_LIST=600519")
+        with patch.dict(
+            os.environ,
+            {
+                "DSA_SECURE_CREDENTIAL_MODE": "windows_dpapi",
+                "DSA_SECURE_CREDENTIAL_KEYS": "OPENAI_API_KEY",
+                "OPENAI_API_KEY": "runtime-fake-value",
+            },
+            clear=False,
+        ):
+            payload = self.service.get_config(include_schema=True)
+
+        item = {entry["key"]: entry for entry in payload["items"]}["OPENAI_API_KEY"]
+        self.assertEqual(item["value"], payload["mask_token"])
+        self.assertTrue(item["is_masked"])
+        self.assertFalse(item["raw_value_exists"])
+        self.assertTrue(item["secure_value_exists"])
+        self.assertEqual(item["credential_source"], "windows_dpapi")
+
+    def test_secure_mode_rejects_direct_sensitive_plaintext_update(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "DSA_SECURE_CREDENTIAL_MODE": "windows_dpapi",
+                "DSA_SECURE_CREDENTIAL_KEYS": "GEMINI_API_KEY",
+            },
+            clear=False,
+        ):
+            with self.assertRaises(ConfigValidationError) as context:
+                self.service.update(
+                    config_version=self.manager.get_config_version(),
+                    items=[{"key": "GEMINI_API_KEY", "value": "new-fake-value"}],
+                    reload_now=False,
+                )
+
+        self.assertEqual(context.exception.issues[0]["code"], "secure_credential_ipc_required")
+        self.assertNotIn("new-fake-value", str(context.exception.issues))
+
+    def test_secure_mode_allows_mask_noop_but_rejects_sensitive_import(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "DSA_SECURE_CREDENTIAL_MODE": "windows_dpapi",
+                "DSA_SECURE_CREDENTIAL_KEYS": "GEMINI_API_KEY",
+            },
+            clear=False,
+        ):
+            response = self.service.update(
+                config_version=self.manager.get_config_version(),
+                items=[
+                    {"key": "GEMINI_API_KEY", "value": "******"},
+                    {"key": "LOG_LEVEL", "value": "DEBUG"},
+                ],
+                mask_token="******",
+                reload_now=False,
+            )
+            with self.assertRaises(ConfigImportError) as context:
+                self.service.import_env(
+                    config_version=self.manager.get_config_version(),
+                    content="OPENAI_API_KEY=imported-fake-value\n",
+                    reload_now=False,
+                )
+
+        self.assertEqual(response["updated_keys"], ["LOG_LEVEL"])
+        self.assertIn("安全凭据", context.exception.message)
+        self.assertNotIn("imported-fake-value", context.exception.message)
+
+    def test_secure_mode_rejects_malformed_sensitive_import_before_parsing(self) -> None:
+        fake_value = "malformed-import-fake-value"
+        original_content = self.env_path.read_text(encoding="utf-8")
+
+        malformed_contents = (
+            f'export OPENAI_API_KEY="{fake_value}\nSTOCK_LIST=600519\n',
+            f"'OPENAI_API_KEY'=\"{fake_value}\nSTOCK_LIST=600519\n",
+            f"export 'OPENAI_API_KEY'=\"{fake_value}\nSTOCK_LIST=600519\n",
+            f'"OPENAI_API_KEY"=\'{fake_value}\nSTOCK_LIST=600519\n',
+            f'export "OPENAI_API_KEY"=\'{fake_value}\nSTOCK_LIST=600519\n',
+        )
+
+        with patch.dict(
+            os.environ,
+            {
+                "DSA_SECURE_CREDENTIAL_MODE": "windows_dpapi",
+                "DSA_SECURE_CREDENTIAL_KEYS": "OPENAI_API_KEY",
+            },
+            clear=False,
+        ):
+            for content in malformed_contents:
+                with self.subTest(content=content.split("=", 1)[0]):
+                    with self.assertRaises(ConfigImportError) as context:
+                        self.service.import_env(
+                            config_version=self.manager.get_config_version(),
+                            content=content,
+                            reload_now=False,
+                        )
+
+                    self.assertIn("安全凭据", context.exception.message)
+                    self.assertNotIn(fake_value, context.exception.message)
+        self.assertEqual(self.env_path.read_text(encoding="utf-8"), original_content)
 
     def test_export_desktop_env_preserves_hidden_web_settings_keys(self) -> None:
         self.env_path.write_text(
@@ -2996,6 +3163,26 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         self.assertNotIn("access_token=first", str(payload))
         self.assertNotIn("token=second", str(payload))
 
+    def test_notification_exception_log_never_contains_capability_url_or_token(self) -> None:
+        fake_url = "https://example.invalid/hook?token=notification-log-fake"
+        with self._notification_test_env(), patch.object(
+            SystemConfigService,
+            "_dispatch_notification_test",
+            side_effect=RuntimeError(f"request failed for {fake_url}"),
+        ), self.assertLogs("src.services.system_config_service", level="WARNING") as captured:
+            payload = self.service.test_notification_channel(
+                channel="custom",
+                items=[{"key": "CUSTOM_WEBHOOK_URLS", "value": fake_url}],
+                title="Test title",
+                content="hello",
+                timeout_seconds=3,
+            )
+
+        logs = "\n".join(captured.output)
+        self.assertNotIn(fake_url, logs)
+        self.assertNotIn("notification-log-fake", logs)
+        self.assertNotIn("notification-log-fake", str(payload))
+
     @patch("src.notification_sender.ntfy_sender.requests.post")
     def test_test_notification_channel_supports_ntfy_and_masks_topic_target(self, mock_post) -> None:
         mock_post.return_value = self._mock_http_response(200)
@@ -4305,6 +4492,7 @@ class SystemConfigServiceTestCase(unittest.TestCase):
 
         backup_content = self.service.export_desktop_env()["content"]
         pre_clear_map = dict(self.manager.read_config_map())
+        self.assertNotIn("OPENAI_API_KEY", backup_content)
 
         clear_response = self.service.update(
             config_version=self.manager.get_config_version(),
@@ -4379,7 +4567,7 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         self.assertEqual(restored_map["LITELLM_MODEL"], pre_clear_map["LITELLM_MODEL"])
         self.assertEqual(restored_map["OPENAI_MODEL"], pre_clear_map["OPENAI_MODEL"])
         self.assertEqual(restored_map["OPENAI_BASE_URL"], pre_clear_map["OPENAI_BASE_URL"])
-        self.assertEqual(restored_map["OPENAI_API_KEY"], pre_clear_map["OPENAI_API_KEY"])
+        self.assertEqual(restored_map["OPENAI_API_KEY"], "")
 
     def test_validate_rejects_comma_only_api_key(self) -> None:
         """Whitespace/comma-only api_key must fail validation (P2: parsed-segment check)."""

@@ -152,3 +152,26 @@ PR #7 Head `d489a795b6089575a1fd61a27c9b28e2f3cb1b03` / Run `30564032072` 虽为
 ## 2026-07-30 PR #8 CI 失败交接
 
 Draft PR #8 的 Run `30576678660` 失败：真实冻结启动门继承 `GITHUB_ACTIONS=true`，命中 `main.py` 现有服务保护条件，出现“进程存活但服务未启动”。不得删除或绕开 `main.py` 保护；启动门必须只在冻结子进程期间覆盖 `GITHUB_ACTIONS=false`，同时设置 Python UTF-8 环境，并在 finally 恢复所有原值与清理进程树。当前保持 `R5_WINDOWS_BASIC_VALIDATION_FAILED — REWORK_REQUIRED — DRAFT_HOLD`，等待同一 PR #8 新 Head CI 和 Artifact。
+
+## 2026-07-31 Work3 / R3.7 交接
+
+- Work2/R5 已完成并进入 `main`；Work3 固定 Base 为
+  `097bb5d60aa42f13737ac4d9db2f582bde50f995`，唯一活动项是 Draft PR `#11`。
+- R3.7 已完成 `safeStorage`/DPAPI 版本化 vault、窄 IPC、`.env` 绑定、backend
+  环境注入、导入/导出边界和固定 Head 假凭据/产物扫描。
+- 经过四次独立安全复审，已无 Critical/Important。首轮固定远端 Head
+  `b23c698b32b09749e907f1f4f7be1c056445a52e` 的 Run `30640475137` 已 8/8
+  success；Windows Job `91189042298` 的 checkout、safeStorage 假凭据 PASS 和
+  最终产物扫描 PASS 均绑定该 Head，Artifact ID 为 `8798100943`。
+- 下一动作只是发布上述证据到现有 Draft PR，并验证证据提交自身的八项最终 CI。
+- 禁止使用真实凭据/数据，禁止 Ready、合并、main 直写、Tag、Release 或进入
+  R3.8/后续阶段；最终 Judge 上限仍为 `DRAFT_HOLD`。
+
+### R3.7 已复审 Head CI 更新
+
+- Head `b23c698b32b09749e907f1f4f7be1c056445a52e` 的 Run `30640475137` 已
+  8/8 success；Backend `5027 passed, 4 deselected, 499 subtests passed`。
+- Windows Job `91189042298` 已证明精确 Head checkout、真实 `safeStorage` 假凭据 PASS、
+  仓库根 source 扫描与 ZIP/解包/`win-unpacked` artifact 扫描 PASS；所有 Head 标记一致。
+- 当前只剩证据收口 Commit 的最终 8 Job 复验；复验结果必须写入 Draft PR
+  元数据而不再改变 Head。

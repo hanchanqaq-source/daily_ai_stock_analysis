@@ -6,19 +6,19 @@
 PROJECT_ID=PP02
 PROJECT_NAME=AI 每日股票分析
 CHAT_ROLE=WORK
-WORK_ID=WORK-002
+WORK_ID=WORK-003
 ROLE_LOCK=TRUE
 APPLICATION_BASE_VERSION=3.28.0
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-CURRENT_STAGE=R3.6 / PR #8 CI Environment Rework
-CURRENT_WORK=Windows 便携安全更新
-ACTIVE_GOAL=修复Draft PR #8冻结启动门继承GITHUB_ACTIONS导致服务未启动
-CURRENT_STATUS=R5_WINDOWS_BASIC_VALIDATION_FAILED — REWORK_REQUIRED — DRAFT_HOLD
+CURRENT_STAGE=R3.7 / Final Evidence Head CI
+CURRENT_WORK=Windows 安全凭据
+ACTIVE_GOAL=在独立Draft PR上以safeStorage/DPAPI建立Windows Desktop安全凭据边界
+CURRENT_STATUS=IMPLEMENTATION_AND_HEAD_BOUND_WINDOWS_VALIDATION_PASS — FINAL_EVIDENCE_HEAD_CI_PENDING — DRAFT_HOLD
 ACTIVE_BLOCKER=NONE
-NEXT_ACTION=提交GITHUB_ACTIONS/UTF-8隔离修复，更新PR #8并等待新Head完整CI/Artifact
-AUTHORIZATION_REQUIRED=FALSE_FOR_R3_6_BUILD_TEST_COMMIT_DRAFT_PR_CI; READY/MERGE/MAIN/RELEASE/REAL_DATA_REQUIRE_NEW_AUTHORIZATION
-LAST_UPDATED=2026-07-30
+NEXT_ACTION=发布首轮固定Head验收证据，并完成证据提交自身的八项最终CI
+AUTHORIZATION_REQUIRED=FALSE_FOR_R3_7_BUILD_TEST_COMMIT_DRAFT_PR_CI_FAKE_CREDENTIAL_VALIDATION; READY/MERGE/MAIN/TAG/RELEASE/REAL_CREDENTIALS/NEXT_STAGE_REQUIRE_NEW_AUTHORIZATION
+LAST_UPDATED=2026-07-31
 ```
 
 ## 已验证基线
@@ -35,8 +35,8 @@ LAST_UPDATED=2026-07-30
 - R1：需求、保留/调整/不迁移分类和冲突处理已确认。
 - PP02 保持单用户；旧用户档案、切换、隔离和用户级备份全部不迁移。
 - 官方账户/组合事件账本是持仓唯一事实源。
-- R2：迁移拆为 R3.1–R3.7；R3.1–R3.4 已完成，当前执行 R3.5
-  应用内手动周期报告与下周参考展望。
+- R2：迁移拆为 R3.1–R3.7；R3.1–R3.6 已完成，当前执行 R3.7
+  Windows 安全凭据。
 - Windows 实机验收为 `Deferred`，不把 D 盘目录缺失登记为云端阻塞。
 
 ## 当前保护边界
@@ -44,9 +44,9 @@ LAST_UPDATED=2026-07-30
 - PR #3 不转 Ready、不合并、不发布 Release。
 - 不接触真实 `.env`、Token、API Key、Webhook 或真实数据库。
 - 不迁移基金、多用户或旧平行持仓表。
-- R3.5 只允许正式分析/市场复盘历史聚合、条件化下周展望、展望快照、
-  对应 Web/API、测试和文档。
-- 不新增事实表、不调用 AI、不新增定时器或自动通知，不迁移基金或多用户。
+- R3.7 只允许 Windows Desktop `safeStorage`/DPAPI 凭据 vault、窄 IPC、后端启动
+  环境注入、敏感配置屏蔽/导入导出边界、测试和文档。
+- 不读取或迁移旧明文凭据，不使用真实凭据，不扩展跨平台密钥服务或后续阶段。
 - 仓库经只读安全审计和用户授权后已改为 Public；PR、分支和 Actions 历史公开，
   但真实数据、密钥和备份文件仍不得进入仓库。
 
@@ -207,3 +207,108 @@ LAST_UPDATED=2026-07-30
 - 模拟未访问正式安装目录、正式数据库、真实凭据或网络 Release；一次性验收截图不进入仓库。
 - Judge：`PASS — R5 WINDOWS VALIDATION COMPLETED — DRAFT_HOLD`。
 - PR 继续保持 Draft；未执行 Ready、Merge、main 直写、Tag、Release、真实数据或 R3.7。
+
+## 2026-07-31 Work3 / R3.7 接管
+
+- Work2 已由 PR #9 完成 R5 Windows 验收并进入 `main`；PR #10 仅补齐 `main`
+  Push 完整 CI，当前固定基线为 `main@097bb5d60aa42f13737ac4d9db2f582bde50f995`。
+- Work3 独立分支：`agent/pp02-work3-r3-7-windows-secure-credentials`；只允许创建并
+  更新独立 Draft PR。
+- 采用 Electron `safeStorage` / Windows DPAPI；Windows Desktop 敏感配置只有
+  `userData` 下版本化 vault 一个持久化事实源，renderer 没有明文读取 IPC。
+- 本轮先冻结威胁模型，再提交 RED 测试，随后最小实现、完整 CI 和固定 PR Head 的
+  Windows 假密钥验收。
+- 只使用构造的假凭据；禁止读取、复制、迁移、打印或上传真实 `.env`、Token、Key、
+  Password、Webhook、数据库或账号资料。
+- Judge 上限为 `DRAFT_HOLD`；不得 Ready、Merge、直写 `main`、Tag、Release 或进入
+  R3.8/后续阶段。
+
+## 2026-07-31 Work3 / R3.7 RED 与本地 GREEN
+
+- 独立 Draft PR：`#11`；Base：
+  `main@097bb5d60aa42f13737ac4d9db2f582bde50f995`；分支：
+  `agent/pp02-work3-r3-7-windows-secure-credentials`。
+- 威胁模型与实施计划已先冻结；远端 RED Head
+  `096ffa4725d552fcc2ca9008409572deb5d9652d` 的 Run `30634867504` 已观察到
+  `backend-gate` 与 `desktop-test` 按新契约预期失败。
+- 本地 GREEN 已覆盖版本化密文 vault、原子写入/回滚/事务失效、窄 IPC、主 frame
+  校验、继承环境敏感值清除、后端内存注入、全量敏感项遮罩和无凭据导出。
+- 本地证据：Desktop `73/73`、后端相关模块 `265/265`、跨运行时/CI 契约
+  `4/4`、Web 阻断套件 `124/124`，Web Lint 与 Production Build 均通过。
+- 初始实现远端 Head `368566e6125d4ff348be817e638c2e195b474c65` 已由独立安全
+  审查和完整 CI 判定作废；不得作为最终固定 Head 证据。PR 必须持续保持 Draft。
+
+## 2026-07-31 Work3 / R3.7 独立审查返工
+
+- 独立只读审查确认四项阻断：PR workflow 默认使用临时 merge SHA、畸形 dotenv
+  敏感行可绕过导出、Backend 原始异常可能进入日志，以及 vault 先于 `.env` 提交会
+  形成“新凭据/旧 endpoint”崩溃窗口。
+- 同时修复单 vault 并发事务、replace 后权限失败、finalize 验证顺序、可信 origin/
+  主 frame 导航约束，以及源码/日志/最终 ZIP 与解包目录假密钥扫描缺口。
+- 采用 `.env` 精确版本绑定：先持久化非敏感配置，再由 main 校验磁盘版本并提交
+  vault；任一崩溃/外部改写导致版本不一致时，启动必须 fail closed，不注入凭据。
+- 作废 Head Run `30637145300` 的 `backend-gate` 另发现
+  `CUSTOM_WEBHOOK_URLS` 已标记敏感但仍使用 textarea；已改为 password 控件。该 Run
+  即使其余 Job 成功也不计最终 Judge。
+- 审查修复本地证据：Desktop `80/80`；Backend 配置相关 `325/325`；跨运行时、
+  打包和泄漏扫描契约 `14/14`；Web 阻断套件 `127/127`；Lint、Production Build、
+  AI 治理、全差异 whitespace 检查和派生假密钥源码扫描均通过。
+- 审查修复 Head 尚未发布；必须先独立复审，再以新 Head 完整跑八个 CI Job，并从
+  Windows Job 日志证明 checkout Head、safeStorage PASS 与 artifact scan Head 三者一致。
+
+## 2026-07-31 Work3 / R3.7 第二次独立复审返工
+
+- 第二次独立复审确认原有四项 Critical 和五项 Important 全部关闭，无新增
+  Critical。
+- 剩余两项 Important 已以回归测试先行修复：Windows secure mode 在
+  dotenv 解析前识别并拒绝畸形敏感 assignment；Windows 假密钥源码扫描扩大为
+  整个仓库根目录。
+- 两项新回归在修复前均按预期失败，修复后 `2/2` 通过；测试值均为构造的
+  假密钥，拒绝信息不包含假密钥。
+- 修复仍只存在本地分支；第三次独立复审通过前不发布，Draft PR `#11`
+  继续保持 Draft。
+
+## 2026-07-31 Work3 / R3.7 第三次独立复审返工
+
+- 第三次独立复审确认仓库根 source scanner 和此前安全边界均已闭环，无
+  Critical；发现一项 Important：`python-dotenv` 支持单引号键，而初版原始扫描
+  只识别裸键，畸形 value 可使该行被解析器丢弃。
+- 回归矩阵扩大到裸键、单引号键、双引号键及两种引号键的 `export`
+  形式；修复前单引号两种形式均可复现失败，修复后五种形式全部通过。
+- 本地修复仍未发布；必须第四次独立复审无 Critical/Important 后才能更新
+  Draft PR `#11`。
+
+## 2026-07-31 Work3 / R3.7 第四次独立复审通过
+
+- 第四次独立只读复审在固定本地 Head
+  `0627ea85ef14cfb7d0d457937244c2a860fac345` 未发现 Critical 或 Important，
+  结论为 `PUBLISH_TO_EXISTING_DRAFT_PR`。
+- 复审实测裸键、单/双引号键、可选 `export`、BOM、空白/Tab、大小写混合和
+  不完整引号 value 组合均在 dotenv 丢弃前识别敏感键；拒绝信息无假值，
+  `.env` 原始字节不变。
+- 完整 base→Head 的 vault 原子性、版本绑定、单活事务、finalize 预检、
+  IPC origin/navigation、日志抑制、导出过滤和 Windows Head-bound scanner 未发现
+  新的 Critical/Important。
+- 发布前最终本地门禁：Python/契约 `340/340`，Desktop `80/80`，Web `127/127`，
+  Lint、Production Build、AI 治理、仓库根假密钥扫描与全差异 whitespace 检查通过。
+- 下一步只允许发布到现有 Draft PR `#11` 并执行完整 CI/假密钥验收；
+  Ready、合并、main 写入、Tag、Release、真实凭据/数据和后续阶段仍禁止。
+
+## 2026-07-31 Work3 / R3.7 已复审实现 Head 完整 CI
+
+- 远端 Head `b23c698b32b09749e907f1f4f7be1c056445a52e` 的树
+  `9b21a84a6b55e1e3dc967d96ceed72bea7b33ae4` 与本地已复审树精确一致。
+- CI Run `30640475137` 为 8/8 success：Change Detection、AI Governance、Docker、
+  Backend、Desktop Test、Web、macOS 和 Windows 全部成功。
+- Backend 精确结果：`5027 passed, 4 deselected, 51 warnings, 499 subtests passed`。
+- Windows Job `91189042298` 日志证明 checkout/ref/环境期望 Head 均为
+  `b23c698b32b09749e907f1f4f7be1c056445a52e`；`safeStorage` 验收 PASS 恰好一次且
+  validation Head 相同。
+- 同一 Windows Job 的仓库根 source scan PASS，并对最终 ZIP、解包目录和
+  `win-unpacked` 做联合 artifact scan PASS；两个 scan Head 均与验收 Head 一致，
+  完整 Job 日志不含派生假凭据明文。
+- 临时 CI artifact `8798100943` 与 Head 同名绑定，不是 Tag 或 Release，本轮不下载、
+  不分发。
+- 本节作为证据收口会生成新 Head；为避免自指 Head/Run 无限漂移，新 Head 的
+  最终 Run ID 与同 Head Windows 标记只写入 Draft PR `#11` 元数据和总控回传，
+  不再修改代码树。

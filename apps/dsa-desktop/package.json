@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "electron .",
     "build": "electron-builder",
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "test:windows-credentials": "electron tests/windows-secure-credential-harness.js"
   },
   "dependencies": {
     "electron-updater": "^6.8.3",
@@ -27,7 +28,8 @@
       "main.js",
       "preload.js",
       "portable-update/**/*",
-      "renderer/**/*"
+      "renderer/**/*",
+      "secure-credentials/**/*"
     ],
     "extraResources": [
       {

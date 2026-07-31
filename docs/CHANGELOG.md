@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - [新功能] 新增应用内手动周期报告，覆盖本周至今、上一周、5周、10周、1个月和2个月，并将股票、ETF与市场复盘分区展示。
 - [新功能] 新增基于最近14日正式历史的条件化下周展望，保存可追溯的 `period_outlook` 快照；数据不足时不生成方向。
 - [测试] Web CI 阻断门加入周期报告页面、路由与导航测试；周期生成保持无模型调用、无定时器和无自动推送。
+- [改进] Windows Desktop 敏感配置改由 Electron `safeStorage` / DPAPI 加密的版本化 vault 持久化，renderer 不提供明文读取 IPC。
+- [改进] 安全凭据与 `.env` 原始字节版本绑定；解密、版本、origin、事务或重启异常均 fail closed。
+- [改进] 敏感配置全量遮罩，配置导出排除凭据，Windows secure mode 明确拒绝裸键或引号键的敏感 `.env` 导入。
+- [测试] Windows CI 使用与 PR Head 绑定的构造假凭据验证真实 `safeStorage`，并扫描源码根目录、日志、ZIP 和解包产物。
 <!-- 新条目格式：- [类型] 描述（类型取值：新功能/改进/修复/文档/测试/chore）-->
 <!-- 每条独立一行追加到本段末尾，无需分类标题，合并时冲突最小 -->
 

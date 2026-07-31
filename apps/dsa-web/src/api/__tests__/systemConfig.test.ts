@@ -1,14 +1,15 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { systemConfigApi } from '../systemConfig';
 
 const get = vi.hoisted(() => vi.fn());
 const post = vi.hoisted(() => vi.fn());
+const put = vi.hoisted(() => vi.fn());
 
 vi.mock('../index', () => ({
   default: {
     get,
     post,
-    put: vi.fn(),
+    put,
   },
 }));
 
@@ -16,6 +17,7 @@ describe('systemConfigApi', () => {
   beforeEach(() => {
     get.mockReset();
     post.mockReset();
+    put.mockReset();
     post.mockResolvedValue({
       data: {
         success: true,
@@ -31,6 +33,262 @@ describe('systemConfigApi', () => {
         capability_results: {},
       },
     });
+  });
+
+  afterEach(() => {
+    delete (window as typeof window & { dsaDesktop?: unknown }).dsaDesktop;
+  });
+
+  it('routes Desktop secrets through a write-only transaction and refreshes the final version', async () => {
+    const prepare = vi.fn().mockResolvedValue({
+      supported: true,
+      transactionId: 'transaction-1',
+      handledKeys: ['OPENAI_API_KEY'],
+      changedKeys: ['OPENAI_API_KEY'],
+      skippedMaskedKeys: [],
+    });
+    const commit = vi.fn().mockResolvedValue({ committed: true });
+    const rollback = vi.fn().mockResolvedValue({ rolledBack: true });
+    const finalize = vi.fn().mockResolvedValue({ finalized: true });
+    (window as typeof window & { dsaDesktop?: Record<string, unknown> }).dsaDesktop = {
+      version: '3.28.0',
+      getSecureCredentialStatus: vi.fn(),
+      prepareSecureCredentialUpdate: prepare,
+      commitSecureCredentialUpdate: commit,
+      rollbackSecureCredentialUpdate: rollback,
+      finalizeSecureCredentialUpdate: finalize,
+    };
+    post.mockResolvedValueOnce({ data: { valid: true, issues: [] } });
+    put.mockResolvedValueOnce({
+      data: {
+        success: true,
+        config_version: 'intermediate-version',
+        applied_count: 1,
+        skipped_masked_count: 0,
+        reload_triggered: false,
+        updated_keys: ['LOG_LEVEL'],
+        warnings: [],
+      },
+    });
+    get.mockResolvedValueOnce({
+      data: {
+        config_version: 'final-version',
+        mask_token: '******',
+        items: [],
+        updated_at: null,
+      },
+    });
+
+    const result = await systemConfigApi.update({
+      configVersion: 'base-version',
+      items: [
+        { key: 'OPENAI_API_KEY', value: ['pp02', 'fake', 'value'].join('-') },
+        { key: 'LOG_LEVEL', value: 'DEBUG' },
+      ],
+    });
+
+    expect(post).toHaveBeenCalledWith('/api/v1/system/config/validate', {
+      items: [
+        { key: 'OPENAI_API_KEY', value: 'pp02-fake-value' },
+        { key: 'LOG_LEVEL', value: 'DEBUG' },
+      ],
+    });
+    expect(prepare).toHaveBeenCalledWith({
+      items: [
+        { key: 'OPENAI_API_KEY', value: 'pp02-fake-value' },
+        { key: 'LOG_LEVEL', value: 'DEBUG' },
+      ],
+      maskToken: '******',
+    });
+    expect(put).toHaveBeenCalledWith('/api/v1/system/config', {
+      config_version: 'base-version',
+      mask_token: '******',
+      reload_now: false,
+      items: [{ key: 'LOG_LEVEL', value: 'DEBUG' }],
+    });
+    expect(commit).toHaveBeenCalledWith({
+      transactionId: 'transaction-1',
+      configVersion: 'intermediate-version',
+    });
+    expect(put.mock.invocationCallOrder[0]).toBeLessThan(commit.mock.invocationCallOrder[0]);
+    expect(finalize).toHaveBeenCalledWith('transaction-1');
+    expect(rollback).not.toHaveBeenCalled();
+    expect(result.configVersion).toBe('final-version');
+    expect(result.updatedKeys).toEqual(['LOG_LEVEL', 'OPENAI_API_KEY']);
+    expect(result.reloadTriggered).toBe(true);
+  });
+
+  it('abandons the Desktop vault transaction when backend persistence fails before commit', async () => {
+    const rollback = vi.fn().mockResolvedValue({ rolledBack: true });
+    const commit = vi.fn().mockResolvedValue({ committed: true });
+    (window as typeof window & { dsaDesktop?: Record<string, unknown> }).dsaDesktop = {
+      version: '3.28.0',
+      prepareSecureCredentialUpdate: vi.fn().mockResolvedValue({
+        supported: true,
+        transactionId: 'transaction-2',
+        handledKeys: ['OPENAI_API_KEY'],
+        changedKeys: ['OPENAI_API_KEY'],
+        skippedMaskedKeys: [],
+      }),
+      commitSecureCredentialUpdate: commit,
+      rollbackSecureCredentialUpdate: rollback,
+      finalizeSecureCredentialUpdate: vi.fn(),
+    };
+    post.mockResolvedValueOnce({ data: { valid: true, issues: [] } });
+    put.mockRejectedValueOnce(new Error('backend unavailable'));
+
+    await expect(systemConfigApi.update({
+      configVersion: 'base-version',
+      items: [
+        { key: 'OPENAI_API_KEY', value: 'fake-value' },
+        { key: 'LOG_LEVEL', value: 'DEBUG' },
+      ],
+    })).rejects.toThrow('backend unavailable');
+
+    expect(rollback).toHaveBeenCalledWith('transaction-2');
+    expect(commit).not.toHaveBeenCalled();
+  });
+
+  it('rolls back the uncommitted vault transaction when the env-version binding fails', async () => {
+    const rollback = vi.fn().mockResolvedValue({ rolledBack: true });
+    const commit = vi.fn().mockRejectedValue(new Error('config version mismatch'));
+    const finalize = vi.fn();
+    (window as typeof window & { dsaDesktop?: Record<string, unknown> }).dsaDesktop = {
+      version: '3.28.0',
+      prepareSecureCredentialUpdate: vi.fn().mockResolvedValue({
+        supported: true,
+        transactionId: 'transaction-3',
+        handledKeys: ['OPENAI_API_KEY'],
+        changedKeys: ['OPENAI_API_KEY'],
+        skippedMaskedKeys: [],
+      }),
+      commitSecureCredentialUpdate: commit,
+      rollbackSecureCredentialUpdate: rollback,
+      finalizeSecureCredentialUpdate: finalize,
+    };
+    post.mockResolvedValueOnce({ data: { valid: true, issues: [] } });
+    put.mockResolvedValueOnce({
+      data: {
+        success: true,
+        config_version: 'new-env-version',
+        applied_count: 1,
+        skipped_masked_count: 0,
+        reload_triggered: false,
+        updated_keys: ['OPENAI_BASE_URL'],
+        warnings: [],
+      },
+    });
+
+    await expect(systemConfigApi.update({
+      configVersion: 'base-version',
+      items: [
+        { key: 'OPENAI_API_KEY', value: 'fake-value' },
+        { key: 'OPENAI_BASE_URL', value: 'https://example.invalid/v1' },
+      ],
+    })).rejects.toThrow('config version mismatch');
+
+    expect(commit).toHaveBeenCalledWith({
+      transactionId: 'transaction-3',
+      configVersion: 'new-env-version',
+    });
+    expect(rollback).toHaveBeenCalledWith('transaction-3');
+    expect(finalize).not.toHaveBeenCalled();
+  });
+
+  it('rebinds the vault version for Desktop updates that contain only public settings', async () => {
+    const commit = vi.fn().mockResolvedValue({ committed: true });
+    const finalize = vi.fn().mockResolvedValue({ finalized: true });
+    (window as typeof window & { dsaDesktop?: Record<string, unknown> }).dsaDesktop = {
+      version: '3.28.0',
+      prepareSecureCredentialUpdate: vi.fn().mockResolvedValue({
+        supported: true,
+        transactionId: 'transaction-public',
+        handledKeys: [],
+        changedKeys: [],
+        skippedMaskedKeys: [],
+      }),
+      commitSecureCredentialUpdate: commit,
+      rollbackSecureCredentialUpdate: vi.fn(),
+      finalizeSecureCredentialUpdate: finalize,
+    };
+    post.mockResolvedValueOnce({ data: { valid: true, issues: [] } });
+    put.mockResolvedValueOnce({
+      data: {
+        success: true,
+        config_version: 'public-env-version',
+        applied_count: 1,
+        skipped_masked_count: 0,
+        reload_triggered: false,
+        updated_keys: ['LOG_LEVEL'],
+        warnings: [],
+      },
+    });
+    get.mockResolvedValueOnce({
+      data: {
+        config_version: 'public-env-version',
+        mask_token: '******',
+        items: [],
+        updated_at: null,
+      },
+    });
+
+    await systemConfigApi.update({
+      configVersion: 'base-version',
+      items: [{ key: 'LOG_LEVEL', value: 'DEBUG' }],
+    });
+
+    expect(commit).toHaveBeenCalledWith({
+      transactionId: 'transaction-public',
+      configVersion: 'public-env-version',
+    });
+    expect(finalize).toHaveBeenCalledWith('transaction-public');
+  });
+
+  it('rebinds the vault version after a credential-free Desktop env import', async () => {
+    const commit = vi.fn().mockResolvedValue({ committed: true });
+    const finalize = vi.fn().mockResolvedValue({ finalized: true });
+    (window as typeof window & { dsaDesktop?: Record<string, unknown> }).dsaDesktop = {
+      version: '3.28.0',
+      prepareSecureCredentialUpdate: vi.fn().mockResolvedValue({
+        supported: true,
+        transactionId: 'transaction-import',
+        handledKeys: [],
+        changedKeys: [],
+        skippedMaskedKeys: [],
+      }),
+      commitSecureCredentialUpdate: commit,
+      rollbackSecureCredentialUpdate: vi.fn(),
+      finalizeSecureCredentialUpdate: finalize,
+    };
+    post.mockResolvedValueOnce({
+      data: {
+        success: true,
+        config_version: 'import-env-version',
+        applied_count: 1,
+        skipped_masked_count: 0,
+        reload_triggered: false,
+        updated_keys: ['LOG_LEVEL'],
+        warnings: [],
+      },
+    });
+
+    const result = await systemConfigApi.importEnv({
+      configVersion: 'base-version',
+      content: 'LOG_LEVEL=DEBUG\n',
+      reloadNow: true,
+    });
+
+    expect(post).toHaveBeenCalledWith('/api/v1/system/config/import', {
+      config_version: 'base-version',
+      content: 'LOG_LEVEL=DEBUG\n',
+      reload_now: false,
+    });
+    expect(commit).toHaveBeenCalledWith({
+      transactionId: 'transaction-import',
+      configVersion: 'import-env-version',
+    });
+    expect(finalize).toHaveBeenCalledWith('transaction-import');
+    expect(result.reloadTriggered).toBe(true);
   });
 
   it('omits capability_checks from basic LLM channel test payloads', async () => {

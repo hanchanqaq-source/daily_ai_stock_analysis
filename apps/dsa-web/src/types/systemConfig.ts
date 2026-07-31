@@ -74,6 +74,8 @@ export interface SystemConfigItem {
   value: string;
   rawValueExists: boolean;
   isMasked: boolean;
+  secureValueExists?: boolean;
+  credentialSource?: 'windows_dpapi' | 'env_file' | 'runtime' | null;
   schema?: SystemConfigFieldSchema;
 }
 
@@ -135,6 +137,7 @@ export interface ExportSystemConfigResponse {
   content: string;
   configVersion: string;
   updatedAt?: string;
+  credentialsExcluded: boolean;
 }
 
 export interface SystemConfigUpdateItem {

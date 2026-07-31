@@ -3,9 +3,11 @@
 当前状态和当前 Active Blocker 以
 [`../_ai-dev/PROJECT_STATUS.md`](../_ai-dev/PROJECT_STATUS.md) 为唯一真源。下列
 `WORK-001` 项目均为追加式历史记录；其解除证据完整保留，不因本次
-`WORK-PP02-CLOUD-REBUILD-001` 启动而回退。当前 R3.4 实现 Head 已通过完整
-Draft PR CI，没有活动阻塞；本文件继续保留 Actions 额度阻塞及其解除证据。
-Windows 实机与真实数据是明确未执行的授权外验收项，不回写成当前代码阻塞。
+`WORK-PP02-CLOUD-REBUILD-001` 启动而回退。当前 R3.7 四轮安全复审已无
+Critical/Important，没有活动产品阻塞；Draft PR `#11` 的最终 Head 完整 CI 与
+Windows 假密钥日志是尚未完成的验收门，不是可绕过的阻塞。本文件继续保留
+Actions 额度阻塞及其解除证据。真实凭据/数据、Ready、合并、Tag、Release 和后续
+阶段是明确的授权外项，不回写成当前代码阻塞。
 
 ## WORK-001-BLOCKER-001｜远端完整历史尚未导入
 
@@ -93,3 +95,19 @@ Windows 实机与真实数据是明确未执行的授权外验收项，不回写
 | 解除方法 | 完成公开前历史/分支/PR/配置/日志安全审计；用户授权后将 PP02 改为 Public |
 | 解除证据 | 公开库标准 Runner 成功运行；最终实现 Head Run `30519559480` 为 8/8 success |
 | 当前状态 | 已解除；仓库公开不构成 Ready、合并、Release 或真实数据授权 |
+
+## WORK-003 / R3.7 当前验收门
+
+| 项目 | 当前事实 |
+| --- | --- |
+| 活动阻塞 | 无 |
+| 已完成 | 威胁模型、RED→GREEN、四轮独立安全复审、本地验证，以及 `b23c698` 的 8/8 CI 和同 Head Windows safeStorage/产物扫描 |
+| 待完成验收 | 发布首轮固定 Head 证据，并完成证据提交自身的八项最终 CI |
+| 授权外 | 真实凭据/数据、PR Ready/合并、main 写入、Tag、Release、R3.8 或后续阶段 |
+
+### WORK-003 验收门进展
+
+- 已复审实现 Head `b23c698b32b09749e907f1f4f7be1c056445a52e` / Run
+  `30640475137` 已完成 8/8 CI 与同 Head Windows 假凭据验收。
+- 当前无活动阻塞；本证据收口 Head 仍必须完整复验。最终 Run 作为 Draft PR
+  元数据证据，不再为记录 Run ID 制造新 Head。

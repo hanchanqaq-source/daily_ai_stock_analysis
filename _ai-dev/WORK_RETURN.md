@@ -275,3 +275,33 @@ Release、`main`、真实数据、AI 调用、定时器或自动推送。
 - 模拟未访问正式安装目录、正式数据库、真实凭据或网络 Release；一次性验收截图不进入仓库。
 - Judge：`PASS — R5 WINDOWS VALIDATION COMPLETED — DRAFT_HOLD`。
 - PR 继续保持 Draft；未执行 Ready、Merge、main 直写、Tag、Release、真实数据或 R3.7。
+
+## 2026-07-31 WORK-003 / R3.7 实现回传（证据提交最终 CI 待收口）
+
+- 固定 Base：`main@097bb5d60aa42f13737ac4d9db2f582bde50f995`；活动项是
+  独立 Draft PR `#11` / `agent/pp02-work3-r3-7-windows-secure-credentials`。
+- 已完成版本化 DPAPI 密文 vault、`.env` 精确版本绑定、单活事务、窄 IPC、
+  origin/navigation 校验、backend child environment 注入、敏感项全遮罩和无凭据导出。
+- Windows secure mode 在 dotenv 解析前识别裸键、单/双引号键与可选
+  `export`，畸形敏感导入明确拒绝且不显示值。
+- Windows CI 改为 checkout 精确 PR Head，从 Head 派生一次性假凭据，并扫描仓库根、
+  日志、最终 ZIP 和解包目录；未使用真实凭据。
+- 四次独立安全复审最终未发现 Critical/Important。本地证据：Python/契约
+  `340/340`，Desktop `80/80`，Web `127/127`，Lint/Build/治理/根目录扫描通过。
+- 首轮固定远端 Head `b23c698b32b09749e907f1f4f7be1c056445a52e` 的 CI Run
+  `30640475137` 已 8/8 success。Windows Job `91189042298` 明确 checkout 同一
+  Head；`R3_7_WINDOWS_FAKE_CREDENTIAL_VALIDATION=PASS` 与最终
+  `R3_7_WINDOWS_FAKE_CREDENTIAL_SCAN=PASS` 也都回报同一 Head。
+- 同一 Job 上传 Head-bound Artifact `8798100943`；Actions 外层上传摘要为
+  `64f01f7a4dc62fd6aac9d393da19dc07ea92fca8a395f862d3b0c5af3e62e254`。
+- 当前只剩本证据提交自身的八项最终 CI；Judge 继续 `DRAFT_HOLD`，不得 Ready、
+  合并、Tag、Release、使用真实凭据或进入后续阶段。
+
+### 已复审实现 Head 远程证据
+
+- Head `b23c698b32b09749e907f1f4f7be1c056445a52e` / Run `30640475137`：
+  8/8 success；Backend `5027 passed, 4 deselected, 499 subtests passed`。
+- Windows Job `91189042298`：精确 checkout 同 Head，`safeStorage` validation PASS 恰好一次，
+  source 与 artifact 扫描均 PASS 且 Head 一致，日志不含派生假凭据明文。
+- 本证据记录将生成最终证据 Head；该 Head 的完整 CI/Windows 复验结果将只更新
+  Draft PR `#11` 元数据，避免再次改变 Head。

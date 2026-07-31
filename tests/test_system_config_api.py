@@ -108,11 +108,11 @@ class SystemConfigApiTestCase(unittest.TestCase):
         add_auth_middleware(app)
         return app
 
-    def test_get_config_keeps_regular_secret_value_unmasked(self) -> None:
+    def test_get_config_masks_regular_secret_value(self) -> None:
         payload = system_config.get_system_config(include_schema=True, service=self.service).model_dump(by_alias=True)
         item_map = {item["key"]: item for item in payload["items"]}
-        self.assertEqual(item_map["GEMINI_API_KEY"]["value"], "secret-key-value")
-        self.assertFalse(item_map["GEMINI_API_KEY"]["is_masked"])
+        self.assertEqual(item_map["GEMINI_API_KEY"]["value"], payload["mask_token"])
+        self.assertTrue(item_map["GEMINI_API_KEY"]["is_masked"])
 
     def test_get_config_masks_llm_usage_hmac_secret(self) -> None:
         self._rewrite_env(
@@ -517,7 +517,7 @@ class SystemConfigApiTestCase(unittest.TestCase):
         self.assertIn("不会启动 scheduler", schedule_time_warning)
         self.assertNotIn("重启当前进程", schedule_time_warning)
 
-    def test_export_system_config_returns_raw_env_content(self) -> None:
+    def test_export_system_config_excludes_credentials(self) -> None:
         self.env_path.write_text(
             "# Web config\nSTOCK_LIST=600519,000001\nGEMINI_API_KEY=secret-key-value\nADMIN_AUTH_ENABLED=true\n",
             encoding="utf-8",
@@ -533,8 +533,9 @@ class SystemConfigApiTestCase(unittest.TestCase):
 
         self.assertEqual(
             payload["content"],
-            "# Web config\nSTOCK_LIST=600519,000001\nGEMINI_API_KEY=secret-key-value\nADMIN_AUTH_ENABLED=true\n",
+            "# Web config\nSTOCK_LIST=600519,000001\nADMIN_AUTH_ENABLED=true\n",
         )
+        self.assertTrue(payload["credentials_excluded"])
         self.assertEqual(payload["config_version"], self.manager.get_config_version())
 
     def test_import_system_config_merges_updates(self) -> None:

@@ -38,6 +38,8 @@ jobs:
               - 'src/brokers/futu/**'
               - 'scripts/build-backend.ps1'
               - 'scripts/verify-frozen-backend.ps1'
+              - 'scripts/verify-windows-secure-credentials.ps1'
+              - 'scripts/scan-windows-fake-credential.js'
               - 'scripts/build-backend-macos.sh'
               - 'scripts/macos-signature-audit.sh'
               - 'scripts/build-all.ps1'
@@ -156,11 +158,15 @@ jobs:
   desktop-futu-package-windows:
     name: desktop-futu-package-windows
     runs-on: windows-latest
+    env:
+      DSA_EXPECTED_PR_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
     needs: [changes, ai-governance]
     if: github.event_name == 'push' || needs.changes.outputs.futu_packaging == 'true'
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v5
+        with:
+          ref: ${{ env.DSA_EXPECTED_PR_HEAD_SHA }}
       - name: 🐍 Setup Python
         uses: actions/setup-python@v6
         with:
@@ -179,6 +185,9 @@ jobs:
       - name: 📦 Install Web dependencies
         shell: pwsh
         run: npm ci --prefix apps/dsa-web
+      - name: 🔐 Validate Windows safeStorage fake credential
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File scripts/verify-windows-secure-credentials.ps1
       - name: 🧊 Build and verify frozen backend
         shell: pwsh
         run: powershell -ExecutionPolicy Bypass -File scripts/build-backend.ps1
@@ -215,7 +224,7 @@ jobs:
           $zip = "dist/pp02-ai-daily-stock-analysis-windows-noinstall-$tag.zip"
           Compress-Archive -Path "$stage/*" -DestinationPath $zip -CompressionLevel Optimal -Force
           node scripts/prepare-portable-release.js verify $tag $zip "$zip.sha256"
-          $finalExtract = Join-Path $env:RUNNER_TEMP "pp02-portable-final-$env:GITHUB_SHA"
+          $finalExtract = Join-Path $env:RUNNER_TEMP "pp02-portable-final-$env:DSA_EXPECTED_PR_HEAD_SHA"
           Remove-FinalExtractWithRetry -Path $finalExtract
           Expand-Archive -LiteralPath $zip -DestinationPath $finalExtract
           $fakeUserAgentData = Join-Path $finalExtract 'resources/backend/stock_analysis/_internal/fake_useragent/data/browsers.jsonl'
@@ -225,6 +234,32 @@ jobs:
           $finalPackagedEntry = Join-Path $finalExtract 'resources/backend/stock_analysis/stock_analysis.exe'
           powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/verify-frozen-backend.ps1 -PackagedEntry $finalPackagedEntry
           Remove-FinalExtractWithRetry -Path $finalExtract
+
+      - name: 🔍 Scan Windows fake credential leakage
+        shell: pwsh
+        run: |
+          $version = (Get-Content apps/dsa-desktop/package.json -Raw | ConvertFrom-Json).version
+          $zip = "dist/pp02-ai-daily-stock-analysis-windows-noinstall-v$version.zip"
+          $scanExtract = Join-Path $env:RUNNER_TEMP "pp02-r37-credential-scan-$env:DSA_EXPECTED_PR_HEAD_SHA"
+          if (Test-Path -LiteralPath $scanExtract) {
+            Remove-Item -LiteralPath $scanExtract -Recurse -Force
+          }
+          try {
+            Expand-Archive -LiteralPath $zip -DestinationPath $scanExtract
+            node scripts/scan-windows-fake-credential.js `
+              --head $env:DSA_EXPECTED_PR_HEAD_SHA `
+              --path $zip `
+              --path $scanExtract `
+              --path apps/dsa-desktop/dist/win-unpacked
+            if ($LASTEXITCODE -ne 0) {
+              throw 'Packaged fake credential scan failed.'
+            }
+          }
+          finally {
+            if (Test-Path -LiteralPath $scanExtract) {
+              Remove-Item -LiteralPath $scanExtract -Recurse -Force
+            }
+          }
 
       - name: 📤 Upload verified portable candidate
         uses: actions/upload-artifact@v6
@@ -291,5 +326,7 @@ jobs:
           src/pages/__tests__/PeriodReportPage.test.tsx
           src/App.test.tsx
           src/components/layout/__tests__/SidebarNav.test.tsx
+          src/api/__tests__/systemConfig.test.ts
+          src/pages/__tests__/SettingsPage.test.tsx
       - name: 🏗️ Build
         run: npm run build
