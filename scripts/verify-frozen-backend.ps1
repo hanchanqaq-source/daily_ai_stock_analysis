@@ -37,10 +37,10 @@ try {
       $healthDiagnostic = "HTTP $([int]$health.StatusCode)"
     } catch { $health = $null; $healthDiagnostic = "$($_.Exception.GetType().Name): $($_.Exception.Message)" }
     try {
-      $home = $httpClient.GetAsync("http://127.0.0.1:$port/").GetAwaiter().GetResult()
-      $homeDiagnostic = "HTTP $([int]$home.StatusCode)"
-    } catch { $home = $null; $homeDiagnostic = "$($_.Exception.GetType().Name): $($_.Exception.Message)" }
-    if ($health -and $home -and [int]$health.StatusCode -eq 200 -and [int]$home.StatusCode -eq 200) { $healthy = $true; break }
+      $homeResponse = $httpClient.GetAsync("http://127.0.0.1:$port/").GetAwaiter().GetResult()
+      $homeDiagnostic = "HTTP $([int]$homeResponse.StatusCode)"
+    } catch { $homeResponse = $null; $homeDiagnostic = "$($_.Exception.GetType().Name): $($_.Exception.Message)" }
+    if ($health -and $homeResponse -and [int]$health.StatusCode -eq 200 -and [int]$homeResponse.StatusCode -eq 200) { $healthy = $true; break }
     Start-Sleep -Milliseconds 500
   } while ((Get-Date) -lt $deadline)
   if (-not $healthy) { throw "Frozen backend HTTP probes failed on dynamic port ${port}: health=$healthDiagnostic; home=$homeDiagnostic.`n$(Get-Content -LiteralPath $stderr -Raw -ErrorAction SilentlyContinue)" }
