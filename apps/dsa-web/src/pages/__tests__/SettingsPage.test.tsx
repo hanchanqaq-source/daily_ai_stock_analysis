@@ -2498,6 +2498,12 @@ describe('SettingsPage', () => {
     expect(load).not.toHaveBeenCalled();
   });
 
+  it('states that exported configuration never contains credentials', () => {
+    render(<SettingsPage />);
+
+    expect(screen.getByText(/导出文件不会包含任何凭据/)).toBeInTheDocument();
+  });
+
   it('asks for confirmation before importing when local drafts exist', async () => {
     (window as { dsaDesktop?: unknown }).dsaDesktop = { version: '3.12.0' };
     useSystemConfigMock.mockReturnValue(buildSystemConfigState({ hasDirty: true, dirtyCount: 2 }));

@@ -211,6 +211,35 @@ class ConfigManagerTestCase(unittest.TestCase):
             self.env_path.read_text(encoding="utf-8"),
         )
 
+    def test_render_without_keys_removes_all_sensitive_assignments_and_preserves_structure(self) -> None:
+        self.env_path.write_text(
+            "# Public settings\nSTOCK_LIST=600519\n\n"
+            "# Credentials stay local\nOPENAI_API_KEY=first-fake\n"
+            "OPENAI_API_KEY=second-fake\nLOG_LEVEL=INFO\n",
+            encoding="utf-8",
+        )
+
+        rendered = self.manager.render_without_keys({"OPENAI_API_KEY"})
+
+        self.assertEqual(
+            rendered,
+            "# Public settings\nSTOCK_LIST=600519\n\n"
+            "# Credentials stay local\nLOG_LEVEL=INFO\n",
+        )
+        self.assertIn("OPENAI_API_KEY", self.manager.read_config_map())
+
+    def test_remove_keys_atomically_removes_duplicates_without_touching_other_values(self) -> None:
+        self.env_path.write_text(
+            "OPENAI_API_KEY=first-fake\nSTOCK_LIST=600519\nOPENAI_API_KEY=second-fake\n",
+            encoding="utf-8",
+        )
+
+        removed, version = self.manager.remove_keys({"OPENAI_API_KEY"})
+
+        self.assertEqual(removed, ["OPENAI_API_KEY"])
+        self.assertEqual(version, self.manager.get_config_version())
+        self.assertEqual(self.env_path.read_text(encoding="utf-8"), "STOCK_LIST=600519\n")
+
 
 if __name__ == "__main__":
     unittest.main()

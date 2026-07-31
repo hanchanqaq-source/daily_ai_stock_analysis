@@ -62,13 +62,13 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         message = SimpleNamespace(content=content, tool_calls=tool_calls or [])
         return SimpleNamespace(choices=[SimpleNamespace(message=message)])
 
-    def test_get_config_keeps_regular_sensitive_values_unmasked(self) -> None:
+    def test_get_config_masks_every_sensitive_value(self) -> None:
         payload = self.service.get_config(include_schema=True)
         items = {item["key"]: item for item in payload["items"]}
 
         self.assertIn("GEMINI_API_KEY", items)
-        self.assertEqual(items["GEMINI_API_KEY"]["value"], "secret-key-value")
-        self.assertFalse(items["GEMINI_API_KEY"]["is_masked"])
+        self.assertEqual(items["GEMINI_API_KEY"]["value"], payload["mask_token"])
+        self.assertTrue(items["GEMINI_API_KEY"]["is_masked"])
         self.assertTrue(items["GEMINI_API_KEY"]["raw_value_exists"])
 
     def _assert_agent_backend_status_matches_runtime(
@@ -1629,7 +1629,7 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         self.assertEqual(storage_check["status"], "configured")
         self.assertFalse(missing_parent.exists())
 
-    def test_export_desktop_env_returns_raw_text(self) -> None:
+    def test_export_desktop_env_excludes_sensitive_assignments(self) -> None:
         self.env_path.write_text(
             "# Desktop config\nSTOCK_LIST=600519,000001\n\nGEMINI_API_KEY=secret-key-value\n",
             encoding="utf-8",
@@ -1639,9 +1639,79 @@ class SystemConfigServiceTestCase(unittest.TestCase):
 
         self.assertEqual(
             payload["content"],
-            "# Desktop config\nSTOCK_LIST=600519,000001\n\nGEMINI_API_KEY=secret-key-value\n",
+            "# Desktop config\nSTOCK_LIST=600519,000001\n\n",
         )
+        self.assertTrue(payload["credentials_excluded"])
+        self.assertNotIn("GEMINI_API_KEY", payload["content"])
         self.assertEqual(payload["config_version"], self.manager.get_config_version())
+
+    def test_secure_runtime_value_is_masked_without_plaintext_or_env_file_presence(self) -> None:
+        self._rewrite_env("STOCK_LIST=600519")
+        with patch.dict(
+            os.environ,
+            {
+                "DSA_SECURE_CREDENTIAL_MODE": "windows_dpapi",
+                "DSA_SECURE_CREDENTIAL_KEYS": "OPENAI_API_KEY",
+                "OPENAI_API_KEY": "runtime-fake-value",
+            },
+            clear=False,
+        ):
+            payload = self.service.get_config(include_schema=True)
+
+        item = {entry["key"]: entry for entry in payload["items"]}["OPENAI_API_KEY"]
+        self.assertEqual(item["value"], payload["mask_token"])
+        self.assertTrue(item["is_masked"])
+        self.assertFalse(item["raw_value_exists"])
+        self.assertTrue(item["secure_value_exists"])
+        self.assertEqual(item["credential_source"], "windows_dpapi")
+
+    def test_secure_mode_rejects_direct_sensitive_plaintext_update(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "DSA_SECURE_CREDENTIAL_MODE": "windows_dpapi",
+                "DSA_SECURE_CREDENTIAL_KEYS": "GEMINI_API_KEY",
+            },
+            clear=False,
+        ):
+            with self.assertRaises(ConfigValidationError) as context:
+                self.service.update(
+                    config_version=self.manager.get_config_version(),
+                    items=[{"key": "GEMINI_API_KEY", "value": "new-fake-value"}],
+                    reload_now=False,
+                )
+
+        self.assertEqual(context.exception.issues[0]["code"], "secure_credential_ipc_required")
+        self.assertNotIn("new-fake-value", str(context.exception.issues))
+
+    def test_secure_mode_allows_mask_noop_but_rejects_sensitive_import(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "DSA_SECURE_CREDENTIAL_MODE": "windows_dpapi",
+                "DSA_SECURE_CREDENTIAL_KEYS": "GEMINI_API_KEY",
+            },
+            clear=False,
+        ):
+            response = self.service.update(
+                config_version=self.manager.get_config_version(),
+                items=[
+                    {"key": "GEMINI_API_KEY", "value": "******"},
+                    {"key": "LOG_LEVEL", "value": "DEBUG"},
+                ],
+                mask_token="******",
+                reload_now=False,
+            )
+            with self.assertRaises(ConfigImportError) as context:
+                self.service.import_env(
+                    config_version=self.manager.get_config_version(),
+                    content="OPENAI_API_KEY=imported-fake-value\n",
+                    reload_now=False,
+                )
+
+        self.assertEqual(response["updated_keys"], ["LOG_LEVEL"])
+        self.assertIn("安全凭据", context.exception.message)
+        self.assertNotIn("imported-fake-value", context.exception.message)
 
     def test_export_desktop_env_preserves_hidden_web_settings_keys(self) -> None:
         self.env_path.write_text(

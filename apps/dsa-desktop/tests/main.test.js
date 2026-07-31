@@ -55,6 +55,12 @@ function loadMainModule(t, options = {}) {
     on: () => undefined,
     removeListener: () => undefined,
   };
+  const fakeSafeStorage = {
+    isEncryptionAvailable: () => true,
+    encryptString: (value) => Buffer.from(value, 'utf8'),
+    decryptString: (value) => Buffer.from(value).toString('utf8'),
+    ...(options.safeStorage || {}),
+  };
 
   Module._load = function patchedLoad(request, parent, isMain) {
     if (request === 'electron') {
@@ -65,6 +71,7 @@ function loadMainModule(t, options = {}) {
         ipcMain: fakeIpcMain,
         shell: fakeShell,
         nativeTheme: fakeNativeTheme,
+        safeStorage: fakeSafeStorage,
       };
     }
     if (request === 'http' && options.http) {
@@ -219,6 +226,69 @@ test('buildBackendEnvironment pins WEBUI_PORT to the Electron-selected backend p
 
   assert.equal(env.WEBUI_PORT, '8000');
   assert.equal(env.WEBUI_HOST, '127.0.0.1');
+});
+
+test('buildBackendEnvironment injects secure credentials after source environment', (t) => {
+  const mainModule = loadMainModule(t, { platform: 'win32' });
+  const fakeValue = ['pp02', 'runtime', 'fake'].join('-');
+  const env = mainModule.buildBackendEnvironment({
+    envFile: 'C:\\PP02\\.env',
+    dbPath: 'C:\\PP02\\stock_analysis.db',
+    logDir: 'C:\\PP02\\logs',
+    sourceEnv: {
+      OPENAI_API_KEY: 'stale-source-value',
+    },
+    secureCredentials: {
+      keys: ['OPENAI_API_KEY'],
+      values: { OPENAI_API_KEY: fakeValue },
+    },
+  });
+
+  assert.equal(env.OPENAI_API_KEY === fakeValue, true);
+  assert.equal(env.DSA_SECURE_CREDENTIAL_MODE, 'windows_dpapi');
+  assert.equal(env.DSA_SECURE_CREDENTIAL_KEYS, 'OPENAI_API_KEY');
+});
+
+test('secure credential IPC trusts only the active window main frame', (t) => {
+  const mainModule = loadMainModule(t, { platform: 'win32' });
+  const mainFrame = { routingId: 1 };
+  const webContents = { mainFrame };
+
+  assert.equal(
+    mainModule.isTrustedSecureCredentialSender(
+      { sender: webContents, senderFrame: mainFrame },
+      webContents,
+    ),
+    true,
+  );
+  assert.equal(
+    mainModule.isTrustedSecureCredentialSender(
+      { sender: webContents, senderFrame: { routingId: 2 } },
+      webContents,
+    ),
+    false,
+  );
+  assert.equal(
+    mainModule.isTrustedSecureCredentialSender(
+      { sender: { mainFrame }, senderFrame: mainFrame },
+      webContents,
+    ),
+    false,
+  );
+});
+
+test('main registers the narrow secure credential IPC surface without a read handler', (t) => {
+  const mainModule = loadMainModule(t, { platform: 'win32' });
+  for (const channel of [
+    'desktop:get-secure-credential-status',
+    'desktop:prepare-secure-credential-update',
+    'desktop:commit-secure-credential-update',
+    'desktop:rollback-secure-credential-update',
+    'desktop:finalize-secure-credential-update',
+  ]) {
+    assert.equal(typeof mainModule.__getIpcMainHandler(channel), 'function');
+  }
+  assert.equal(mainModule.__getIpcMainHandler('desktop:get-secure-credential-value'), undefined);
 });
 
 test('resolveBackendBindHost reads WEBUI_HOST from env file', (t) => {

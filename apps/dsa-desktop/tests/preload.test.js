@@ -47,6 +47,12 @@ test('preload exposes desktop version from BrowserWindow additionalArguments', (
   assert.equal(typeof exposeInMainWorldCalls[0][1].installDownloadedUpdate, 'function');
   assert.equal(typeof exposeInMainWorldCalls[0][1].openReleasePage, 'function');
   assert.equal(typeof exposeInMainWorldCalls[0][1].onUpdateStateChange, 'function');
+  assert.equal(typeof exposeInMainWorldCalls[0][1].getSecureCredentialStatus, 'function');
+  assert.equal(typeof exposeInMainWorldCalls[0][1].prepareSecureCredentialUpdate, 'function');
+  assert.equal(typeof exposeInMainWorldCalls[0][1].commitSecureCredentialUpdate, 'function');
+  assert.equal(typeof exposeInMainWorldCalls[0][1].rollbackSecureCredentialUpdate, 'function');
+  assert.equal(typeof exposeInMainWorldCalls[0][1].finalizeSecureCredentialUpdate, 'function');
+  assert.equal(exposeInMainWorldCalls[0][1].getSecureCredentialValue, undefined);
   assert.equal(
     preloadModule.readDesktopVersion([`--dsa-desktop-version=${expectedVersion}`]),
     expectedVersion
@@ -151,6 +157,27 @@ test('createDesktopBridge delegates update actions to ipcRenderer', async (t) =>
   assert.deepEqual(await desktopBridge.openReleasePage('https://github.com/ZhuLinsen/daily_stock_analysis/releases/tag/v3.13.0'), {
     channel: preloadModule.DESKTOP_OPEN_RELEASE_PAGE_CHANNEL,
     payload: 'https://github.com/ZhuLinsen/daily_stock_analysis/releases/tag/v3.13.0',
+  });
+  const items = [{ key: 'OPENAI_API_KEY', value: 'fake-value' }];
+  assert.deepEqual(await desktopBridge.getSecureCredentialStatus(), {
+    channel: preloadModule.DESKTOP_GET_SECURE_CREDENTIAL_STATUS_CHANNEL,
+    payload: undefined,
+  });
+  assert.deepEqual(await desktopBridge.prepareSecureCredentialUpdate({ items, maskToken: '******' }), {
+    channel: preloadModule.DESKTOP_PREPARE_SECURE_CREDENTIAL_UPDATE_CHANNEL,
+    payload: { items, maskToken: '******' },
+  });
+  assert.deepEqual(await desktopBridge.commitSecureCredentialUpdate('transaction-1'), {
+    channel: preloadModule.DESKTOP_COMMIT_SECURE_CREDENTIAL_UPDATE_CHANNEL,
+    payload: 'transaction-1',
+  });
+  assert.deepEqual(await desktopBridge.rollbackSecureCredentialUpdate('transaction-1'), {
+    channel: preloadModule.DESKTOP_ROLLBACK_SECURE_CREDENTIAL_UPDATE_CHANNEL,
+    payload: 'transaction-1',
+  });
+  assert.deepEqual(await desktopBridge.finalizeSecureCredentialUpdate('transaction-1'), {
+    channel: preloadModule.DESKTOP_FINALIZE_SECURE_CREDENTIAL_UPDATE_CHANNEL,
+    payload: 'transaction-1',
   });
 
   const receivedPayloads = [];

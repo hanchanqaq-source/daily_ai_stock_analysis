@@ -143,6 +143,40 @@ def test_macos_unsigned_packaging_contract_is_explicit() -> None:
     assert "run: bash scripts/build-desktop-macos.sh" in workflow
 
 
+def test_windows_job_runs_head_bound_safe_storage_fake_credential_gate() -> None:
+    workflow = _read_text(REPO_ROOT / ".github" / "workflows" / "ci.yml")
+    verifier = _read_text(
+        REPO_ROOT / "scripts" / "verify-windows-secure-credentials.ps1"
+    )
+    harness = _read_text(
+        REPO_ROOT
+        / "apps"
+        / "dsa-desktop"
+        / "tests"
+        / "windows-secure-credential-harness.js"
+    )
+    package = json.loads(
+        _read_text(REPO_ROOT / "apps" / "dsa-desktop" / "package.json")
+    )
+
+    assert "Validate Windows safeStorage fake credential" in workflow
+    assert "scripts/verify-windows-secure-credentials.ps1" in workflow
+    assert "- 'scripts/verify-windows-secure-credentials.ps1'" in workflow
+    assert workflow.index("Validate Windows safeStorage fake credential") < workflow.index(
+        "Build and verify portable candidate"
+    )
+    assert package["scripts"]["test:windows-credentials"]
+    assert "GITHUB_SHA" in verifier
+    assert "R3_7_WINDOWS_FAKE_CREDENTIAL_VALIDATION=PASS" in verifier
+    assert "test:windows-credentials" in verifier
+    assert "safeStorage" in harness
+    assert "CredentialVault" in harness
+    assert "app.whenReady" in harness
+    assert "R3_7_WINDOWS_FAKE_CREDENTIAL_VALIDATION=PASS" in harness
+    assert "console.log(fake" not in harness
+    assert "console.error(fake" not in harness
+
+
 def _write_fake_macos_signature_tools(fake_bin: Path) -> None:
     fake_bin.mkdir()
     file_tool = fake_bin / "file"
