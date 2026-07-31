@@ -192,7 +192,16 @@ jobs:
           $zip = "dist/pp02-ai-daily-stock-analysis-windows-noinstall-$tag.zip"
           Compress-Archive -Path "$stage/*" -DestinationPath $zip -CompressionLevel Optimal -Force
           node scripts/prepare-portable-release.js verify $tag $zip "$zip.sha256"
-          powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/verify-frozen-backend.ps1 -PackagedEntry apps/dsa-desktop/dist/win-unpacked/resources/backend/stock_analysis/stock_analysis.exe
+          $finalExtract = Join-Path $env:RUNNER_TEMP "pp02-portable-final-$env:GITHUB_SHA"
+          Remove-Item -LiteralPath $finalExtract -Recurse -Force -ErrorAction SilentlyContinue
+          Expand-Archive -LiteralPath $zip -DestinationPath $finalExtract
+          $fakeUserAgentData = Join-Path $finalExtract 'resources/backend/stock_analysis/_internal/fake_useragent/data/browsers.jsonl'
+          if (-not (Test-Path -LiteralPath $fakeUserAgentData -PathType Leaf)) {
+            throw "Final portable ZIP is missing fake_useragent/data/browsers.jsonl: $fakeUserAgentData"
+          }
+          $finalPackagedEntry = Join-Path $finalExtract 'resources/backend/stock_analysis/stock_analysis.exe'
+          powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/verify-frozen-backend.ps1 -PackagedEntry $finalPackagedEntry
+          Remove-Item -LiteralPath $finalExtract -Recurse -Force
 
       - name: 📤 Upload verified portable candidate
         uses: actions/upload-artifact@v6
