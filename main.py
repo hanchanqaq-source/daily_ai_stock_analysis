@@ -46,6 +46,45 @@ if os.getenv("GITHUB_ACTIONS") != "true" and os.getenv("USE_PROXY", "false").low
     os.environ["https_proxy"] = proxy_url
 
 _packaged_import_probe = os.getenv("DSA_PACKAGED_IMPORT_PROBE")
+_packaged_fake_useragent_probe = os.getenv("DSA_PACKAGED_FAKE_USERAGENT_PROBE")
+if _packaged_fake_useragent_probe:
+    import sys
+
+    try:
+        import importlib.resources
+
+        from fake_useragent import UserAgent
+
+        data_root = importlib.resources.files("fake_useragent.data")
+        browser_data = next(
+            (
+                candidate
+                for candidate in (
+                    data_root.joinpath("browsers.jsonl"),
+                    data_root.joinpath("browsers.json"),
+                )
+                if candidate.is_file()
+            ),
+            None,
+        )
+        if browser_data is None:
+            raise RuntimeError("fake-useragent browser data file is missing")
+        browser_text = browser_data.read_text(encoding="utf-8")
+        if browser_data.name.endswith(".jsonl"):
+            if not any(json.loads(line) for line in browser_text.splitlines() if line.strip()):
+                raise RuntimeError("fake-useragent browser JSONL data is empty")
+        elif not json.loads(browser_text):
+            raise RuntimeError("fake-useragent browser JSON data is empty")
+        if not UserAgent().random:
+            raise RuntimeError("fake-useragent returned an empty browser identity")
+        import data_provider.efinance_fetcher  # noqa: F401
+    except Exception as exc:
+        print(f"ERROR: packaged fake-useragent runtime probe failed: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    print("OK: packaged fake-useragent data and efinance import chain succeeded")
+    sys.exit(0)
+
 if _packaged_import_probe:
     import importlib
     import sys

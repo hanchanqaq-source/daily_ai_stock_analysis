@@ -120,6 +120,7 @@ pushd "${ROOT_DIR}" >/dev/null
 cmd=("${PYTHON_BIN}" -m PyInstaller --name stock_analysis --onedir --noconfirm --noconsole --add-data "static:static" --add-data "strategies:strategies" --collect-data litellm --collect-data tiktoken --collect-data akshare)
 cmd+=("--collect-all" "alphasift")
 cmd+=("--collect-all" "futu")
+cmd+=("--collect-all" "fake_useragent")
 cmd+=("${hidden_import_args[@]}" "main.py")
 
 echo "Running: ${cmd[*]}"
@@ -156,6 +157,20 @@ for module in alphasift.dsa_adapter futu orjson; do
     exit 1
   fi
 done
+
+log "Verifying packaged fake-useragent data and efinance import chain..."
+if ! DSA_PACKAGED_FAKE_USERAGENT_PROBE=1 "${packaged_entry}" >/tmp/dsa-packaged-fake-useragent.log 2>&1; then
+  echo "ERROR: packaged backend cannot load fake-useragent data."
+  cat /tmp/dsa-packaged-fake-useragent.log
+  exit 1
+fi
+cat /tmp/dsa-packaged-fake-useragent.log
+if ! DSA_PACKAGED_IMPORT_PROBE="data_provider.efinance_fetcher" "${packaged_entry}" >/tmp/dsa-packaged-efinance.log 2>&1; then
+  echo "ERROR: packaged backend cannot import data_provider.efinance_fetcher."
+  cat /tmp/dsa-packaged-efinance.log
+  exit 1
+fi
+cat /tmp/dsa-packaged-efinance.log
 
 log "Verifying packaged AkShare calendar data..."
 packaged_akshare_calendar="${packaged_root}/_internal/akshare/file_fold/calendar.json"

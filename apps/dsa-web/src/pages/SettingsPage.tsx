@@ -62,6 +62,13 @@ type DesktopUpdateState = {
   downloadPercent?: number | null;
   downloadedBytes?: number | null;
   totalBytes?: number | null;
+  runtimeKind?: string;
+  portableEligible?: boolean;
+  releaseNotes?: string;
+  assetName?: string;
+  verificationStage?: string;
+  rollbackPerformed?: boolean;
+  restoredVersion?: string;
 };
 
 type RawDesktopUpdateState = {
@@ -78,6 +85,13 @@ type RawDesktopUpdateState = {
   downloadPercent?: unknown;
   downloadedBytes?: unknown;
   totalBytes?: unknown;
+  runtimeKind?: unknown;
+  portableEligible?: unknown;
+  releaseNotes?: unknown;
+  assetName?: unknown;
+  verificationStage?: unknown;
+  rollbackPerformed?: unknown;
+  restoredVersion?: unknown;
 };
 
 type DesktopUpdateNotice = {
@@ -229,6 +243,13 @@ function normalizeDesktopUpdateState(state: RawDesktopUpdateState | null | undef
     downloadPercent: normalizeDesktopRuntimeNumber(state.downloadPercent),
     downloadedBytes: normalizeDesktopRuntimeNumber(state.downloadedBytes),
     totalBytes: normalizeDesktopRuntimeNumber(state.totalBytes),
+    runtimeKind: trimDesktopRuntimeString(state.runtimeKind),
+    portableEligible: state.portableEligible === true,
+    releaseNotes: trimDesktopRuntimeString(state.releaseNotes),
+    assetName: trimDesktopRuntimeString(state.assetName),
+    verificationStage: trimDesktopRuntimeString(state.verificationStage),
+    rollbackPerformed: state.rollbackPerformed === true,
+    restoredVersion: trimDesktopRuntimeString(state.restoredVersion),
   };
 }
 
@@ -251,8 +272,8 @@ function getDesktopUpdateNotice(
         message: state.message || t('settings.desktopUpdateReleaseMessage'),
       }),
       variant: 'warning' as const,
-      actionLabel: state.updateMode === 'auto' ? undefined : t('settings.desktopDownload'),
-      actionKind: state.updateMode === 'auto' ? undefined : 'release',
+      actionLabel: state.portableEligible ? t('settings.desktopSafeUpdate') : (state.updateMode === 'auto' ? undefined : t('settings.desktopDownload')),
+      actionKind: state.portableEligible ? 'install' : (state.updateMode === 'auto' ? undefined : 'release'),
     };
   }
 
@@ -263,6 +284,14 @@ function getDesktopUpdateNotice(
       message: state.message || t('settings.desktopUpdateDownloadingMessage', { percent: percentText }),
       variant: 'warning' as const,
     };
+  }
+
+  if (state.status === 'verifying' || state.status === 'ready-to-install') {
+    return { title: t('settings.desktopVerifying'), message: state.message || t('settings.desktopVerifyingMessage'), variant: 'warning' as const };
+  }
+
+  if (state.status === 'rolling-back' || state.status === 'restored') {
+    return { title: t('settings.desktopRollback'), message: state.message || t('settings.desktopRollbackMessage'), variant: state.status === 'restored' ? 'success' as const : 'warning' as const };
   }
 
   if (state.status === 'update-downloaded') {

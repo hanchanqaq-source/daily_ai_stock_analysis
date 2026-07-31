@@ -6,6 +6,14 @@ const net = require('net');
 const http = require('http');
 const https = require('https');
 const { TextDecoder } = require('util');
+const os = require('os');
+const crypto = require('crypto');
+const { detectWindowsRuntime } = require('./portable-update/portableIdentity');
+const { selectPortableAssets, parseBoundSha256 } = require('./portable-update/portableRelease');
+const { downloadHttps, sha256File } = require('./portable-update/portableDownload');
+const { extractAndVerify } = require('./portable-update/portableArchive');
+const { buildUpdatePlan, writeUpdatePlan } = require('./portable-update/portablePlan');
+const { copyHelperToTemp } = require('./portable-update/portableTransaction');
 
 let mainWindow = null;
 let backendProcess = null;
@@ -17,6 +25,7 @@ let lastPromptedInstallVersion = '';
 let electronAutoUpdater = undefined;
 let electronAutoUpdaterConfigured = false;
 let electronUpdateCheckInFlight = false;
+let portableRelease = null;
 
 function resolveWindowBackgroundColor() {
   return nativeTheme.shouldUseDarkColors ? '#08080c' : '#f4f7fb';
@@ -66,7 +75,11 @@ const UPDATE_STATUS = Object.freeze({
   UPDATE_AVAILABLE: 'update-available',
   DOWNLOADING: 'downloading',
   UPDATE_DOWNLOADED: 'update-downloaded',
+  VERIFYING: 'verifying',
+  READY_TO_INSTALL: 'ready-to-install',
   INSTALLING: 'installing',
+  ROLLING_BACK: 'rolling-back',
+  RESTORED: 'restored',
   ERROR: 'error',
 });
 
@@ -197,6 +210,13 @@ function buildUpdateState(state = {}) {
     downloadPercent: normalizeDownloadPercent(state.downloadPercent),
     downloadedBytes: normalizeFiniteNumber(state.downloadedBytes),
     totalBytes: normalizeFiniteNumber(state.totalBytes),
+    runtimeKind: typeof state.runtimeKind === 'string' ? state.runtimeKind : '',
+    portableEligible: state.portableEligible === true,
+    releaseNotes: typeof state.releaseNotes === 'string' ? state.releaseNotes : '',
+    assetName: typeof state.assetName === 'string' ? state.assetName : '',
+    verificationStage: typeof state.verificationStage === 'string' ? state.verificationStage : '',
+    rollbackPerformed: state.rollbackPerformed === true,
+    restoredVersion: normalizeVersionString(state.restoredVersion),
   };
 }
 
@@ -844,6 +864,16 @@ function buildBackendUrl(host, port, pathname = '/') {
   const url = new URL(`http://${formatUrlHost(host)}:${port}/`);
   url.pathname = pathname;
   return url.toString();
+}
+
+function writePortableReadySignal({ argv = process.argv, runtime, version, port, backendPid, electronPid = process.pid }) {
+  const valueAfter = (flag) => { const index = argv.indexOf(flag); return index >= 0 ? argv[index + 1] : ''; };
+  const token = valueAfter('--pp02-update-token'); const planValue = valueAfter('--pp02-update-plan'); const signalValue = valueAfter('--pp02-ready-signal');
+  if (!runtime?.portableEligible || !runtime.manifest || !token || !planValue || !signalValue) return false;
+  const planPath = path.resolve(planValue); const readySignal = path.resolve(signalValue); const plan = JSON.parse(fs.readFileSync(planPath, 'utf8'));
+  if (plan.readySignal !== readySignal || plan.token !== token || plan.productId !== runtime.manifest.productId || plan.targetVersion !== version) throw new Error('Portable update readiness arguments do not match the signed plan.');
+  fs.writeFileSync(readySignal, JSON.stringify({ token, productId: runtime.manifest.productId, version, port, backendPid: backendPid || null, electronPid, homeLoaded: true }), { encoding: 'utf8', flag: 'wx', mode: 0o600 });
+  return true;
 }
 
 function buildBackendArgs({ host, port }) {
@@ -1702,7 +1732,17 @@ async function performDesktopUpdateCheck({ manual = false, notify = false } = {}
   });
 
   try {
-    const nextState = await checkForDesktopUpdates({ currentVersion });
+    const release = await fetchLatestReleaseJson();
+    const nextState = evaluateReleaseUpdate({ currentVersion, release });
+    const runtime = detectWindowsRuntime({ platform: process.platform, packaged: app.isPackaged, exePath: app.getPath('exe'), version: currentVersion });
+    if (runtime.portableEligible && nextState.status === UPDATE_STATUS.UPDATE_AVAILABLE) {
+      const assets = selectPortableAssets(release, nextState.latestVersion);
+      portableRelease = { release, assets, runtime };
+      Object.assign(nextState, { runtimeKind: runtime.runtimeKind, portableEligible: true, releaseNotes: typeof release.body === 'string' ? release.body : '', assetName: assets.zipName, message: `发现便携版新版本 ${nextState.latestVersion}。查看说明后可点击“安全更新”下载并校验。` });
+    } else {
+      portableRelease = null;
+      Object.assign(nextState, { runtimeKind: runtime.runtimeKind, portableEligible: runtime.portableEligible });
+    }
     const resolvedState = setDesktopUpdateState(nextState);
     logLine(
       `[update] status=${resolvedState.status} current=${resolvedState.currentVersion || 'unknown'} latest=${resolvedState.latestVersion || 'unknown'}`
@@ -1733,9 +1773,33 @@ async function performDesktopUpdateCheck({ manual = false, notify = false } = {}
   }
 }
 
+async function installPortableUpdate() {
+  if (!portableRelease || !desktopUpdateState?.portableEligible || desktopUpdateState.status !== UPDATE_STATUS.UPDATE_AVAILABLE) throw new Error('没有已确认的便携版安全更新。');
+  const { assets, runtime } = portableRelease; const version = desktopUpdateState.latestVersion;
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pp02-update-')); const zipPath = path.join(tempRoot, assets.zipName); const shaPath = path.join(tempRoot, assets.shaName); const stage = path.join(tempRoot, 'stage');
+  try {
+    setDesktopUpdateState({ ...desktopUpdateState, status: UPDATE_STATUS.DOWNLOADING, message: '正在下载便携版更新和校验文件...' });
+    await downloadHttps(assets.zip.browser_download_url, zipPath); await downloadHttps(assets.sha256.browser_download_url, shaPath, { maxBytes: 4096 });
+    setDesktopUpdateState({ ...desktopUpdateState, status: UPDATE_STATUS.VERIFYING, verificationStage: 'archive-sha256', message: '正在验证 SHA-256、产品身份和 ZIP 安全结构...' });
+    const expected = parseBoundSha256(fs.readFileSync(shaPath, 'utf8'), assets.zipName); const actual = await sha256File(zipPath); if (actual !== expected) throw new Error('Portable ZIP SHA-256 mismatch.');
+    const manifest = await extractAndVerify(zipPath, stage, { version, releaseTag: assets.tag });
+    const helperSource = app.isPackaged ? path.join(process.resourcesPath, 'portable-update-helper.ps1') : path.join(__dirname, 'portable-update', 'portable-update-helper.ps1');
+    const helper = copyHelperToTemp(helperSource, tempRoot);
+    const backupRoot = path.join(runtime.root, '.pp02-update-backup', `${Date.now()}-${crypto.randomBytes(8).toString('hex')}`); fs.mkdirSync(backupRoot, { recursive: true });
+    const currentManifest = runtime.manifest || null;
+    const plan = buildUpdatePlan({ currentRoot: runtime.root, stagedRoot: stage, backupRoot, currentManifest, nextManifest: manifest, version }); plan.entryExecutable = manifest.entryExecutable;
+    const planPath = path.join(backupRoot, 'update-plan.json'); writeUpdatePlan(planPath, plan);
+    setDesktopUpdateState({ ...desktopUpdateState, status: UPDATE_STATUS.READY_TO_INSTALL, verificationStage: 'complete', message: '全部安全校验通过，正在准备切换。' });
+    await stopBackend();
+    if (backendProcess) throw new Error('旧后端未确认退出，拒绝备份或切换。');
+    setDesktopUpdateState({ ...desktopUpdateState, status: UPDATE_STATUS.INSTALLING, verificationStage: 'complete', message: '正在退出并切换便携版；失败时将自动回滚。' });
+    const child = spawn('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', helper, '-PlanPath', planPath, '-Token', plan.token, '-ParentPid', String(process.pid)], { windowsHide: true, detached: true, stdio: 'ignore' }); child.unref(); app.quit(); return true;
+  } catch (error) { fs.rmSync(tempRoot, { recursive: true, force: true }); setDesktopUpdateState({ ...desktopUpdateState, status: UPDATE_STATUS.ERROR, message: `便携版安全更新失败：${error instanceof Error ? error.message : String(error)}` }); throw error; }
+}
+
 ipcMain.handle('desktop:get-update-state', () => desktopUpdateState);
 ipcMain.handle('desktop:check-for-updates', () => performDesktopUpdateCheck({ manual: true }));
-ipcMain.handle('desktop:install-downloaded-update', () => installDownloadedUpdate());
+ipcMain.handle('desktop:install-downloaded-update', () => desktopUpdateState?.portableEligible ? installPortableUpdate() : installDownloadedUpdate());
 ipcMain.handle('desktop:open-release-page', async (_event, releaseUrl) => {
   await shell.openExternal(sanitizeReleaseUrl(releaseUrl));
   return true;
@@ -1928,6 +1992,7 @@ async function createWindow() {
     await mainWindow.loadURL(mainPageUrl);
     logStartup(`Main page loadURL resolved in ${Date.now() - mainPageStartedAt}ms url=${mainPageUrl}`);
     logStartup(`Main UI loaded in ${Date.now() - startupStartedAt}ms`);
+    writePortableReadySignal({ argv: process.argv, runtime: detectWindowsRuntime({ platform: process.platform, packaged: app.isPackaged, exePath: app.getPath('exe'), version: resolveDesktopVersion() }), version: resolveDesktopVersion(), port, backendPid: backendProcess?.pid });
     if (!restoreFailed) {
       void performDesktopUpdateCheck({ notify: true });
     }
@@ -1998,4 +2063,5 @@ module.exports = {
     mainWindow = mainWindowRef;
   },
   waitForBackendExit,
+  writePortableReadySignal,
 };

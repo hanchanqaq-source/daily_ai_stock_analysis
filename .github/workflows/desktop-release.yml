@@ -85,9 +85,12 @@ jobs:
           }
           New-Item -ItemType Directory -Path 'dist/release-assets' -Force | Out-Null
           $exeTarget = "dist/release-assets/$expectedInstallerName"
+          $stage = 'dist/portable-stage'
           $zipTarget = "dist/release-assets/pp02-ai-daily-stock-analysis-windows-noinstall-$env:RELEASE_TAG.zip"
           Copy-Item -Path $installerExe.FullName -Destination $exeTarget -Force
-          Compress-Archive -Path $winUnpacked -DestinationPath $zipTarget -CompressionLevel Optimal -Force
+          node scripts/prepare-portable-release.js stage $env:RELEASE_TAG $winUnpacked $stage
+          Compress-Archive -Path "$stage/*" -DestinationPath $zipTarget -CompressionLevel Optimal -Force
+          node scripts/prepare-portable-release.js verify $env:RELEASE_TAG $zipTarget "$zipTarget.sha256"
           Get-ChildItem -Path 'apps/dsa-desktop/dist' -File |
             Where-Object { $_.Name -eq 'latest.yml' -or $_.Name -like '*.blockmap' } |
             ForEach-Object {

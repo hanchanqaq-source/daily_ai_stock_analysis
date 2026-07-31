@@ -6,18 +6,18 @@
 PROJECT_ID=PP02
 PROJECT_NAME=AI 每日股票分析
 CHAT_ROLE=WORK
-WORK_ID=WORK-PP02-CLOUD-REBUILD-001
+WORK_ID=WORK-002
 ROLE_LOCK=TRUE
 APPLICATION_BASE_VERSION=3.28.0
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-CURRENT_STAGE=R3.5 / Judge
-CURRENT_WORK=应用内手动周期报告与下周参考展望
-ACTIVE_GOAL=验证R3.5文档收口Head完整CI并完成Judge回传
-CURRENT_STATUS=R3_5_IMPLEMENTATION_CI_PASSED_FINAL_HEAD_CI_PENDING
+CURRENT_STAGE=R3.6 / PR #8 CI Environment Rework
+CURRENT_WORK=Windows 便携安全更新
+ACTIVE_GOAL=修复Draft PR #8冻结启动门继承GITHUB_ACTIONS导致服务未启动
+CURRENT_STATUS=R5_WINDOWS_BASIC_VALIDATION_FAILED — REWORK_REQUIRED — DRAFT_HOLD
 ACTIVE_BLOCKER=NONE
-NEXT_ACTION=验证R3.5文档收口Head完整CI；成功后停止并回传总控
-AUTHORIZATION_REQUIRED=FALSE_FOR_R3_5_BUILD_TEST_CI; READY/MERGE/MAIN/RELEASE/REAL_DATA_REQUIRE_NEW_AUTHORIZATION
+NEXT_ACTION=提交GITHUB_ACTIONS/UTF-8隔离修复，更新PR #8并等待新Head完整CI/Artifact
+AUTHORIZATION_REQUIRED=FALSE_FOR_R3_6_BUILD_TEST_COMMIT_DRAFT_PR_CI; READY/MERGE/MAIN/RELEASE/REAL_DATA_REQUIRE_NEW_AUTHORIZATION
 LAST_UPDATED=2026-07-30
 ```
 
@@ -157,3 +157,53 @@ LAST_UPDATED=2026-07-30
   模型、通知渠道或自动入口。
 
 `R3_5_IMPLEMENTATION_CI_PASSED_FINAL_HEAD_CI_PENDING`
+
+## 2026-07-30 Work2 / R3.6 接管
+
+`WORK_ID=WORK-002`；`CURRENT_STAGE=R3.6 / Build-Test-Publish-CI`；`ACTIVE_GOAL=Windows 便携安全更新`。Work1 已永久关闭，PR #3 已合并，R3.1–R3.5 已进入 `main`。本轮基线 `0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9`，独立分支 `agent/pp02-work2-r3-6-windows-portable-update`，只创建独立 Draft PR。Windows R5 真机验收、Ready、合并、Tag、Release 和真实数据继续禁止。
+
+## 2026-07-30 Work2 / R3.6 Review 修复（历史，已由 PR #6 取代）
+
+- 当时 Draft PR：`#5`；实际分支：`codex`。该 PR 现已关闭并标记为 superseded。
+- 上一 Head：`e5cdb70`；CI Run `30543513470` 为 8/8 success，但 Work2 Judge 发现更新事务与真实运行行为阻断，不能据此判定通过。
+- 先前 `PUBLISH_BLOCKED` 仅保留为历史说明，当前不再是 Active Blocker。
+- 历史动作：收敛助手资源、下载重定向/超时、停止后备份、完整回滚、动态端口握手、严格便携身份和真实行为测试；成果后由 PR #6 接管。
+
+## 2026-07-30 Work2 / R3.6 最终收口
+
+- 活动 Draft PR：`#6`；分支：`codex-xbl3c5`；Base：`main@0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9`。
+- 已验证 Head：`71404954407a9a3a6362a398465fc822b1351c72`；CI Run `30547333980` 为 8/8 success。
+- PR #5 已关闭并由 PR #6 取代，只保留为 superseded 历史。
+- 当前 Judge：`IMPLEMENTATION PASS — R5 WINDOWS VALIDATION REQUIRED`；`DRAFT_HOLD`。
+- 本轮只为 Windows CI 增加已验证便携候选 artifact，不修改便携更新业务行为、不升版本、不创建 Tag 或 Release。
+
+
+## 2026-07-30 PR #7｜R5 Windows 基础启动失败与返工
+
+- 活动 Draft PR：`#7`；验收失败 Head `d489a795b6089575a1fd61a27c9b28e2f3cb1b03`；CI Run `30564032072` 为 8/8 success。
+- 失败 Artifact SHA-256：`203e41a35e2cd081a20640f514c9de417bd507cbd9b8a2f097a4d0bed36cda1a`；不得继续用于回滚模拟。
+- Windows 11 隔离目录中 Electron loading shell 可启动，但冻结后端因缺少 `fake_useragent.data` / 浏览器数据立即崩溃，健康端点持续 `ECONNREFUSED`。
+- 根因：依赖无上限、PyInstaller 未收集 `fake_useragent` 全部数据/子模块、冻结探针未实际加载 UserAgent 数据或 efinance 链、候选上传前未真实启动冻结后端。
+- 修复范围：`fake-useragent>=1.4.0,<3.0.0`（当前 CI 同代环境实测 2.2.0）、Windows/macOS `--collect-all fake_useragent`、真实运行时探针，以及 Windows 动态端口健康/主页/进程树启动门。
+- 当前结论：`R5_WINDOWS_BASIC_VALIDATION_FAILED — REWORK_REQUIRED — DRAFT_HOLD`。新 Head 完整 CI 和 Head-bound Artifact 通过前不得重进 R5。
+
+
+## 2026-07-30 PR #8｜CI 失败根因与下一修复
+
+- 当前唯一活动项为 Draft PR `#8`；CI Run `30576678660` 失败。
+- 根因：冻结启动门继承 Actions Runner 的 `GITHUB_ACTIONS=true`，触发 `main.py` 既有保护条件，冻结进程可存活但 `--serve-only` 服务不会启动，动态端口健康与主页检查因此失败。
+- `main.py` 的 `GITHUB_ACTIONS` 保护条件保持不变；正确修复位于启动门边界。
+- 启动冻结 EXE 前保存并临时设置 `GITHUB_ACTIONS=false`、`PYTHONUTF8=1`、`PYTHONIOENCODING=utf-8`；finally 恢复全部环境变量并可靠停止进程树。
+- 当前继续 `R5_WINDOWS_BASIC_VALIDATION_FAILED — REWORK_REQUIRED — DRAFT_HOLD`；新 Head 完整 CI 与新 Head-bound Artifact 前不得进入 R5。
+
+
+## 2026-07-31 PR #9｜R5 Windows 最终真机验收
+
+- 当前活动项：Draft PR `#9`；分支 `codex-2ka919`；Base `main@0f9afe8b1095e869cc9bbaa7306b13989b0a8ff9`。
+- Windows 验收实现 Head：`958b64de78c50bd2ebb2f9b10a15409ee7040eea`；CI Run `30615265618` 为 8/8 success。
+- 验收 Artifact：`8787591352`；外层 SHA-256 `ef4025618b3de9ba8cc45c487518e54340088a69b6eca388d4da5aaa25e30971`；内层便携候选 ZIP SHA-256 `8cc00e59414d418362418ba817271adfef81bbdadf4dfb92549db34555652e45`。
+- Windows 隔离目录基础启动复验通过：PP02 主界面完整打开，`/api/health` 与主页均返回 HTTP 200，人工确认后正常关闭窗口；`R5_WINDOWS_BASIC_VALIDATION=PASS`。
+- 隔离回滚模拟通过：故障注入确认部分替换会失败，正式候选 `portable-update-helper.ps1` 随后恢复首个被替换程序文件；`.env`、DB、WAL、SHM 与旧 manifest 哈希保持不变；隔离旧入口探针成功重启；`R5_WINDOWS_ROLLBACK_SIMULATION=PASS`。
+- 模拟未访问正式安装目录、正式数据库、真实凭据或网络 Release；一次性验收截图不进入仓库。
+- Judge：`PASS — R5 WINDOWS VALIDATION COMPLETED — DRAFT_HOLD`。
+- PR 继续保持 Draft；未执行 Ready、Merge、main 直写、Tag、Release、真实数据或 R3.7。

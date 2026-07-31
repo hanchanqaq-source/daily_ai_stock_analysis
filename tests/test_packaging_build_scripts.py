@@ -43,6 +43,44 @@ def test_windows_backend_build_script_collects_alphasift_adapter() -> None:
     assert "importlib.import_module(_packaged_import_probe)" in main_py
 
 
+def test_windows_backend_collects_and_exercises_fake_useragent_runtime() -> None:
+    script = _read_text(REPO_ROOT / "scripts" / "build-backend.ps1")
+    verifier = _read_text(REPO_ROOT / "scripts" / "verify-frozen-backend.ps1")
+    workflow = _read_text(REPO_ROOT / ".github" / "workflows" / "ci.yml")
+    requirements = _read_text(REPO_ROOT / "requirements.txt")
+    main_py = _read_text(REPO_ROOT / "main.py")
+
+    assert "fake-useragent>=1.4.0,<3.0.0" in requirements
+    assert "'--collect-all', 'fake_useragent'" in script
+    assert "DSA_PACKAGED_FAKE_USERAGENT_PROBE" in script
+    assert "DSA_PACKAGED_IMPORT_PROBE = 'data_provider.efinance_fetcher'" in script
+    assert "UserAgent().random" in main_py
+    assert 'importlib.resources.files("fake_useragent.data")' in main_py
+    assert 'data_root.joinpath("browsers.jsonl")' in main_py
+    assert "scripts/verify-frozen-backend.ps1" in workflow
+    assert "- 'scripts/verify-frozen-backend.ps1'" in workflow
+    assert "Get-FreeTcpPort" in verifier
+    assert "[string]$PackagedEntry" in verifier
+    assert "/api/health" in verifier
+    assert "HttpClient" in verifier
+    assert "Add-Type -AssemblyName System.Net.Http" in verifier
+    assert "taskkill.exe" in verifier
+    assert 'os.getenv("GITHUB_ACTIONS") != "true"' in main_py
+    assert "'GITHUB_ACTIONS','PYTHONUTF8','PYTHONIOENCODING'" in verifier
+    assert "$env:GITHUB_ACTIONS = 'false'" in verifier
+    assert "$env:PYTHONUTF8 = '1'" in verifier
+    assert "$env:PYTHONIOENCODING = 'utf-8'" in verifier
+    assert "foreach ($name in $saved.Keys)" in verifier
+    assert "SetEnvironmentVariable($name, $saved[$name], 'Process')" in verifier
+    assert "if (-not $healthy)" in verifier
+    assert "[int]$health.StatusCode -eq 200 -and [int]$homeResponse.StatusCode -eq 200" in verifier
+    assert "UseProxy = $false" in verifier
+    assert "$healthDiagnostic" in verifier
+    assert "$homeDiagnostic" in verifier
+    assert "health=$healthDiagnostic" in verifier
+    assert "home=$homeDiagnostic" in verifier
+
+
 def test_macos_backend_build_script_collects_alphasift_adapter() -> None:
     script = _read_text(REPO_ROOT / "scripts" / "build-backend-macos.sh")
     main_py = _read_text(REPO_ROOT / "main.py")
@@ -60,6 +98,13 @@ def test_macos_backend_build_script_collects_alphasift_adapter() -> None:
     assert 'normalized.startswith("alphasift/dsa_adapter.")' not in script
     assert "DSA_PACKAGED_IMPORT_PROBE" in main_py
     assert "importlib.import_module(_packaged_import_probe)" in main_py
+
+
+def test_macos_backend_collects_and_exercises_fake_useragent_runtime() -> None:
+    script = _read_text(REPO_ROOT / "scripts" / "build-backend-macos.sh")
+    assert 'cmd+=("--collect-all" "fake_useragent")' in script
+    assert "DSA_PACKAGED_FAKE_USERAGENT_PROBE=1" in script
+    assert "data_provider.efinance_fetcher" in script
 
 
 def test_macos_unsigned_packaging_contract_is_explicit() -> None:
