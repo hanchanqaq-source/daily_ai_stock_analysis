@@ -54,3 +54,14 @@ Head `d489a795b6089575a1fd61a27c9b28e2f3cb1b03` / Run `30564032072` 的旧 Artif
 CI Run `30576678660` 暴露启动门环境契约：Actions Runner 的 `GITHUB_ACTIONS=true` 会命中 `main.py` 既有保护条件，使冻结进程存在但 serve-only 服务不启动。该保护条件不得删除。
 
 Windows smoke 在启动冻结 EXE 前保存 `GITHUB_ACTIONS`、`PYTHONUTF8` 和 `PYTHONIOENCODING`，仅对子进程准备阶段设置 `GITHUB_ACTIONS=false`、`PYTHONUTF8=1`、`PYTHONIOENCODING=utf-8`；finally 恢复全部变量并终止进程树。动态端口健康和主页 HTTP 200 仍是强制成功条件。当前保持 `R5_WINDOWS_BASIC_VALIDATION_FAILED — REWORK_REQUIRED — DRAFT_HOLD`，等待 PR #8 新 Head 完整 CI 与新 Artifact。
+
+
+## PR #9 R5 Windows 最终真机验收
+
+Head `958b64de78c50bd2ebb2f9b10a15409ee7040eea` 的 CI Run `30615265618` 已 8/8 success。用于真机验收的 Artifact `8787591352` 外层 SHA-256 为 `ef4025618b3de9ba8cc45c487518e54340088a69b6eca388d4da5aaa25e30971`，内层便携候选 ZIP SHA-256 为 `8cc00e59414d418362418ba817271adfef81bbdadf4dfb92549db34555652e45`。
+
+2026-07-31 Windows 隔离真机复验中，PP02 主界面完整打开，`/api/health` 与主页均返回 HTTP 200，人工确认后正常关闭；`R5_WINDOWS_BASIC_VALIDATION=PASS`。随后故障注入确认部分替换失败，正式候选 `portable-update-helper.ps1` 恢复首个被替换程序文件；`.env`、DB、WAL、SHM 与旧 manifest 哈希保持不变；隔离旧入口探针成功重启；`R5_WINDOWS_ROLLBACK_SIMULATION=PASS`。
+
+本模拟未访问正式安装目录、正式数据库、真实凭据或网络 Release。一次性验收截图不进入仓库，关键结果以本台账和 PR #9 评论记录。
+
+最终 Judge：`PASS — R5 WINDOWS VALIDATION COMPLETED — DRAFT_HOLD`。PR #9 继续保持 Draft；未执行 Ready、Merge、main 直写、Tag、Release、真实数据或 R3.7。
