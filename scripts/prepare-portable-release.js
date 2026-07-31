@@ -2,7 +2,6 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { PRODUCT_ID, PRODUCT_NAME, PACKAGE_KIND, ARTIFACT_PREFIX, MANIFEST_NAME } = require('../apps/dsa-desktop/portable-update/portableIdentity');
-const { extractAndVerify } = require('../apps/dsa-desktop/portable-update/portableArchive');
 
 function walk(root, current = '') { return fs.readdirSync(path.join(root, current), { withFileTypes: true }).flatMap((entry) => { const relative = path.posix.join(current.replace(/\\/g, '/'), entry.name); if (entry.isSymbolicLink()) throw new Error(`Links are forbidden: ${relative}`); return entry.isDirectory() ? walk(root, relative) : [relative]; }); }
 function sha(file) { return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'); }
@@ -20,7 +19,7 @@ async function main() {
     const entryExecutable = 'PP02 AI Daily Stock Analysis.exe'; if (!managedFiles.some((f) => f.relativePath === entryExecutable)) throw new Error(`Missing ${entryExecutable}.`);
     fs.writeFileSync(path.join(target, MANIFEST_NAME), JSON.stringify({ schemaVersion: 1, productId: PRODUCT_ID, productName: PRODUCT_NAME, packageKind: PACKAGE_KIND, version, releaseTag: tag, artifactPrefix: ARTIFACT_PREFIX, entryExecutable, managedFiles }, null, 2)); return;
   }
-  if (mode === 'verify') { const expectedName = `${ARTIFACT_PREFIX}-${tag}.zip`; if (path.basename(source) !== expectedName) throw new Error('ZIP filename does not match release tag.'); const temp = fs.mkdtempSync(path.join(require('os').tmpdir(), 'pp02-verify-')); try { await extractAndVerify(source, path.join(temp, 'payload'), { version, releaseTag: tag }); } finally { fs.rmSync(temp, { recursive: true, force: true }); } const digest = sha(source); fs.writeFileSync(target, `${digest}  ${expectedName}\n`); return; }
+  if (mode === 'verify') { const { extractAndVerify } = require('../apps/dsa-desktop/portable-update/portableArchive'); const expectedName = `${ARTIFACT_PREFIX}-${tag}.zip`; if (path.basename(source) !== expectedName) throw new Error('ZIP filename does not match release tag.'); const temp = fs.mkdtempSync(path.join(require('os').tmpdir(), 'pp02-verify-')); try { await extractAndVerify(source, path.join(temp, 'payload'), { version, releaseTag: tag }); } finally { fs.rmSync(temp, { recursive: true, force: true }); } const digest = sha(source); fs.writeFileSync(target, `${digest}  ${expectedName}\n`); return; }
   throw new Error('Usage: stage|verify tag source target');
 }
 main().catch((error) => { console.error(error.message); process.exitCode = 1; });
