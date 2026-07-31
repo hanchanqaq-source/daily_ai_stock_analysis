@@ -6,19 +6,19 @@
 PROJECT_ID=PP02
 PROJECT_NAME=AI 每日股票分析
 CHAT_ROLE=WORK
-WORK_ID=WORK-002
+WORK_ID=WORK-003
 ROLE_LOCK=TRUE
 APPLICATION_BASE_VERSION=3.28.0
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-CURRENT_STAGE=R3.6 / PR #8 CI Environment Rework
-CURRENT_WORK=Windows 便携安全更新
-ACTIVE_GOAL=修复Draft PR #8冻结启动门继承GITHUB_ACTIONS导致服务未启动
-CURRENT_STATUS=R5_WINDOWS_BASIC_VALIDATION_FAILED — REWORK_REQUIRED — DRAFT_HOLD
+CURRENT_STAGE=R3.7 / Threat Model-Plan-TDD RED
+CURRENT_WORK=Windows 安全凭据
+ACTIVE_GOAL=在独立Draft PR上以safeStorage/DPAPI建立Windows Desktop安全凭据边界
+CURRENT_STATUS=AUTHORIZED — PLAN_COMPLETE — RED_TESTS_PENDING — DRAFT_HOLD
 ACTIVE_BLOCKER=NONE
-NEXT_ACTION=提交GITHUB_ACTIONS/UTF-8隔离修复，更新PR #8并等待新Head完整CI/Artifact
-AUTHORIZATION_REQUIRED=FALSE_FOR_R3_6_BUILD_TEST_COMMIT_DRAFT_PR_CI; READY/MERGE/MAIN/RELEASE/REAL_DATA_REQUIRE_NEW_AUTHORIZATION
-LAST_UPDATED=2026-07-30
+NEXT_ACTION=先提交失败契约测试并创建独立Draft PR，再做最小实现与固定Head Windows假密钥验收
+AUTHORIZATION_REQUIRED=FALSE_FOR_R3_7_BUILD_TEST_COMMIT_DRAFT_PR_CI_FAKE_CREDENTIAL_VALIDATION; READY/MERGE/MAIN/TAG/RELEASE/REAL_CREDENTIALS/NEXT_STAGE_REQUIRE_NEW_AUTHORIZATION
+LAST_UPDATED=2026-07-31
 ```
 
 ## 已验证基线
@@ -207,3 +207,18 @@ LAST_UPDATED=2026-07-30
 - 模拟未访问正式安装目录、正式数据库、真实凭据或网络 Release；一次性验收截图不进入仓库。
 - Judge：`PASS — R5 WINDOWS VALIDATION COMPLETED — DRAFT_HOLD`。
 - PR 继续保持 Draft；未执行 Ready、Merge、main 直写、Tag、Release、真实数据或 R3.7。
+
+## 2026-07-31 Work3 / R3.7 接管
+
+- Work2 已由 PR #9 完成 R5 Windows 验收并进入 `main`；PR #10 仅补齐 `main`
+  Push 完整 CI，当前固定基线为 `main@097bb5d60aa42f13737ac4d9db2f582bde50f995`。
+- Work3 独立分支：`agent/pp02-work3-r3-7-windows-secure-credentials`；只允许创建并
+  更新独立 Draft PR。
+- 采用 Electron `safeStorage` / Windows DPAPI；Windows Desktop 敏感配置只有
+  `userData` 下版本化 vault 一个持久化事实源，renderer 没有明文读取 IPC。
+- 本轮先冻结威胁模型，再提交 RED 测试，随后最小实现、完整 CI 和固定 PR Head 的
+  Windows 假密钥验收。
+- 只使用构造的假凭据；禁止读取、复制、迁移、打印或上传真实 `.env`、Token、Key、
+  Password、Webhook、数据库或账号资料。
+- Judge 上限为 `DRAFT_HOLD`；不得 Ready、Merge、直写 `main`、Tag、Release 或进入
+  R3.8/后续阶段。

@@ -166,3 +166,43 @@ Work1 已永久关闭；Work2 从已合并 PR #3 的 main 基线 `0f9afe8b1095e8
 ### PR #8 CI 环境修复授权
 
 只更新现有 Draft PR #8。不得删除 `main.py` 的 `GITHUB_ACTIONS` 保护条件；只允许在 `scripts/verify-frozen-backend.ps1` 启动冻结 EXE 前保存并临时覆盖 `GITHUB_ACTIONS=false`、`PYTHONUTF8=1`、`PYTHONIOENCODING=utf-8`，继续验证动态端口健康和主页 HTTP 200，并在 finally 恢复环境与清理进程树。记录 Run `30576678660` 失败并等待新 Head CI/Artifact。禁止新 PR、Ready、Merge、Tag、Release、main 直写和 R3.7。
+
+
+## WORK-003｜R3.7 Windows 安全凭据
+
+总控已授权启动独立 Work3。固定基线为
+`main@097bb5d60aa42f13737ac4d9db2f582bde50f995`，独立分支为
+`agent/pp02-work3-r3-7-windows-secure-credentials`，目标是建立 Electron
+`safeStorage` / Windows DPAPI 安全凭据边界，并完成威胁模型、测试先行实现、
+完整 CI 和固定 PR Head 的 Windows 假密钥验收。
+
+### 范围与验收
+
+1. Windows Desktop 敏感值只持久化为 `userData` 下的 DPAPI 密文；不得继续写入
+   `.env`，不得通过读取接口或配置导出返回明文。
+2. renderer 只能写入、删除和查询存在状态；不得新增任何明文读取 IPC。
+3. backend 只在启动/安全重启时通过 child environment 获得内存中的解密值；
+   Windows secure mode 必须拒绝明文敏感配置写入和导入。
+4. 先提交可证明失败的契约测试，再做最小实现；完整 CI 必须绑定最终 PR Head。
+5. Windows 验收只使用由测试构造的假凭据，证明真实 Electron `safeStorage` 可加密/
+   解密、vault 和导出无明文、日志与 artifact 不泄漏，并记录 Head/Run/Job。
+
+### 授权与禁止边界
+
+- 已授权：威胁模型、实施计划、独立分支、普通 Commit、独立 Draft PR、范围内 CI
+  修复、固定 Head Windows 假密钥验收和事实台账更新。
+- 禁止：真实 `.env`、真实 Key/Token/Password/Webhook、真实账号或数据库；PR Ready、
+  Merge、`main` 直写/强推、Tag、Release，以及自行进入 R3.8 或任何后续阶段。
+- 最终 Judge 必须保持 `DRAFT_HOLD`，即使实现、CI 和 Windows 验收全部通过。
+
+### Plan Challenge Result
+
+| 项目 | 结果 |
+| --- | --- |
+| 问题级别 | 无待决产品问题 |
+| 问答 | 0 个问题，通过 |
+| 已确认方案 | Electron `safeStorage` / Windows DPAPI |
+| 唯一事实源 | Windows Desktop 版本化凭据 vault |
+| 测试策略 | RED Commit → 最小实现 → 完整 CI → 固定 Head Windows 假密钥验收 |
+| 明确不做 | 旧 P001 密钥迁移、真实密钥、跨平台密钥服务、Ready/Merge/Tag/Release、后续阶段 |
+| 允许进入 Build | 是 |
