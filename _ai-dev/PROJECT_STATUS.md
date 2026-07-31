@@ -11,12 +11,12 @@ ROLE_LOCK=TRUE
 APPLICATION_BASE_VERSION=3.28.0
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-CURRENT_STAGE=R3.7 / Threat Model-Plan-TDD RED
+CURRENT_STAGE=R3.7 / Implementation-GREEN CI
 CURRENT_WORK=Windows 安全凭据
 ACTIVE_GOAL=在独立Draft PR上以safeStorage/DPAPI建立Windows Desktop安全凭据边界
-CURRENT_STATUS=AUTHORIZED — PLAN_COMPLETE — RED_TESTS_PENDING — DRAFT_HOLD
+CURRENT_STATUS=LOCAL_GREEN — REMOTE_IMPLEMENTATION_CI_PENDING — DRAFT_HOLD
 ACTIVE_BLOCKER=NONE
-NEXT_ACTION=先提交失败契约测试并创建独立Draft PR，再做最小实现与固定Head Windows假密钥验收
+NEXT_ACTION=发布实现Head并完成完整CI、独立代码审查和固定Head Windows假密钥验收
 AUTHORIZATION_REQUIRED=FALSE_FOR_R3_7_BUILD_TEST_COMMIT_DRAFT_PR_CI_FAKE_CREDENTIAL_VALIDATION; READY/MERGE/MAIN/TAG/RELEASE/REAL_CREDENTIALS/NEXT_STAGE_REQUIRE_NEW_AUTHORIZATION
 LAST_UPDATED=2026-07-31
 ```
@@ -35,8 +35,8 @@ LAST_UPDATED=2026-07-31
 - R1：需求、保留/调整/不迁移分类和冲突处理已确认。
 - PP02 保持单用户；旧用户档案、切换、隔离和用户级备份全部不迁移。
 - 官方账户/组合事件账本是持仓唯一事实源。
-- R2：迁移拆为 R3.1–R3.7；R3.1–R3.4 已完成，当前执行 R3.5
-  应用内手动周期报告与下周参考展望。
+- R2：迁移拆为 R3.1–R3.7；R3.1–R3.6 已完成，当前执行 R3.7
+  Windows 安全凭据。
 - Windows 实机验收为 `Deferred`，不把 D 盘目录缺失登记为云端阻塞。
 
 ## 当前保护边界
@@ -44,9 +44,9 @@ LAST_UPDATED=2026-07-31
 - PR #3 不转 Ready、不合并、不发布 Release。
 - 不接触真实 `.env`、Token、API Key、Webhook 或真实数据库。
 - 不迁移基金、多用户或旧平行持仓表。
-- R3.5 只允许正式分析/市场复盘历史聚合、条件化下周展望、展望快照、
-  对应 Web/API、测试和文档。
-- 不新增事实表、不调用 AI、不新增定时器或自动通知，不迁移基金或多用户。
+- R3.7 只允许 Windows Desktop `safeStorage`/DPAPI 凭据 vault、窄 IPC、后端启动
+  环境注入、敏感配置屏蔽/导入导出边界、测试和文档。
+- 不读取或迁移旧明文凭据，不使用真实凭据，不扩展跨平台密钥服务或后续阶段。
 - 仓库经只读安全审计和用户授权后已改为 Public；PR、分支和 Actions 历史公开，
   但真实数据、密钥和备份文件仍不得进入仓库。
 
@@ -222,3 +222,18 @@ LAST_UPDATED=2026-07-31
   Password、Webhook、数据库或账号资料。
 - Judge 上限为 `DRAFT_HOLD`；不得 Ready、Merge、直写 `main`、Tag、Release 或进入
   R3.8/后续阶段。
+
+## 2026-07-31 Work3 / R3.7 RED 与本地 GREEN
+
+- 独立 Draft PR：`#11`；Base：
+  `main@097bb5d60aa42f13737ac4d9db2f582bde50f995`；分支：
+  `agent/pp02-work3-r3-7-windows-secure-credentials`。
+- 威胁模型与实施计划已先冻结；远端 RED Head
+  `096ffa4725d552fcc2ca9008409572deb5d9652d` 的 Run `30634867504` 已观察到
+  `backend-gate` 与 `desktop-test` 按新契约预期失败。
+- 本地 GREEN 已覆盖版本化密文 vault、原子写入/回滚/事务失效、窄 IPC、主 frame
+  校验、继承环境敏感值清除、后端内存注入、全量敏感项遮罩和无凭据导出。
+- 本地证据：Desktop `73/73`、后端相关模块 `265/265`、跨运行时/CI 契约
+  `4/4`、Web 阻断套件 `124/124`，Web Lint 与 Production Build 均通过。
+- 实现 Head 尚未发布；完整远端 CI、独立代码审查与同一固定 Head 的 Windows 真实
+  Electron `safeStorage` 假密钥验收仍待完成。PR 必须持续保持 Draft。

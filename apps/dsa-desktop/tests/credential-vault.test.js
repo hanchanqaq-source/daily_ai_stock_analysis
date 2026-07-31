@@ -56,6 +56,10 @@ test('sensitive key policy covers registered secrets and capability URLs', () =>
   assert.equal(isSensitiveConfigKey('SLACK_WEBHOOK_URL'), true);
   assert.equal(isSensitiveConfigKey('ALPHASIFT_INSTALL_SPEC'), true);
   assert.equal(isSensitiveConfigKey('STOCK_LIST'), false);
+  assert.equal(isSensitiveConfigKey('LLM_USAGE_HMAC_KEY_VERSION'), false);
+  assert.equal(isSensitiveConfigKey('ANTHROPIC_MAX_TOKENS'), false);
+  assert.equal(isSensitiveConfigKey('FEISHU_WEBHOOK_KEYWORD'), false);
+  assert.equal(isSensitiveConfigKey('DISCORD_INTERACTIONS_PUBLIC_KEY'), false);
   assert.equal(isSensitiveConfigKey('../OPENAI_API_KEY'), false);
 });
 
@@ -202,4 +206,24 @@ test('failed atomic replace preserves the prior encrypted vault', (t) => {
   );
   assert.deepEqual(fs.readFileSync(vaultPath), originalBytes);
   assert.equal(fs.existsSync(`${vaultPath}.tmp`), false);
+});
+
+test('uncommitted credential transactions expire before they can modify the vault', (t) => {
+  let now = 1_000;
+  const { vault } = createVault(t, {
+    now: () => now,
+    transactionTtlMs: 100,
+  });
+  const transaction = vault.prepare(
+    [{ key: 'OPENAI_API_KEY', value: fakeCredential() }],
+    MASK_TOKEN,
+  );
+
+  now += 101;
+
+  assert.throws(
+    () => vault.commit(transaction),
+    (error) => error instanceof SecureCredentialError && error.code === 'transaction_invalid',
+  );
+  assert.deepEqual(vault.status().configuredKeys, []);
 });

@@ -15,7 +15,9 @@ from typing import Dict, Iterable, List, Literal, Optional, Set, Tuple
 
 from dotenv import dotenv_values
 
-_ASSIGNMENT_PATTERN = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$")
+_ASSIGNMENT_PATTERN = re.compile(
+    r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$"
+)
 _FALLBACK_REWRITE_ERRNOS = {errno.EBUSY, errno.EXDEV}
 _COMPOSE_ESCAPED_ENV_VALUE_KEYS = frozenset({"CUSTOM_WEBHOOK_BODY_TEMPLATE"})
 _APPLICATION_TEMPLATE_PLACEHOLDER_PATTERN = re.compile(
@@ -227,14 +229,61 @@ class ConfigManager:
             else:
                 entries.append(ConfigLineEntry.assignment(key, line_value))
 
+        self._atomic_write_content(self._render_entries(entries))
+
+    def render_without_keys(self, excluded_keys: Set[str]) -> str:
+        """Render `.env` content without assignments for excluded keys."""
+        normalized = {str(key).upper() for key in excluded_keys}
+        entries = [
+            entry
+            for entry in self._read_entries()
+            if not (
+                entry.kind == "assignment"
+                and entry.key is not None
+                and entry.key.upper() in normalized
+            )
+        ]
+        return self._render_entries(entries)
+
+    def remove_keys(self, keys: Set[str]) -> Tuple[List[str], str]:
+        """Atomically remove all assignments for the requested keys."""
+        normalized = {str(key).upper() for key in keys}
+        with self._lock:
+            entries = self._read_entries()
+            removed = sorted(
+                {
+                    entry.key.upper()
+                    for entry in entries
+                    if entry.kind == "assignment"
+                    and entry.key is not None
+                    and entry.key.upper() in normalized
+                }
+            )
+            if removed:
+                retained = [
+                    entry
+                    for entry in entries
+                    if not (
+                        entry.kind == "assignment"
+                        and entry.key is not None
+                        and entry.key.upper() in normalized
+                    )
+                ]
+                self._atomic_write_content(self._render_entries(retained))
+            return removed, self.get_config_version()
+
+    @staticmethod
+    def _render_entries(entries: List[ConfigLineEntry]) -> str:
+        content = "\n".join(entry.render() for entry in entries)
+        if content and not content.endswith("\n"):
+            content += "\n"
+        return content
+
+    def _atomic_write_content(self, content: str) -> None:
         if not self._env_path.parent.exists():
             self._env_path.parent.mkdir(parents=True, exist_ok=True)
 
         temp_path = self._env_path.with_suffix(self._env_path.suffix + ".tmp")
-        content = "\n".join(entry.render() for entry in entries)
-        if content and not content.endswith("\n"):
-            content += "\n"
-
         with temp_path.open("w", encoding="utf-8", newline="\n") as file_obj:
             file_obj.write(content)
             file_obj.flush()

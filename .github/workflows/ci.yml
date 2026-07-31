@@ -38,6 +38,7 @@ jobs:
               - 'src/brokers/futu/**'
               - 'scripts/build-backend.ps1'
               - 'scripts/verify-frozen-backend.ps1'
+              - 'scripts/verify-windows-secure-credentials.ps1'
               - 'scripts/build-backend-macos.sh'
               - 'scripts/macos-signature-audit.sh'
               - 'scripts/build-all.ps1'
@@ -179,6 +180,9 @@ jobs:
       - name: 📦 Install Web dependencies
         shell: pwsh
         run: npm ci --prefix apps/dsa-web
+      - name: 🔐 Validate Windows safeStorage fake credential
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File scripts/verify-windows-secure-credentials.ps1
       - name: 🧊 Build and verify frozen backend
         shell: pwsh
         run: powershell -ExecutionPolicy Bypass -File scripts/build-backend.ps1
@@ -291,5 +295,7 @@ jobs:
           src/pages/__tests__/PeriodReportPage.test.tsx
           src/App.test.tsx
           src/components/layout/__tests__/SidebarNav.test.tsx
+          src/api/__tests__/systemConfig.test.ts
+          src/pages/__tests__/SettingsPage.test.tsx
       - name: 🏗️ Build
         run: npm run build

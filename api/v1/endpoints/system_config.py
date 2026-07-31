@@ -425,13 +425,16 @@ def update_system_config(
         500: {"description": "Internal server error", "model": ErrorResponse},
     },
     summary="Export env backup",
-    description="Return the raw saved .env content for configuration backup.",
+    description=(
+        "Return saved non-sensitive .env content for configuration backup. "
+        "Credentials and ciphertext are always excluded."
+    ),
 )
 def export_system_config(
     request: Request,
     service: SystemConfigService = Depends(get_system_config_service),
 ) -> ExportSystemConfigResponse:
-    """Export the active `.env` file for config backup."""
+    """Export non-sensitive entries from the active `.env` file."""
     try:
         _allow_env_backup_access(request)
     except EnvBackupAccessDenied as exc:
@@ -476,7 +479,10 @@ def export_system_config(
         500: {"description": "Internal server error", "model": ErrorResponse},
     },
     summary="Import env backup",
-    description="Merge raw .env text into the saved configuration with config version conflict protection.",
+    description=(
+        "Merge .env text into saved configuration with config version conflict protection. "
+        "Windows secure credential mode rejects credential assignments."
+    ),
 )
 def import_system_config(
     request: ImportSystemConfigRequest,

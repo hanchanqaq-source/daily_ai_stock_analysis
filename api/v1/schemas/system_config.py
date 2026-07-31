@@ -90,6 +90,8 @@ class SystemConfigItem(BaseModel):
     value: str
     raw_value_exists: bool
     is_masked: bool
+    secure_value_exists: bool = False
+    credential_source: Optional[Literal["windows_dpapi", "env_file", "runtime"]] = None
     schema_: Optional[SystemConfigFieldSchema] = Field(default=None, alias="schema")
 
 
@@ -175,6 +177,7 @@ class ExportSystemConfigResponse(BaseModel):
     content: str
     config_version: str
     updated_at: Optional[str] = None
+    credentials_excluded: bool = True
 
 
 class SystemConfigUpdateItem(BaseModel):

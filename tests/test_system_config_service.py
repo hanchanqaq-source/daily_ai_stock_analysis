@@ -514,6 +514,54 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         no_proxy_client.assert_not_called()
         completion.assert_not_called()
 
+    def test_hermes_secure_runtime_saved_secret_is_reusable_without_plaintext_response(self) -> None:
+        self._rewrite_env(
+            "STOCK_LIST=600519,000001",
+            "LLM_CHANNELS=hermes",
+            "LLM_HERMES_PROTOCOL=openai",
+            "LLM_HERMES_BASE_URL=http://127.0.0.1:8642/v1",
+        )
+        secure_value = "secure-runtime-fake"
+
+        class FakeSession:
+            def __init__(self) -> None:
+                self.trust_env = True
+
+            def get(self, _url: str, **kwargs: Any) -> Any:
+                authorization = (kwargs.get("headers") or {}).get("Authorization", "")
+                self_outer.assertTrue(authorization.endswith(secure_value))
+                return SimpleNamespace(
+                    status_code=200,
+                    ok=True,
+                    json=lambda: {"data": [{"id": "hermes-agent"}]},
+                    text="",
+                )
+
+            def close(self) -> None:
+                pass
+
+        self_outer = self
+        with patch.dict(
+            os.environ,
+            {
+                "DSA_SECURE_CREDENTIAL_MODE": "windows_dpapi",
+                "DSA_SECURE_CREDENTIAL_KEYS": "LLM_HERMES_API_KEY",
+                "LLM_HERMES_API_KEY": secure_value,
+            },
+            clear=False,
+        ), patch("src.services.system_config_service.requests.Session", side_effect=FakeSession):
+            result = self.service.discover_llm_channel_models(
+                name="hermes",
+                protocol="openai",
+                base_url="http://127.0.0.1:8642/v1",
+                api_key="******",
+                models=["hermes-agent"],
+                use_saved_secret=True,
+            )
+
+        self.assertTrue(result["success"])
+        self.assertNotIn(secure_value, json.dumps(result, ensure_ascii=False))
+
     def test_hermes_masked_key_is_not_sent_for_model_discovery(self) -> None:
         with patch("src.services.system_config_service.requests.Session") as session_cls:
             result = self.service.discover_llm_channel_models(
@@ -885,7 +933,8 @@ class SystemConfigServiceTestCase(unittest.TestCase):
 
             self.assertEqual(pre_save_items["OPENAI_BASE_URL"]["value"], "https://runtime-openai.v1")
             self.assertFalse(pre_save_items["OPENAI_BASE_URL"]["raw_value_exists"])
-            self.assertEqual(pre_save_items["OPENAI_API_KEY"]["value"], "runtime-openai-key")
+            self.assertEqual(pre_save_items["OPENAI_API_KEY"]["value"], pre_save["mask_token"])
+            self.assertTrue(pre_save_items["OPENAI_API_KEY"]["is_masked"])
             self.assertFalse(pre_save_items["OPENAI_API_KEY"]["raw_value_exists"])
             self.assertEqual(pre_save_items["LITELLM_MODEL"]["value"], "openai/gpt-4o-mini")
             self.assertTrue(pre_save_items["LITELLM_MODEL"]["raw_value_exists"])
@@ -989,9 +1038,11 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         items = {item["key"]: item for item in payload["items"]}
 
         self.assertIn("LLM_CHANNELS", items)
-        self.assertEqual(items["LLM_DEEPSEEK_API_KEY"]["value"], "sk-test-value")
+        self.assertEqual(items["LLM_DEEPSEEK_API_KEY"]["value"], payload["mask_token"])
+        self.assertTrue(items["LLM_DEEPSEEK_API_KEY"]["is_masked"])
         self.assertEqual(items["LLM_DEEPSEEK_MODELS"]["value"], "deepseek-v4-flash,deepseek-v4-pro")
-        self.assertEqual(items["LLM_MY_PROXY_API_KEYS"]["value"], "sk-key-1,sk-key-2")
+        self.assertEqual(items["LLM_MY_PROXY_API_KEYS"]["value"], payload["mask_token"])
+        self.assertTrue(items["LLM_MY_PROXY_API_KEYS"]["is_masked"])
         self.assertEqual(items["LLM_MY_PROXY_MODELS"]["value"], "gpt-5.5")
         self.assertEqual(items["LLM_MY_PROXY_API_KEYS"]["schema"]["category"], "ai_model")
         self.assertNotIn("LLM_UNUSED_API_KEY", items)
@@ -1639,7 +1690,7 @@ class SystemConfigServiceTestCase(unittest.TestCase):
 
         self.assertEqual(
             payload["content"],
-            "# Desktop config\nSTOCK_LIST=600519,000001\n\n",
+            "# Desktop config\nSTOCK_LIST=600519,000001\n",
         )
         self.assertTrue(payload["credentials_excluded"])
         self.assertNotIn("GEMINI_API_KEY", payload["content"])
@@ -4375,6 +4426,7 @@ class SystemConfigServiceTestCase(unittest.TestCase):
 
         backup_content = self.service.export_desktop_env()["content"]
         pre_clear_map = dict(self.manager.read_config_map())
+        self.assertNotIn("OPENAI_API_KEY", backup_content)
 
         clear_response = self.service.update(
             config_version=self.manager.get_config_version(),
@@ -4449,7 +4501,7 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         self.assertEqual(restored_map["LITELLM_MODEL"], pre_clear_map["LITELLM_MODEL"])
         self.assertEqual(restored_map["OPENAI_MODEL"], pre_clear_map["OPENAI_MODEL"])
         self.assertEqual(restored_map["OPENAI_BASE_URL"], pre_clear_map["OPENAI_BASE_URL"])
-        self.assertEqual(restored_map["OPENAI_API_KEY"], pre_clear_map["OPENAI_API_KEY"])
+        self.assertEqual(restored_map["OPENAI_API_KEY"], "")
 
     def test_validate_rejects_comma_only_api_key(self) -> None:
         """Whitespace/comma-only api_key must fail validation (P2: parsed-segment check)."""

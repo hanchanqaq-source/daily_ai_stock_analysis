@@ -7,6 +7,7 @@ validation hints, and category grouping.
 
 from __future__ import annotations
 
+import re
 from copy import deepcopy
 from typing import Any, Dict, List, Optional
 
@@ -1746,7 +1747,7 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "category": "notification",
         "data_type": "array",
         "ui_control": "textarea",
-        "is_sensitive": False,
+        "is_sensitive": True,
         "is_required": False,
         "is_editable": True,
         "default_value": None,
@@ -4993,6 +4994,7 @@ def get_field_definition(key: str, value_hint: Optional[str] = None) -> Dict[str
     key_upper = key.upper()
     if key_upper in _FIELD_DEFINITIONS:
         field = deepcopy(_FIELD_DEFINITIONS[key_upper])
+        field["is_sensitive"] = bool(field.get("is_sensitive")) or is_sensitive_config_key(key_upper)
         if key_upper in _FIELD_HELP_METADATA:
             field.update(deepcopy(_FIELD_HELP_METADATA[key_upper]))
         field["key"] = key_upper
@@ -5012,7 +5014,7 @@ def get_field_definition(key: str, value_hint: Optional[str] = None) -> Dict[str
         "category": category,
         "data_type": data_type,
         "ui_control": _infer_ui_control(data_type, key_upper),
-        "is_sensitive": _is_sensitive_key(key_upper),
+        "is_sensitive": is_sensitive_config_key(key_upper),
         "is_required": False,
         "is_editable": True,
         "default_value": None,
@@ -5046,9 +5048,36 @@ def build_schema_response() -> Dict[str, Any]:
     }
 
 
-def _is_sensitive_key(key: str) -> bool:
+def is_sensitive_config_key(key: str) -> bool:
+    """Return the shared security classification for persisted config values."""
+    normalized = str(key or "").strip().upper()
+    if not re.fullmatch(r"[A-Z][A-Z0-9_]{0,127}", normalized):
+        return False
+    non_sensitive_marker_keys = {
+        "AGENT_CONTEXT_COMPRESSION_TRIGGER_TOKENS",
+        "ANTHROPIC_MAX_TOKENS",
+        "DISCORD_INTERACTIONS_PUBLIC_KEY",
+        "FEISHU_WEBHOOK_KEYWORD",
+        "LLM_USAGE_HMAC_KEY_VERSION",
+    }
+    if normalized in non_sensitive_marker_keys:
+        return False
+    capability_keys = {
+        "ALPHASIFT_INSTALL_SPEC",
+        "ASTRBOT_URL",
+        "CUSTOM_WEBHOOK_URLS",
+        "DINGTALK_WEBHOOK_URL",
+        "DISCORD_WEBHOOK_URL",
+        "FEISHU_WEBHOOK_URL",
+        "GOTIFY_URL",
+        "NTFY_URL",
+        "SLACK_WEBHOOK_URL",
+        "WECHAT_WEBHOOK_URL",
+    }
+    if normalized in capability_keys or re.fullmatch(r"LLM_[A-Z0-9_]+_EXTRA_HEADERS", normalized):
+        return True
     markers = ("KEY", "TOKEN", "SECRET", "PASSWORD")
-    return any(marker in key for marker in markers)
+    return any(marker in normalized for marker in markers)
 
 
 def _infer_category(key: str) -> str:
@@ -5129,7 +5158,7 @@ def _infer_data_type(key: str, value_hint: Optional[str]) -> str:
 
 
 def _infer_ui_control(data_type: str, key: str) -> str:
-    if _is_sensitive_key(key):
+    if is_sensitive_config_key(key):
         return "password"
     if data_type == "boolean":
         return "switch"

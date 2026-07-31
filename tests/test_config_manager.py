@@ -215,11 +215,11 @@ class ConfigManagerTestCase(unittest.TestCase):
         self.env_path.write_text(
             "# Public settings\nSTOCK_LIST=600519\n\n"
             "# Credentials stay local\nOPENAI_API_KEY=first-fake\n"
-            "OPENAI_API_KEY=second-fake\nLOG_LEVEL=INFO\n",
+            "OPENAI_API_KEY=second-fake\nexport ANTHROPIC_API_KEY=third-fake\nLOG_LEVEL=INFO\n",
             encoding="utf-8",
         )
 
-        rendered = self.manager.render_without_keys({"OPENAI_API_KEY"})
+        rendered = self.manager.render_without_keys({"OPENAI_API_KEY", "ANTHROPIC_API_KEY"})
 
         self.assertEqual(
             rendered,

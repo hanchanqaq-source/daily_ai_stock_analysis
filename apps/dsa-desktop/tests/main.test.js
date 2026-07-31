@@ -237,6 +237,7 @@ test('buildBackendEnvironment injects secure credentials after source environmen
     logDir: 'C:\\PP02\\logs',
     sourceEnv: {
       OPENAI_API_KEY: 'stale-source-value',
+      ANTHROPIC_API_KEY: 'stale-unmanaged-value',
     },
     secureCredentials: {
       keys: ['OPENAI_API_KEY'],
@@ -245,6 +246,7 @@ test('buildBackendEnvironment injects secure credentials after source environmen
   });
 
   assert.equal(env.OPENAI_API_KEY === fakeValue, true);
+  assert.equal(env.ANTHROPIC_API_KEY, undefined);
   assert.equal(env.DSA_SECURE_CREDENTIAL_MODE, 'windows_dpapi');
   assert.equal(env.DSA_SECURE_CREDENTIAL_KEYS, 'OPENAI_API_KEY');
 });
@@ -289,6 +291,28 @@ test('main registers the narrow secure credential IPC surface without a read han
     assert.equal(typeof mainModule.__getIpcMainHandler(channel), 'function');
   }
   assert.equal(mainModule.__getIpcMainHandler('desktop:get-secure-credential-value'), undefined);
+});
+
+test('sanitizeEnvFile removes every sensitive assignment and preserves public structure', (t) => {
+  const mainModule = loadMainModule(t, { platform: 'win32' });
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pp02-secure-env-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const envPath = path.join(root, '.env');
+  fs.writeFileSync(
+    envPath,
+    '# Public\nSTOCK_LIST=600519\n\nOPENAI_API_KEY=first-fake\n'
+      + 'OPENAI_API_KEY=second-fake\nexport ANTHROPIC_API_KEY=third-fake\n'
+      + 'CUSTOM_WEBHOOK_URLS=https://example.invalid/fake\nLOG_LEVEL=INFO\n',
+    'utf8',
+  );
+
+  const removed = mainModule.sanitizeEnvFile(envPath);
+
+  assert.deepEqual(removed, ['ANTHROPIC_API_KEY', 'CUSTOM_WEBHOOK_URLS', 'OPENAI_API_KEY']);
+  assert.equal(
+    fs.readFileSync(envPath, 'utf8'),
+    '# Public\nSTOCK_LIST=600519\n\nLOG_LEVEL=INFO\n',
+  );
 });
 
 test('resolveBackendBindHost reads WEBUI_HOST from env file', (t) => {
@@ -522,7 +546,11 @@ test('startBackend passes WEBUI_HOST from env file to backend args and env', (t)
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsa-desktop-host-'));
   t.after(() => fs.rmSync(tmpDir, { recursive: true, force: true }));
   const envPath = path.join(tmpDir, '.env');
-  fs.writeFileSync(envPath, 'BIND_HOST=0.0.0.0\nWEBUI_HOST=${BIND_HOST}\n', 'utf-8');
+  fs.writeFileSync(
+    envPath,
+    'BIND_HOST=0.0.0.0\nWEBUI_HOST=${BIND_HOST}\nOPENAI_API_KEY=legacy-fake-value\n',
+    'utf-8',
+  );
   const spawned = [];
   const fakeBackendProcess = new EventEmitter();
   fakeBackendProcess.stdout = new EventEmitter();
@@ -557,6 +585,8 @@ test('startBackend passes WEBUI_HOST from env file to backend args and env', (t)
     '8123',
   ]);
   assert.equal(spawned[0].options.env.WEBUI_HOST, '0.0.0.0');
+  assert.equal(spawned[0].options.env.DSA_SECURE_CREDENTIAL_MODE, 'windows_dpapi');
+  assert.equal(fs.readFileSync(envPath, 'utf8').includes('OPENAI_API_KEY'), false);
 });
 
 test('extendMacDesktopBackendPath preserves existing order and avoids duplicates', (t) => {

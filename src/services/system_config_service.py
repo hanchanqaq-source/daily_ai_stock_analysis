@@ -55,6 +55,7 @@ from src.core.config_registry import (
     get_category_definitions,
     get_field_definition,
     get_registered_field_keys,
+    is_sensitive_config_key,
 )
 from src.llm.errors import call_litellm_with_param_recovery
 from src.llm.backend_registry import (
@@ -199,6 +200,7 @@ class SystemConfigService:
         "LLM_HERMES_EXTRA_HEADERS",
         "LLM_USAGE_HMAC_SECRET",
     }
+    _SECURE_CREDENTIAL_MODE = "windows_dpapi"
     _NOTIFICATION_TEST_CHANNELS: Tuple[str, ...] = (
         "wechat",
         "dingtalk",
@@ -439,9 +441,10 @@ class SystemConfigService:
         return cls._build_display_config_map(runtime_map)
 
     def get_config(self, include_schema: bool = True, mask_token: str = "******") -> Dict[str, Any]:
-        """Return display config values with mask metadata for server-masked fields."""
+        """Return display config values without exposing sensitive plaintext."""
         saved_config_map = self._build_display_config_map(self._manager.read_config_map())
         runtime_config_map = self._build_runtime_display_config_map(saved_config_map)
+        secure_keys = self._get_secure_credential_keys()
         config_map = {
             **runtime_config_map,
             **saved_config_map,
@@ -468,14 +471,25 @@ class SystemConfigService:
             field_schema = schema_by_key[key]
             display_value = self._resolve_display_value(raw_value, field_schema, raw_value_exists)
             is_masked = False
-            if key in self._SERVER_MASKED_CONFIG_KEYS and display_value:
+            is_sensitive = bool(field_schema.get("is_sensitive", False)) or is_sensitive_config_key(key)
+            if is_sensitive and display_value:
                 display_value = mask_token
                 is_masked = True
+            secure_value_exists = key in secure_keys and bool(runtime_config_map.get(key, ""))
+            credential_source: Optional[str] = None
+            if secure_value_exists:
+                credential_source = self._SECURE_CREDENTIAL_MODE
+            elif raw_value_exists and is_sensitive and bool(saved_config_map.get(key, "")):
+                credential_source = "env_file"
+            elif key in runtime_config_map and is_sensitive and bool(runtime_config_map.get(key, "")):
+                credential_source = "runtime"
             item: Dict[str, Any] = {
                 "key": key,
                 "value": display_value,
                 "raw_value_exists": raw_value_exists,
                 "is_masked": is_masked,
+                "secure_value_exists": secure_value_exists,
+                "credential_source": credential_source,
             }
             if include_schema:
                 item["schema"] = field_schema
@@ -696,16 +710,21 @@ class SystemConfigService:
         ).get_status()
 
     def export_env(self) -> Dict[str, Any]:
-        """Return the raw active `.env` content for backup."""
-        if self._manager.env_path.exists():
-            content = self._manager.env_path.read_text(encoding="utf-8")
-        else:
-            content = ""
+        """Return active non-sensitive `.env` content for backup."""
+        saved_map = self._manager.read_config_map()
+        sensitive_keys = {
+            key
+            for key, value in saved_map.items()
+            if bool(get_field_definition(key, value).get("is_sensitive", False))
+            or is_sensitive_config_key(key)
+        }
+        content = self._manager.render_without_keys(sensitive_keys)
 
         return {
             "content": content,
             "config_version": self._manager.get_config_version(),
             "updated_at": self._manager.get_updated_at(),
+            "credentials_excluded": True,
         }
 
     def export_desktop_env(self) -> Dict[str, Any]:
@@ -725,6 +744,14 @@ class SystemConfigService:
             raise ConfigConflictError(current_version=current_version)
 
         updates = self._parse_imported_env_content(content)
+        if self._is_secure_credential_mode() and any(
+            is_sensitive_config_key(item["key"])
+            or bool(get_field_definition(item["key"], item["value"]).get("is_sensitive", False))
+            for item in updates
+        ):
+            raise ConfigImportError(
+                "Windows 安全凭据不能从 .env 导入；请在设置页重新输入凭据"
+            )
         return self.update(
             config_version=config_version,
             items=updates,
@@ -778,7 +805,11 @@ class SystemConfigService:
             ), redaction_values
 
         saved_map = self._manager.read_config_map()
-        saved_key = (saved_map.get("LLM_HERMES_API_KEY") or "").strip()
+        secure_keys = self._get_secure_credential_keys()
+        if "LLM_HERMES_API_KEY" in secure_keys:
+            saved_key = (os.environ.get("LLM_HERMES_API_KEY") or "").strip()
+        else:
+            saved_key = (saved_map.get("LLM_HERMES_API_KEY") or "").strip()
         if not saved_key or is_masked_secret_placeholder(saved_key):
             error_code = (
                 "runtime_secret_not_reusable"
@@ -2029,6 +2060,23 @@ class SystemConfigService:
             raise ConfigConflictError(current_version=current_version)
 
         issues = self._collect_issues(items=items, mask_token=mask_token)
+        if self._is_secure_credential_mode():
+            for item in items:
+                key = str(item.get("key", "")).strip().upper()
+                value = "" if item.get("value") is None else str(item.get("value"))
+                field_schema = get_field_definition(key, value)
+                if (
+                    bool(field_schema.get("is_sensitive", False))
+                    and value != mask_token
+                ):
+                    issues.append(
+                        {
+                            "key": key,
+                            "code": "secure_credential_ipc_required",
+                            "message": "Windows 安全凭据必须通过桌面安全存储保存",
+                            "severity": "error",
+                        }
+                    )
         errors = [issue for issue in issues if issue["severity"] == "error"]
         if errors:
             raise ConfigValidationError(issues=errors)
@@ -2107,6 +2155,23 @@ class SystemConfigService:
             "reload_triggered": reload_triggered,
             "updated_keys": updated_keys,
             "warnings": warnings,
+        }
+
+    @classmethod
+    def _is_secure_credential_mode(cls) -> bool:
+        return (
+            os.environ.get("DSA_SECURE_CREDENTIAL_MODE", "").strip().lower()
+            == cls._SECURE_CREDENTIAL_MODE
+        )
+
+    @classmethod
+    def _get_secure_credential_keys(cls) -> Set[str]:
+        if not cls._is_secure_credential_mode():
+            return set()
+        return {
+            key
+            for raw_key in os.environ.get("DSA_SECURE_CREDENTIAL_KEYS", "").split(",")
+            if (key := raw_key.strip().upper()) and is_sensitive_config_key(key)
         }
 
     def _build_explainability_warnings(
@@ -2366,7 +2431,7 @@ class SystemConfigService:
             field_schema = get_field_definition(key, value)
             is_sensitive = bool(field_schema.get("is_sensitive", False))
 
-            if is_sensitive and value == mask_token and saved_config_map.get(key):
+            if is_sensitive and value == mask_token and effective_map.get(key):
                 continue
 
             updated_map[key] = value
@@ -3303,7 +3368,7 @@ class SystemConfigService:
             value = "" if item.get("value") is None else str(item.get("value"))
             field_schema = get_field_definition(key, value)
             if bool(field_schema.get("is_sensitive", False)) and value == mask_token:
-                if key in saved_map:
+                if key in effective_map:
                     continue
             effective_map[key] = value
 
@@ -3338,7 +3403,7 @@ class SystemConfigService:
             key = item["key"]
             value = item["value"]
             field_schema = get_field_definition(key, value)
-            if bool(field_schema.get("is_sensitive", False)) and value == mask_token and key in saved_map:
+            if bool(field_schema.get("is_sensitive", False)) and value == mask_token and key in effective_map:
                 continue
             effective_map[key] = value
         return self._build_display_config_map(effective_map)

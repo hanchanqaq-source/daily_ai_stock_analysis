@@ -517,7 +517,7 @@ class SystemConfigApiTestCase(unittest.TestCase):
         self.assertIn("不会启动 scheduler", schedule_time_warning)
         self.assertNotIn("重启当前进程", schedule_time_warning)
 
-    def test_export_system_config_returns_raw_env_content(self) -> None:
+    def test_export_system_config_excludes_credentials(self) -> None:
         self.env_path.write_text(
             "# Web config\nSTOCK_LIST=600519,000001\nGEMINI_API_KEY=secret-key-value\nADMIN_AUTH_ENABLED=true\n",
             encoding="utf-8",
@@ -533,8 +533,9 @@ class SystemConfigApiTestCase(unittest.TestCase):
 
         self.assertEqual(
             payload["content"],
-            "# Web config\nSTOCK_LIST=600519,000001\nGEMINI_API_KEY=secret-key-value\nADMIN_AUTH_ENABLED=true\n",
+            "# Web config\nSTOCK_LIST=600519,000001\nADMIN_AUTH_ENABLED=true\n",
         )
+        self.assertTrue(payload["credentials_excluded"])
         self.assertEqual(payload["config_version"], self.manager.get_config_version())
 
     def test_import_system_config_merges_updates(self) -> None:

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, ipcMain, shell, nativeTheme } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, shell, nativeTheme, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
@@ -14,6 +14,9 @@ const { downloadHttps, sha256File } = require('./portable-update/portableDownloa
 const { extractAndVerify } = require('./portable-update/portableArchive');
 const { buildUpdatePlan, writeUpdatePlan } = require('./portable-update/portablePlan');
 const { copyHelperToTemp } = require('./portable-update/portableTransaction');
+const { CredentialVault, SecureCredentialError } = require('./secure-credentials/credentialVault');
+const { isSensitiveConfigKey } = require('./secure-credentials/sensitiveKeys');
+const { sanitizeEnvFile } = require('./secure-credentials/envSanitizer');
 
 let mainWindow = null;
 let backendProcess = null;
@@ -26,6 +29,8 @@ let electronAutoUpdater = undefined;
 let electronAutoUpdaterConfigured = false;
 let electronUpdateCheckInFlight = false;
 let portableRelease = null;
+let credentialVault = null;
+let activeBackendRuntime = null;
 
 function resolveWindowBackgroundColor() {
   return nativeTheme.shouldUseDarkColors ? '#08080c' : '#f4f7fb';
@@ -893,6 +898,7 @@ function buildBackendEnvironment({
   port = null,
   host = null,
   sourceEnv = process.env,
+  secureCredentials = null,
 }) {
   const selectedPort = Number(port);
   const selectedHost = normalizeBackendBindHost(
@@ -918,6 +924,24 @@ function buildBackendEnvironment({
     env.WEBUI_PORT = String(selectedPort);
   }
 
+  if (secureCredentials && Array.isArray(secureCredentials.keys) && secureCredentials.values) {
+    for (const key of Object.keys(env)) {
+      if (isSensitiveConfigKey(key)) {
+        delete env[key];
+      }
+    }
+    const keys = [...new Set(secureCredentials.keys.map((key) => String(key).trim().toUpperCase()))]
+      .filter((key) => isSensitiveConfigKey(key))
+      .sort();
+    for (const key of keys) {
+      if (Object.hasOwn(secureCredentials.values, key)) {
+        env[key] = String(secureCredentials.values[key]);
+      }
+    }
+    env.DSA_SECURE_CREDENTIAL_MODE = 'windows_dpapi';
+    env.DSA_SECURE_CREDENTIAL_KEYS = keys.join(',');
+  }
+
   if (isMac) {
     env.PATH = extendMacDesktopBackendPath(sourceEnv.PATH);
   }
@@ -934,6 +958,32 @@ function sleep(ms) {
 function ensureDirectory(dirPath) {
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath, { recursive: true });
+  }
+}
+
+function ensureCredentialVault() {
+  if (!credentialVault) {
+    credentialVault = new CredentialVault({
+      safeStorage,
+      platform: process.platform,
+      vaultPath: path.join(app.getPath('userData'), 'secure-credentials.v1.json'),
+    });
+  }
+  return credentialVault;
+}
+
+function isTrustedSecureCredentialSender(event, expectedWebContents = mainWindow?.webContents) {
+  return Boolean(
+    event
+    && expectedWebContents
+    && event.sender === expectedWebContents
+    && event.senderFrame === expectedWebContents.mainFrame
+  );
+}
+
+function requireTrustedSecureCredentialSender(event) {
+  if (!isTrustedSecureCredentialSender(event)) {
+    throw new SecureCredentialError('transaction_invalid');
   }
 }
 
@@ -1190,7 +1240,7 @@ function waitForHealth(
   });
 }
 
-function startBackend({ port, envFile, dbPath, logDir, host = null }) {
+function startBackend({ port, envFile, dbPath, logDir, host = null, secureCredentials = undefined }) {
   const backendPath = resolveBackendPath();
   backendStartError = null;
   const launchStartedAt = Date.now();
@@ -1199,7 +1249,24 @@ function startBackend({ port, envFile, dbPath, logDir, host = null }) {
     DESKTOP_BACKEND_DEFAULT_HOST
   );
 
-  const env = buildBackendEnvironment({ envFile, dbPath, logDir, port, host: bindHost });
+  let resolvedSecureCredentials = secureCredentials;
+  if (resolvedSecureCredentials === undefined && isWindows) {
+    resolvedSecureCredentials = ensureCredentialVault().buildEnvironment();
+    const removedLegacyCredentialKeys = sanitizeEnvFile(envFile);
+    if (removedLegacyCredentialKeys.length > 0) {
+      logLine(
+        `[credentials] removed ${removedLegacyCredentialKeys.length} legacy plaintext assignment(s): ${removedLegacyCredentialKeys.join(', ')}`
+      );
+    }
+  }
+  const env = buildBackendEnvironment({
+    envFile,
+    dbPath,
+    logDir,
+    port,
+    host: bindHost,
+    secureCredentials: resolvedSecureCredentials,
+  });
 
   const args = buildBackendArgs({ host: bindHost, port });
   let launchMode = '';
@@ -1805,6 +1872,83 @@ ipcMain.handle('desktop:open-release-page', async (_event, releaseUrl) => {
   return true;
 });
 
+ipcMain.handle('desktop:get-secure-credential-status', (event) => {
+  requireTrustedSecureCredentialSender(event);
+  if (!isWindows) {
+    return { supported: false, storage: 'windows_dpapi', configuredKeys: [] };
+  }
+  return ensureCredentialVault().status();
+});
+
+ipcMain.handle('desktop:prepare-secure-credential-update', (event, payload = {}) => {
+  requireTrustedSecureCredentialSender(event);
+  if (!isWindows) {
+    return {
+      supported: false,
+      transactionId: null,
+      handledKeys: [],
+      changedKeys: [],
+      skippedMaskedKeys: [],
+    };
+  }
+  const vault = ensureCredentialVault();
+  if (!vault.status().supported) {
+    throw new SecureCredentialError('encryption_unavailable');
+  }
+  const transaction = vault.prepare(payload.items, payload.maskToken || '******');
+  return {
+    supported: true,
+    transactionId: transaction.id,
+    handledKeys: transaction.handledKeys,
+    changedKeys: transaction.changedKeys,
+    skippedMaskedKeys: transaction.skippedMaskedKeys,
+  };
+});
+
+ipcMain.handle('desktop:commit-secure-credential-update', (event, transactionId) => {
+  requireTrustedSecureCredentialSender(event);
+  ensureCredentialVault().commit(transactionId);
+  return { committed: true };
+});
+
+ipcMain.handle('desktop:rollback-secure-credential-update', (event, transactionId) => {
+  requireTrustedSecureCredentialSender(event);
+  ensureCredentialVault().rollback(transactionId);
+  return { rolledBack: true };
+});
+
+ipcMain.handle('desktop:finalize-secure-credential-update', async (event, transactionId) => {
+  requireTrustedSecureCredentialSender(event);
+  if (!activeBackendRuntime) {
+    throw new SecureCredentialError('transaction_invalid');
+  }
+  const removedKeys = sanitizeEnvFile(activeBackendRuntime.envFile);
+  await stopBackend();
+  if (backendProcess) {
+    throw new Error('Backend did not stop before secure credential restart.');
+  }
+  startBackend(activeBackendRuntime);
+  const healthUrl = buildBackendUrl(
+    activeBackendRuntime.connectHost,
+    activeBackendRuntime.port,
+    '/api/health',
+  );
+  await waitForHealth(healthUrl, 60000, 250, 1500, () => {
+    if (backendStartError) {
+      return 'backend start error';
+    }
+    if (!backendProcess) {
+      return 'backend process is unavailable';
+    }
+    if (backendProcess.exitCode !== null || backendProcess.signalCode) {
+      return 'backend process exited';
+    }
+    return null;
+  });
+  ensureCredentialVault().finalize(transactionId);
+  return { finalized: true, removedKeys };
+});
+
 async function createWindow() {
   const restoreResult = isWindowsNsisInstalledApp() ? restorePackagedRuntimeStateFromBackup() : null;
   const macMigrationResult = migrateMacPackagedRuntimeState();
@@ -1909,9 +2053,17 @@ async function createWindow() {
 
   const dbPath = path.join(appDir, 'data', 'stock_analysis.db');
   const logDir = path.join(appDir, 'logs');
+  activeBackendRuntime = {
+    port,
+    envFile: envPath,
+    dbPath,
+    logDir,
+    host: backendBindHost,
+    connectHost: backendConnectHost,
+  };
 
   try {
-    const launchInfo = startBackend({ port, envFile: envPath, dbPath, logDir, host: backendBindHost });
+    const launchInfo = startBackend(activeBackendRuntime);
     logStartup(`Backend launch mode=${launchInfo.mode}`);
     logStartup(`Backend launch command=${launchInfo.command}`);
     logStartup(`Backend launch cwd=${launchInfo.cwd}`);
@@ -2052,6 +2204,8 @@ module.exports = {
   resolveBackendBindHost,
   resolveDesktopConnectHost,
   restorePackagedRuntimeStateFromBackup,
+  isTrustedSecureCredentialSender,
+  sanitizeEnvFile,
   sanitizeReleaseUrl,
   startBackend,
   stopBackend,

@@ -65,6 +65,42 @@ export class SystemConfigConflictError extends Error {
   }
 }
 
+interface DesktopSecureCredentialPrepareResult {
+  supported: boolean;
+  transactionId?: string | null;
+  handledKeys: string[];
+  changedKeys: string[];
+  skippedMaskedKeys: string[];
+}
+
+interface DesktopSecureCredentialBridge {
+  prepareSecureCredentialUpdate(payload: {
+    items: UpdateSystemConfigRequest['items'];
+    maskToken: string;
+  }): Promise<DesktopSecureCredentialPrepareResult>;
+  commitSecureCredentialUpdate(transactionId: string): Promise<unknown>;
+  rollbackSecureCredentialUpdate(transactionId: string): Promise<unknown>;
+  finalizeSecureCredentialUpdate(transactionId: string): Promise<unknown>;
+}
+
+function getDesktopSecureCredentialBridge(): DesktopSecureCredentialBridge | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  const candidate = (window as typeof window & { dsaDesktop?: Partial<DesktopSecureCredentialBridge> })
+    .dsaDesktop;
+  if (
+    !candidate
+    || typeof candidate.prepareSecureCredentialUpdate !== 'function'
+    || typeof candidate.commitSecureCredentialUpdate !== 'function'
+    || typeof candidate.rollbackSecureCredentialUpdate !== 'function'
+    || typeof candidate.finalizeSecureCredentialUpdate !== 'function'
+  ) {
+    return null;
+  }
+  return candidate as DesktopSecureCredentialBridge;
+}
+
 function toSnakeUpdatePayload(payload: UpdateSystemConfigRequest): Record<string, unknown> {
   return {
     config_version: payload.configVersion,
@@ -303,6 +339,79 @@ export const systemConfigApi = {
 
   async update(payload: UpdateSystemConfigRequest): Promise<UpdateSystemConfigResponse> {
     try {
+      const desktopBridge = getDesktopSecureCredentialBridge();
+      if (desktopBridge) {
+        const maskToken = payload.maskToken ?? '******';
+        const validation = await this.validate({ items: payload.items });
+        if (!validation.valid) {
+          throw new SystemConfigValidationError(
+            '配置校验失败',
+            validation.issues,
+          );
+        }
+
+        const prepared = await desktopBridge.prepareSecureCredentialUpdate({
+          items: payload.items,
+          maskToken,
+        });
+        if (prepared.supported && prepared.transactionId && prepared.handledKeys.length > 0) {
+          const transactionId = prepared.transactionId;
+          const handledKeys = new Set(prepared.handledKeys.map((key) => key.toUpperCase()));
+          const publicItems = payload.items.filter((item) => !handledKeys.has(item.key.toUpperCase()));
+          let backendResult: UpdateSystemConfigResponse = {
+            success: true,
+            configVersion: payload.configVersion,
+            appliedCount: 0,
+            skippedMaskedCount: 0,
+            reloadTriggered: false,
+            updatedKeys: [],
+            warnings: [],
+          };
+          let backendPersisted = false;
+
+          try {
+            await desktopBridge.commitSecureCredentialUpdate(transactionId);
+            if (publicItems.length > 0) {
+              const response = await apiClient.put<Record<string, unknown>>(
+                '/api/v1/system/config',
+                toSnakeUpdatePayload({
+                  ...payload,
+                  items: publicItems,
+                  reloadNow: false,
+                }),
+              );
+              backendResult = toCamelCase<UpdateSystemConfigResponse>(response.data);
+            }
+            backendPersisted = true;
+            await desktopBridge.finalizeSecureCredentialUpdate(transactionId);
+          } catch (error) {
+            if (!backendPersisted) {
+              try {
+                await desktopBridge.rollbackSecureCredentialUpdate(transactionId);
+              } catch {
+                // Keep the original failure. Main returns only generic secure-storage errors.
+              }
+            }
+            throw error;
+          }
+
+          const refreshed = await this.getConfig(false);
+          return {
+            ...backendResult,
+            success: true,
+            configVersion: refreshed.configVersion,
+            appliedCount: backendResult.appliedCount + prepared.changedKeys.length,
+            skippedMaskedCount:
+              backendResult.skippedMaskedCount + prepared.skippedMaskedKeys.length,
+            reloadTriggered: true,
+            updatedKeys: [...new Set([
+              ...backendResult.updatedKeys,
+              ...prepared.changedKeys,
+            ])],
+          };
+        }
+      }
+
       const response = await apiClient.put<Record<string, unknown>>(
         '/api/v1/system/config',
         toSnakeUpdatePayload(payload),
