@@ -306,7 +306,7 @@ Confirm only approved governance, service, CLI, tests and docs changed; no `.db`
 report, log, fixture artifact, secret-like value, dependency or workflow change is tracked. Confirm
 the report schema cannot contain row values.
 
-- [ ] **Step 3: Push and create/update one Draft PR**
+- [x] **Step 3: Push and create/update one Draft PR**
 
 Push `agent/pp02-work4-r4-database-rehearsal`, create one Draft PR targeting `main`, and include
 scope, TDD evidence, data exclusions, rollback, local verification, authorization locks and rollback
@@ -317,19 +317,19 @@ plan. Keep it Draft.
 Add a concise note that each is superseded by merged PR #9, close it, and verify the branch remains.
 Do not delete branches or rewrite history.
 
-- [ ] **Step 5: Wait for and inspect full CI**
+- [x] **Step 5: Wait for and inspect full CI**
 
 Pin the PR Head SHA, require every expected CI job to complete successfully, and inspect failing logs
 if any. Fix only in-scope root causes with a new failing regression test, rerun local gates, push, and
 restart the fixed-Head check.
 
-- [ ] **Step 6: Write final evidence without creating a self-referential CI loop**
+- [x] **Step 6: Write final evidence without creating a self-referential CI loop**
 
 Put final Run IDs and fixed-Head metadata in the Draft PR body/comment when that avoids changing
 Head. Repository state may record the verified implementation Head and state `CI_PASS` only if a
 later state commit itself receives the required full CI.
 
-- [ ] **Step 7: Judge and release the Work lock**
+- [x] **Step 7: Judge and release the Work lock**
 
 Only after code, tests, report, GitHub state and ledgers agree, set Work4 to `COMPLETED — DRAFT_HOLD`,
 record the next unstarted segment, and state that the user should open a new same-project Codex chat

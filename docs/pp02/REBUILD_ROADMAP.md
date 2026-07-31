@@ -10,8 +10,8 @@
 | R1｜需求与旧功能迁移确认 | 保留、调整、不迁移及冲突裁决 | 完成 | `R1_REQUIREMENTS_MIGRATION_CONFIRMATION.md` |
 | R2｜迁移正式候选计划 | 把 R1 决定拆成独立可验收切片 | 完成 | `R2_MIGRATION_EXECUTION_PLAN.md` |
 | R3｜按优先级迁移旧 PP02 功能 | 每个切片单独测试、CI 和 Judge | 完成 | R3.1–R3.7 已由 PR #11 合入 `main@eb32298…` |
-| R4｜数据库兼容与脱敏迁移演练 | 空库/人工假数据验证 | 进行中 | Work4 方案 A；可重复脚本、核对与回滚 |
-| R5｜Windows 本机验收 | 安装、启动、Web/Desktop 与安全默认值 | Deferred | 从固定 PR Head 新建隔离目录验收 |
+| R4｜数据库兼容与脱敏迁移演练 | 空库/人工假数据验证 | 完成 | PR #12 Head `f1b433a7…` / Run `30660971800` |
+| R5｜Windows 本机验收 | 安装、启动、Web/Desktop 与安全默认值 | 完成 | Work2 / PR #9 真机启动与回滚模拟通过 |
 | R6｜正式数据迁移 | 迁移经确认的真实数据 | 未启动 | 单独数据授权、备份与回滚 |
 | R7｜替换 main 与 Release | Ready、合并、main、Tag、Release | 未启动 | 每项分别精确授权 |
 
@@ -49,3 +49,7 @@ PR #11 最终 Head `173b3d3…` 完成 8/8 CI 和固定 Head Windows 假凭据�
 用户选择方案 A。当前先校正状态并关闭已由 PR #9 替代的历史 Draft PR #7/#8，
 保留分支和历史；随后通过合成证明、临时数据库副本、现有股票备份恢复契约和失败
 回滚探针形成可重复演练。只用空库和人工假数据，停在独立 Draft PR 完整 CI。
+
+最终实现 Head `f1b433a7…` 的 Run `30660971800` 全部适用 Job success；PR #12
+保持 Draft，Work4 Judge 为 `PASS — WORK4 COMPLETED — DRAFT_HOLD`。下一未启动大段
+是 Work5 / R6 正式数据迁移授权与计划；真实数据库和数据仍需单独授权。

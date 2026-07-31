@@ -4,7 +4,7 @@
 
 ```text
 WORK_ID=WORK-004
-WORK_STATE=IN_PROGRESS
+WORK_STATE=COMPLETED
 WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
 BASE=eb32298c8f3cbec2ff400dda37d3267a7181af40
 BRANCH=agent/pp02-work4-r4-database-rehearsal
@@ -51,6 +51,12 @@ SCOPE_DRIFT=FALSE
 | 数据风险 | 真实数据库/数据禁止；只接受空库和人工合成证明 |
 | Judge 上限 | `PASS — DRAFT_HOLD` |
 | 允许进入 Build | 是；先完成设计/计划检查点和 RED |
+
+## 完成状态
+
+- Work4 已在 Draft PR #12 完成范围内实现、测试、CI 和 Judge。
+- 本合同不继续授权 R6、真实数据库/数据、Ready、合并、Tag 或 Release。
+- 下一 Work 尚未启动；用户新开同项目聊天后只发送“下一步”。
 
 ---
 

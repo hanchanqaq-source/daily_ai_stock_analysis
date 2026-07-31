@@ -1,6 +1,6 @@
 # WORK-004｜R4 数据库兼容与脱敏迁移演练回传
 
-> 当前 Work 运行中。只有本 Work 的新鲜证据可以更新当前结果；旧 Work 内容在下方
+> 当前 Work 已结束。只有本 Work 的新鲜证据可以更新当前结果；旧 Work 内容在下方
 > 作为追加历史保留。
 
 ## 当前进度
@@ -21,12 +21,18 @@
   499 subtests passed`；Flake8 严重错误 0，AI 资产、语法、确定性检查和差异格式通过。
 - Base-to-Head 安全自审通过；未跟踪数据库、环境文件、备份、报告、日志、依赖或
   Workflow 变化，报告不包含行值或备份正文。
+- 固定实现 Head `f1b433a7a97ed43a7048aeb4239b76357003083b`；Tree
+  `cdc54b1d1488358a13c40223a6354c901b8a5001`；CI Run `30660971800` 中 AI 治理、
+  变更检测、Docker 和后端门全部 success，未改路径 Job 按规则 skipped。
+- PR #12 保持 Draft；未 Ready、未合并、未写 `main`、未 Tag、未 Release，且未使用
+  真实数据库、数据、备份、账号或凭据。
 
 ## 当前 Judge
 
-`LOCAL_VERIFIED — CI_PENDING — DRAFT_HOLD`
+`PASS — WORK4 COMPLETED — DRAFT_HOLD`
 
-Draft PR 固定 Head CI 和最终回传尚未完成，不得宣布 Work4 结束。
+施工权已释放。下一段为未启动的 `WORK-005 / R6 正式数据迁移授权与计划`；新聊天
+只能先做接管核对和白话授权决策，不得自动接触真实数据。
 
 ---
 

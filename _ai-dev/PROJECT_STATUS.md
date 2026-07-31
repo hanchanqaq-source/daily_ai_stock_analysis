@@ -9,20 +9,22 @@ CHAT_ROLE=AUTO_TAKEOVER
 WORK_ID=WORK-004
 ROLE_LOCK=SUPERSEDED_BY_PP02-WORK-HANDOFF-002
 WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
-WORK_STATE=IN_PROGRESS
+WORK_STATE=COMPLETED
+EXECUTION_LOCK=RELEASED
 APPLICATION_BASE_VERSION=3.28.0
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
 ACTIVE_BASE=eb32298c8f3cbec2ff400dda37d3267a7181af40
 ACTIVE_BRANCH=agent/pp02-work4-r4-database-rehearsal
 ACTIVE_PR=12
-CURRENT_STAGE=R4 / Draft Candidate Publication and CI
+CURRENT_STAGE=R4 / Completed
 CURRENT_WORK=数据库兼容与脱敏迁移演练
 ACTIVE_GOAL=只用空库和人工假数据建立可重复的兼容检查、股票事件迁移与回滚演练
-CURRENT_STATUS=LOCAL_VERIFIED — CI_PENDING — DRAFT_HOLD
+CURRENT_STATUS=COMPLETED — CI_PASS — DRAFT_HOLD
 ACTIVE_BLOCKER=NONE
-NEXT_ACTION=发布最终候选到Draft PR #12，固定远程Head并验证完整CI
-AUTHORIZATION_REQUIRED=FALSE_FOR_WORK4_FRAMEWORK_STATE_BRANCH_COMMIT_PUSH_DRAFT_PR_CI_SYNTHETIC_DATA; READY/MERGE/MAIN/TAG/RELEASE/REAL_DATABASE/REAL_DATA/REAL_CREDENTIALS/NEXT_STAGE_REQUIRE_NEW_AUTHORIZATION
+NEXT_WORK=WORK-005 / R6 正式数据迁移授权与计划 / UNSTARTED
+NEXT_ACTION=用户新开同项目Codex聊天且不改聊天名称，只发送“下一步”；新Work先做接管核对和R6白话决策卡
+AUTHORIZATION_REQUIRED=TRUE_FOR_NEXT_STAGE; READY/MERGE/MAIN/TAG/RELEASE/REAL_DATABASE/REAL_DATA/REAL_CREDENTIALS_REQUIRE_SEPARATE_AUTHORIZATION
 LAST_UPDATED=2026-07-31
 ```
 
@@ -41,17 +43,17 @@ LAST_UPDATED=2026-07-31
 - PP02 保持单用户；旧用户档案、切换、隔离和用户级备份全部不迁移。
 - 官方账户/组合事件账本是持仓唯一事实源。
 - R2：迁移拆为 R3.1–R3.7；R3 已全部完成并通过 PR #11 合入 `main`。
-- R4：用户已选择方案 A，当前只用空库和人工假数据执行兼容与脱敏迁移演练。
-- Windows 实机验收为 `Deferred`，不把 D 盘目录缺失登记为云端阻塞。
+- R4：方案 A 已完成；只用空库和人工假数据完成兼容、迁移、排除和回滚演练。
+- R5：Work2 已通过 PR #9 完成 Windows 真机验收并进入 `main`。
 
 ## 当前保护边界
 
-- Work4 只允许独立分支、Commit、Push、Draft PR、CI 和范围内修复。
+- Work4 已结束并释放施工权；PR #12 继续保持 Draft，不自动进入下一阶段。
 - 不接触真实 `.env`、Token、API Key、Webhook 或真实数据库。
 - 不迁移基金、多用户或旧平行持仓表。
 - R4 输入只允许空 SQLite 或带精确合成证明的人工假数据 fixture；不得以“脱敏”
   名义读取或复制真实数据库。
-- 不执行 Ready、Merge、`main` 写入、Tag、Release、R5/R6/R7 或真实迁移。
+- 不执行 Ready、Merge、`main` 写入、Tag、Release、R6/R7 或真实迁移。
 - 仓库经只读安全审计和用户授权后已改为 Public；PR、分支和 Actions 历史公开，
   但真实数据、密钥和备份文件仍不得进入仓库。
 
@@ -86,7 +88,12 @@ LAST_UPDATED=2026-07-31
   499 subtests passed`；Flake8 严重错误为 0，AI 资产、语法、确定性检查和差异格式均通过。
 - Base-to-Head 自审只包含批准的规则、状态、设计、服务、CLI、测试和文档；未跟踪
   `.db`、`.env`、备份、报告、日志、依赖或 Workflow 变化，报告结构不含行值。
-- 当前尚未发布最终远程候选或验证固定 Head CI，不能宣布 Work4 结束。
+- 最终实现候选 Head `f1b433a7a97ed43a7048aeb4239b76357003083b`，Tree
+  `cdc54b1d1488358a13c40223a6354c901b8a5001`；CI Run `30660971800` 的
+  AI 治理、变更检测、Docker 和后端门全部 success，未改路径的 Desktop/Web/打包
+  Job 按规则 skipped。PR #12 保持 Draft。
+- Judge：`PASS — WORK4 COMPLETED — DRAFT_HOLD`。施工权已释放；R6 未启动且需要
+  新授权，不得读取真实数据库或数据。
 
 ## R3.1 实现与验证证据
 
