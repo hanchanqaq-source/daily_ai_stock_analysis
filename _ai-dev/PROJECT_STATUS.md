@@ -5,19 +5,24 @@
 ```text
 PROJECT_ID=PP02
 PROJECT_NAME=AI 每日股票分析
-CHAT_ROLE=WORK
-WORK_ID=WORK-003
-ROLE_LOCK=TRUE
+CHAT_ROLE=AUTO_TAKEOVER
+WORK_ID=WORK-004
+ROLE_LOCK=SUPERSEDED_BY_PP02-WORK-HANDOFF-002
+WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
+WORK_STATE=IN_PROGRESS
 APPLICATION_BASE_VERSION=3.28.0
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-CURRENT_STAGE=R3.7 / Final Evidence Head CI
-CURRENT_WORK=Windows 安全凭据
-ACTIVE_GOAL=在独立Draft PR上以safeStorage/DPAPI建立Windows Desktop安全凭据边界
-CURRENT_STATUS=IMPLEMENTATION_AND_HEAD_BOUND_WINDOWS_VALIDATION_PASS — FINAL_EVIDENCE_HEAD_CI_PENDING — DRAFT_HOLD
+ACTIVE_BASE=eb32298c8f3cbec2ff400dda37d3267a7181af40
+ACTIVE_BRANCH=agent/pp02-work4-r4-database-rehearsal
+ACTIVE_PR=PENDING_INITIAL_DRAFT
+CURRENT_STAGE=R4 / Framework Alignment and Design
+CURRENT_WORK=数据库兼容与脱敏迁移演练
+ACTIVE_GOAL=只用空库和人工假数据建立可重复的兼容检查、股票事件迁移与回滚演练
+CURRENT_STATUS=WORK4_OPTION_A_APPROVED — PLAN_IN_PROGRESS — DRAFT_HOLD
 ACTIVE_BLOCKER=NONE
-NEXT_ACTION=发布首轮固定Head验收证据，并完成证据提交自身的八项最终CI
-AUTHORIZATION_REQUIRED=FALSE_FOR_R3_7_BUILD_TEST_COMMIT_DRAFT_PR_CI_FAKE_CREDENTIAL_VALIDATION; READY/MERGE/MAIN/TAG/RELEASE/REAL_CREDENTIALS/NEXT_STAGE_REQUIRE_NEW_AUTHORIZATION
+NEXT_ACTION=写入自动接力规则与R4设计计划，建立初始Draft PR后按TDD实现
+AUTHORIZATION_REQUIRED=FALSE_FOR_WORK4_FRAMEWORK_STATE_BRANCH_COMMIT_PUSH_DRAFT_PR_CI_SYNTHETIC_DATA; READY/MERGE/MAIN/TAG/RELEASE/REAL_DATABASE/REAL_DATA/REAL_CREDENTIALS/NEXT_STAGE_REQUIRE_NEW_AUTHORIZATION
 LAST_UPDATED=2026-07-31
 ```
 
@@ -35,20 +40,37 @@ LAST_UPDATED=2026-07-31
 - R1：需求、保留/调整/不迁移分类和冲突处理已确认。
 - PP02 保持单用户；旧用户档案、切换、隔离和用户级备份全部不迁移。
 - 官方账户/组合事件账本是持仓唯一事实源。
-- R2：迁移拆为 R3.1–R3.7；R3.1–R3.6 已完成，当前执行 R3.7
-  Windows 安全凭据。
+- R2：迁移拆为 R3.1–R3.7；R3 已全部完成并通过 PR #11 合入 `main`。
+- R4：用户已选择方案 A，当前只用空库和人工假数据执行兼容与脱敏迁移演练。
 - Windows 实机验收为 `Deferred`，不把 D 盘目录缺失登记为云端阻塞。
 
 ## 当前保护边界
 
-- PR #3 不转 Ready、不合并、不发布 Release。
+- Work4 只允许独立分支、Commit、Push、Draft PR、CI 和范围内修复。
 - 不接触真实 `.env`、Token、API Key、Webhook 或真实数据库。
 - 不迁移基金、多用户或旧平行持仓表。
-- R3.7 只允许 Windows Desktop `safeStorage`/DPAPI 凭据 vault、窄 IPC、后端启动
-  环境注入、敏感配置屏蔽/导入导出边界、测试和文档。
-- 不读取或迁移旧明文凭据，不使用真实凭据，不扩展跨平台密钥服务或后续阶段。
+- R4 输入只允许空 SQLite 或带精确合成证明的人工假数据 fixture；不得以“脱敏”
+  名义读取或复制真实数据库。
+- 不执行 Ready、Merge、`main` 写入、Tag、Release、R5/R6/R7 或真实迁移。
 - 仓库经只读安全审计和用户授权后已改为 Public；PR、分支和 Actions 历史公开，
   但真实数据、密钥和备份文件仍不得进入仓库。
+
+## 2026-07-31 Work3 / R3.7 最终收口
+
+- PR #11 最终 Head `173b3d3bd358b281c4dd86057b5162605bd277b0` 的 Run
+  `30643230898` 为 8/8 success；Windows Job `91198401578` 与固定 Head 一致。
+- PR #11 已合并；当前远程 `main` Head 为
+  `eb32298c8f3cbec2ff400dda37d3267a7181af40`。R3 全部完成，Work3 已关闭。
+- 该完成事实不授权 R4 之后的真实数据、Ready、合并、Tag 或 Release。
+
+## 2026-07-31 Work4 / R4 接管
+
+- 当前唯一 Active Work：`WORK-004`；Base `main@eb32298…`；分支
+  `agent/pp02-work4-r4-database-rehearsal`。
+- 用户选择方案 A，并批准自动接力规则。旧窗口角色锁已由
+  `PP02-WORK-HANDOFF-002` 替代；聊天显示名称保持原样。
+- PR #7/#8 是已被 PR #9 替代的历史 Draft，获准关闭但保留分支和全部历史。
+- R4 只使用动态生成的空库和人工假数据；Judge 上限为 `DRAFT_HOLD`。
 
 ## R3.1 实现与验证证据
 

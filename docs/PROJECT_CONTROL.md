@@ -13,9 +13,11 @@
 | 官方上游 | `ZhuLinsen/daily_stock_analysis` |
 | 当前官方基线 | `v3.28.0` / `905c339d80ad2daa6fd2bab3bb10267b23c7ac1c` |
 | 项目控制框架 | `P000/P001 V1.5.6` |
-| 当前 Work | `WORK-PP02-CLOUD-REBUILD-001` |
-| 当前阶段 | R1/R2/R3.1 完成；R3.2 实现 Head 8/8 CI 通过，等待最终 Head 收口 |
-| 后续路线 | [`pp02/REBUILD_ROADMAP.md`](pp02/REBUILD_ROADMAP.md)；Windows 验收 Deferred |
+| 当前 Work | `WORK-004｜R4 数据库兼容与脱敏迁移演练` |
+| 当前阶段 | R3 已完成并进入 `main@eb32298…`；R4 方案 A 已启动 |
+| 当前执行模式 | 一个大段一个 Work；任意项目 Codex 聊天可核验后接管；同一时间只允许一个 Active Work |
+| 聊天名称 | 永不由项目自动流程修改 |
+| 后续路线 | [`pp02/REBUILD_ROADMAP.md`](pp02/REBUILD_ROADMAP.md)；R5/R6/R7 继续受独立授权门控制 |
 
 ## Work 1 历史身份
 

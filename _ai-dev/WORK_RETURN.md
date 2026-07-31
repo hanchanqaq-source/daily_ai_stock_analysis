@@ -1,4 +1,26 @@
-# WORK-PP02-CLOUD-REBUILD-001 回传
+# WORK-004｜R4 数据库兼容与脱敏迁移演练回传
+
+> 当前 Work 运行中。只有本 Work 的新鲜证据可以更新当前结果；旧 Work 内容在下方
+> 作为追加历史保留。
+
+## 当前进度
+
+- 已核对 `main@eb32298…`、PR #11 合并、PR #7/#8 仍 Open/Draft，以及旧台账漂移。
+- 已建立隔离分支 `agent/pp02-work4-r4-database-rehearsal`。
+- 已选择并记录 `PP02-WORK-HANDOFF-002`；聊天显示名称保持不变。
+- 已冻结 R4 设计；仅允许空库和人工假数据。
+- 基线专项：`tests/test_storage.py` + `tests/test_portfolio_backup_service.py` 为
+  `30 passed`；`scripts/check_ai_assets.py` 通过。
+
+## 当前 Judge
+
+`IN_PROGRESS — DRAFT_HOLD`
+
+实现、完整本地门、Draft PR CI 和最终回传尚未完成，不得宣布 Work4 结束。
+
+---
+
+# 历史回传｜WORK-PP02-CLOUD-REBUILD-001
 
 > 运行中记录；只有本 Work 的新鲜证据可以更新本文件。
 

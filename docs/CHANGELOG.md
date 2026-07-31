@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - [改进] 安全凭据与 `.env` 原始字节版本绑定；解密、版本、origin、事务或重启异常均 fail closed。
 - [改进] 敏感配置全量遮罩，配置导出排除凭据，Windows secure mode 明确拒绝裸键或引号键的敏感 `.env` 导入。
 - [测试] Windows CI 使用与 PR Head 绑定的构造假凭据验证真实 `safeStorage`，并扫描源码根目录、日志、ZIP 和解包产物。
+- [文档] PP02 改用一个大段一个 Work 的自动接力协议，聊天名称保持不变，交接由唯一状态文件和 GitHub 事实自动完成。
 <!-- 新条目格式：- [类型] 描述（类型取值：新功能/改进/修复/文档/测试/chore）-->
 <!-- 每条独立一行追加到本段末尾，无需分类标题，合并时冲突最小 -->
 

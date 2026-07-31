@@ -12,8 +12,9 @@
 | R0｜云端安全重建基线 | 完成 | 官方 v3.28.0 + V1.5.6 候选、Draft PR 和两轮 CI 已通过 |
 | R1｜需求与旧功能迁移确认 | 完成 | 单用户范围、保留/调整/不迁移和冲突裁决已确认 |
 | R2｜迁移正式候选计划 | 完成 | R3.1–R3.7 文件边界、依赖和验收已固定 |
-| R3｜功能迁移 | 进行中 | R3.1–R3.6 已完成；R3.7 安全复审已通过，等待最终 Head CI/Windows 假密钥收口 |
-| R4–R7 | 未启动 | 脱敏演练、Windows验收、真实数据和发布分别受授权门控制 |
+| R3｜功能迁移 | 完成 | R3.1–R3.7 已通过并由 PR #11 合入 `main@eb32298…` |
+| R4｜数据库兼容与脱敏迁移演练 | 进行中 | Work4 方案 A；只用空库和人工假数据；Draft Hold |
+| R5–R7 | 未启动 | Windows验收、真实数据和发布分别受独立授权门控制 |
 
 ## Work 1｜官方稳定版干净底座建立（历史）
 
@@ -49,8 +50,14 @@ Work1 已永久关闭；PR #3 已合并且 R3.1–R3.5 已进入 main。Work2 �
 Work2/R5 已完成并进入 `main`。Work3 从固定基线
 `097bb5d60aa42f13737ac4d9db2f582bde50f995` 建立独立 Draft PR `#11`，完成
 `safeStorage` / DPAPI 版本化 vault、窄 IPC、backend 内存注入、导入导出边界和
-固定 Head 假凭据验收门。威胁模型与四次独立安全复审已无
-Critical/Important；首轮固定 Head `b23c698` 的 Run `30640475137` 已 8/8
-success，Windows Job 已同 Head 完成 safeStorage 和最终产物扫描。当前只等待
-证据提交自身的最终完整 CI。
-Judge 上限仍为 `DRAFT_HOLD`，不进入后续阶段。
+固定 Head 假凭据验收门。威胁模型与四次独立安全复审已无 Critical/Important；
+最终 Head `173b3d3` 的 Run `30643230898` 已 8/8 success，Windows Job
+`91198401578` 已同 Head 完成 safeStorage 和最终产物扫描。PR #11 已合并，
+Work3 已关闭；该历史合并不自动授权 R4 或后续阶段。
+
+## Work4 / R4 数据库兼容与脱敏迁移演练（2026-07-31）
+
+Work3 已完成并由 PR #11 合入 `main@eb32298…`。Work4 使用独立分支
+`agent/pp02-work4-r4-database-rehearsal`，先把自动接力规则写入现有唯一框架，
+再只用空库和人工假数据完成可重复兼容、迁移、排除与回滚演练。真实数据库、
+Ready、合并、Tag、Release 和后续阶段均未授权。
