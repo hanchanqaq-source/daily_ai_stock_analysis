@@ -9,25 +9,50 @@ CHAT_ROLE=AUTO_TAKEOVER
 WORK_ID=WORK-007
 ROLE_LOCK=SUPERSEDED_BY_PP02-WORK-HANDOFF-002
 WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
-WORK_STATE=ACTIVE
-EXECUTION_LOCK=HELD_BY_WORK_007
+WORK_STATE=COMPLETED
+EXECUTION_LOCK=RELEASED
 APPLICATION_BASE_VERSION=3.28.0
 TARGET_RELEASE_VERSION=3.29.0
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-ACTIVE_BASE=6650f9c30f394a1ba6b7e7fd99de67d5c11488ab
-ACTIVE_BRANCH=agent/pp02-r7-main-web-ci-stabilization
-ACTIVE_PR=14
-CURRENT_STAGE=R7 / Mainline-CI-Tag-Release-Judge
-CURRENT_WORK=主线合并与正式发布
-ACTIVE_GOAL=修复首轮main push CI阻塞后正式发布v3.29.0
-CURRENT_STATUS=MAIN_CI_FAILED — PR14_CI_REQUIRED
-ACTIVE_BLOCKER=RUN_30693665810_WEB_RACE_AND_NLTK_FROZEN_CWD
-NEXT_WORK=NONE_WHILE_WORK_007_ACTIVE
-NEXT_ACTION=验证PR #14固定Head CI，通过后合并并重新验证main push CI
-AUTHORIZATION_REQUIRED=FALSE_FOR_PR12_PR13_READY/MERGE/MAIN_CI/TAG_v3.29.0/RELEASE_v3.29.0;TRUE_FOR_REAL_DATA/OTHER_RELEASE/OTHER_SCOPE
+ACTIVE_BASE=b4a0ec11da19b5552ce87dde1ece716f61fd5174
+ACTIVE_BRANCH=NONE
+ACTIVE_PR=NONE
+CURRENT_STAGE=R7 / Released-and-Closed
+CURRENT_WORK=NONE — WORK-007 COMPLETED
+ACTIVE_GOAL=NONE
+CURRENT_STATUS=PASS — v3.29.0 RELEASED — R7 CLOSED
+ACTIVE_BLOCKER=NONE
+RELEASE_TAG=v3.29.0
+RELEASE_COMMIT=49759dbd032f577d32e8e0f6670298f700e0f272
+POST_RELEASE_MAIN=b4a0ec11da19b5552ce87dde1ece716f61fd5174
+LAST_MAIN_CI_RUN=30697946093
+NEXT_WORK=NONE_SCHEDULED
+NEXT_ACTION=等待用户提出并授权新的项目目标
+AUTHORIZATION_REQUIRED=TRUE_FOR_ANY_NEW_SCOPE/READY/MERGE/MAIN_WRITE/TAG/RELEASE/REAL_DATA
 LAST_UPDATED=2026-08-01
 ```
+
+## 2026-08-01 Work7 / R7 最终发布与台账收口
+
+- PR #14 已合并为发布提交
+  `49759dbd032f577d32e8e0f6670298f700e0f272`；该提交的 `main` push CI
+  全部 8 个适用 Job 成功。
+- annotated Tag `v3.29.0` 精确指向上述已验证发布提交；GitHub Release
+  非 Draft、非 Prerelease，Desktop 与 Docker 正式发布工作流成功。
+- 正式 Release 含 Windows 安装版、Windows 免安装 ZIP 与 SHA-256、macOS
+  arm64/x64 DMG 等 7 个资产；未使用真实数据或真实凭据。
+- PR #15 已补充三语言项目来源声明并修正当前仓库链接，明确本项目基于
+  `ZhuLinsen/daily_stock_analysis@v3.28.0` 复制后进行二次开发、非上游官方版本；
+  原 MIT License 保持不变，Release 正文也已加入同款声明。
+- PR #15 已合并为
+  `main@b4a0ec11da19b5552ce87dde1ece716f61fd5174`；合并后 Run
+  `30697946093` 的 8 个 Job 全部 success。Tag 仍保持在发布提交
+  `49759dbd…`，没有因发布后文档合并而移动。
+- Judge：`PASS — v3.29.0 RELEASED — WORK7 COMPLETED`。Work7 施工权已释放，
+  当前无 Active Work；任何新功能、真实数据、Tag、Release、Ready、合并或
+  `main` 写入都必须由后续新 Work 单独授权。
+
 
 ## 2026-08-01 Work7 / R7 主线合并与 CI 阻塞
 
@@ -128,13 +153,15 @@ LAST_UPDATED=2026-08-01
 
 ## 当前保护边界
 
-- Work5 是唯一 Active Work；Work4 已结束，PR #12 继续保持 Draft。
-- 不接触真实 `.env`、Token、API Key、Webhook 或真实数据库。
-- 不迁移基金、多用户或旧平行持仓表。
-- R6-A 云端测试只允许动态空库或人工假数据；工具不搜索整盘、不显示行值、不迁移。
-- 不执行 Windows 真实盘点、Ready、Merge、`main` 写入、Tag、Release、R7 或真实迁移。
-- 仓库经只读安全审计和用户授权后已改为 Public；PR、分支和 Actions 历史公开，
-  但真实数据、密钥和备份文件仍不得进入仓库。
+- Work7 / R7 已完成并释放施工权；当前不存在 Active Work、活动分支或活动 PR。
+- `v3.29.0` Tag 固定在已发布提交 `49759dbd…`；发布后文档主线为
+  `b4a0ec11…`，不得移动或重打该 Tag。
+- 后续目标必须新建 Work，并重新确认范围、Base、分支、PR 与授权。
+- 不接触真实 `.env`、Token、API Key、Webhook、账号或真实数据库；Work6
+  `NO_FORMAL_DATA_FOUND` 的历史裁决继续有效。
+- PP02 只包含股票业务；基金、多用户和旧平行持仓表不得迁入。
+- 仓库为 Public；代码、PR、分支和 Actions 历史公开，但真实数据、密钥、备份、
+  一次性验收材料和临时日志仍不得进入仓库。
 
 ## 2026-07-31 Work3 / R3.7 最终收口
 
