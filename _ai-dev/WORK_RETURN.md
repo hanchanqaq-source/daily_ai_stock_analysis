@@ -1,4 +1,42 @@
-# WORK-PP02-CLOUD-REBUILD-001 回传
+# WORK-004｜R4 数据库兼容与脱敏迁移演练回传
+
+> 当前 Work 已结束。只有本 Work 的新鲜证据可以更新当前结果；旧 Work 内容在下方
+> 作为追加历史保留。
+
+## 当前进度
+
+- 已核对 `main@eb32298…`、PR #11 合并、PR #7/#8 仍 Open/Draft，以及旧台账漂移。
+- 已建立隔离分支 `agent/pp02-work4-r4-database-rehearsal`。
+- 已选择并记录 `PP02-WORK-HANDOFF-002`；聊天显示名称保持不变。
+- 已冻结 R4 设计；仅允许空库和人工假数据。
+- 已关闭被 PR #9 替代的历史 Draft PR #7/#8，分支和历史保留；已建立 Draft PR #12。
+- 基线专项：`tests/test_storage.py` + `tests/test_portfolio_backup_service.py` 为
+  `30 passed`；`scripts/check_ai_assets.py` 通过。
+- TDD RED：8 项服务契约均因实现模块缺失而失败；意外异常脱敏回归也先证明原始
+  异常会泄漏，再完成修正；GREEN 后 R4 专项为 `13 passed`。
+- R4、备份与存储联合回归：`43 passed, 17 warnings`；警告与既有基线一致。
+- 临时目录全新混合假数据演练：PASS；四类正式事件各 1 条，源 SHA 不变、摘要一致、
+  过期预览被拒绝且目标不变；报告和目标未包含构造的排除值。
+- CI 等效 UTC 环境完整离线后端门：`5040 passed, 4 deselected, 47 warnings,
+  499 subtests passed`；Flake8 严重错误 0，AI 资产、语法、确定性检查和差异格式通过。
+- Base-to-Head 安全自审通过；未跟踪数据库、环境文件、备份、报告、日志、依赖或
+  Workflow 变化，报告不包含行值或备份正文。
+- 固定实现 Head `f1b433a7a97ed43a7048aeb4239b76357003083b`；Tree
+  `cdc54b1d1488358a13c40223a6354c901b8a5001`；CI Run `30660971800` 中 AI 治理、
+  变更检测、Docker 和后端门全部 success，未改路径 Job 按规则 skipped。
+- PR #12 保持 Draft；未 Ready、未合并、未写 `main`、未 Tag、未 Release，且未使用
+  真实数据库、数据、备份、账号或凭据。
+
+## 当前 Judge
+
+`PASS — WORK4 COMPLETED — DRAFT_HOLD`
+
+施工权已释放。下一段为未启动的 `WORK-005 / R6 正式数据迁移授权与计划`；新聊天
+只能先做接管核对和白话授权决策，不得自动接触真实数据。
+
+---
+
+# 历史回传｜WORK-PP02-CLOUD-REBUILD-001
 
 > 运行中记录；只有本 Work 的新鲜证据可以更新本文件。
 

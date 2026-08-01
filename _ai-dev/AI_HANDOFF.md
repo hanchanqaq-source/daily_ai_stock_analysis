@@ -1,6 +1,27 @@
 # PP02 新聊天交接
 
-## 身份与基线
+## 当前接管入口｜WORK-004 / R4
+
+| 项目 | 当前值 |
+| --- | --- |
+| 远程 main | `eb32298c8f3cbec2ff400dda37d3267a7181af40` |
+| 当前 Work | `WORK-004｜数据库兼容与脱敏迁移演练` |
+| 当前状态 | `COMPLETED — CI_PASS — DRAFT_HOLD`；施工权已释放；聊天名称不得修改 |
+| 分支 | `agent/pp02-work4-r4-database-rehearsal` |
+| Draft PR | `#12`，必须保持 Draft |
+| 数据边界 | 只允许空库和人工构造的假数据；真实数据库/数据禁止 |
+| 本地验证 | R4 `13 passed`；关联回归 `43 passed`；全量 `5040 passed, 4 deselected` |
+| 远程验证 | Head `f1b433a7…`；Run `30660971800`；全部适用 Job success |
+| 下一动作 | 用户新开同项目 Codex 聊天，只发送“下一步”；R6 先进入授权决策，不接触真实数据 |
+
+新聊天不需要用户复制施工单或回传。必须读取 `AGENTS.md` 和四份 `_ai-dev`
+文件，再核对 GitHub。Work4 已完整结束；下一聊天不得续做 Work4，也不得直接执行
+R6 真实迁移，必须先建立 Work5 并向用户显示白话授权决策卡。
+
+以下内容是旧 Work 的追加历史；与本节冲突时，以 `PROJECT_STATUS.md`、本节和
+GitHub 可验证事实为准。
+
+## 历史身份与基线
 
 | 项目 | 当前值 |
 | --- | --- |

@@ -1,4 +1,66 @@
-# WORK-PP02-CLOUD-REBUILD-001 任务合同
+# WORK-004｜R4 数据库兼容与脱敏迁移演练任务合同
+
+## 当前任务身份
+
+```text
+WORK_ID=WORK-004
+WORK_STATE=COMPLETED
+WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
+BASE=eb32298c8f3cbec2ff400dda37d3267a7181af40
+BRANCH=agent/pp02-work4-r4-database-rehearsal
+SCOPE_DRIFT=FALSE
+```
+
+## 用户结果
+
+把“一个大段一个 Work”的自动接力规则写入现有唯一框架，并在同一 Work4 内只用
+空库和人工假数据完成 R4 可重复兼容检查、股票事件迁移、脱敏排除和失败回滚演练；
+建立独立 Draft PR 和完整 CI 后停下。
+
+## 范围
+
+- 校正 Work3/R3.7 已合并事实和 R4 路线；关闭被 PR #9 替代的 PR #7/#8，保留分支。
+- 更新 `AGENTS.md` 和现有状态/交接/任务/回传文件，不建立第二套状态中心。
+- 冻结 R4 设计和实施计划，按 RED→GREEN 实现可重复脚本与专项测试。
+- 输入只接受空 SQLite 或与 SHA-256 绑定的人工合成证明；源文件只读且保持不变。
+- 复用 `DatabaseManager` 与 `PortfolioBackupService`，只迁移正式股票事件账本。
+- 输出安全报告并验证失败回滚；运行本地门禁、Draft PR 完整 CI 和 Judge。
+
+## 非目标与硬边界
+
+- 不读取、复制、脱敏、打开或迁移真实数据库、真实备份、真实账号或真实凭据。
+- 不迁移基金、用户档案、多用户隔离、旧快捷持仓表、派生持仓、缓存或日志。
+- 不修改聊天显示名称，不要求用户跨聊天复制施工单或完成报告。
+- 不 Ready、不合并、不写 `main`、不 Tag、不 Release、不进入 R5/R6/R7。
+
+## 验收标准
+
+1. 新自动接力规则只有一个活动真源，旧窗口锁明确 Superseded。
+2. RED 测试在实现缺失时按预期失败；GREEN 覆盖空库、合成混合库、拒绝边界和回滚。
+3. 源 SHA-256 前后一致；目标只含现有正式股票事件导出的允许内容。
+4. 报告不含行值、备份正文或构造的假敏感值。
+5. 本地完整后端门和 Draft PR 固定 Head 完整 CI 通过。
+6. Work4 只在状态、GitHub、测试和 CI 全部一致后宣布结束。
+
+## Plan Challenge Result
+
+| 项目 | 结果 |
+| --- | --- |
+| 用户决定 | `选A`，完整启动 Work4 |
+| 待决产品问题 | 0 个；技术方案复用现有事实源和恢复契约 |
+| 数据风险 | 真实数据库/数据禁止；只接受空库和人工合成证明 |
+| Judge 上限 | `PASS — DRAFT_HOLD` |
+| 允许进入 Build | 是；先完成设计/计划检查点和 RED |
+
+## 完成状态
+
+- Work4 已在 Draft PR #12 完成范围内实现、测试、CI 和 Judge。
+- 本合同不继续授权 R6、真实数据库/数据、Ready、合并、Tag 或 Release。
+- 下一 Work 尚未启动；用户新开同项目聊天后只发送“下一步”。
+
+---
+
+# 历史任务合同｜WORK-PP02-CLOUD-REBUILD-001
 
 ## 任务身份
 
