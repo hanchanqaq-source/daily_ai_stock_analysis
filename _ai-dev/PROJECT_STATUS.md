@@ -6,32 +6,53 @@
 PROJECT_ID=PP02
 PROJECT_NAME=AI 每日股票分析
 CHAT_ROLE=AUTO_TAKEOVER
-WORK_ID=WORK-007
+WORK_ID=WORK-008
 ROLE_LOCK=SUPERSEDED_BY_PP02-WORK-HANDOFF-002
 WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
-WORK_STATE=COMPLETED
-EXECUTION_LOCK=RELEASED
-APPLICATION_BASE_VERSION=3.28.0
-TARGET_RELEASE_VERSION=3.29.0
+WORK_STATE=ACTIVE
+EXECUTION_LOCK=HELD_BY_WORK_008
+APPLICATION_BASE_VERSION=3.29.0
+TARGET_RELEASE_VERSION=3.29.1
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-ACTIVE_BASE=b4a0ec11da19b5552ce87dde1ece716f61fd5174
-ACTIVE_BRANCH=NONE
-ACTIVE_PR=NONE
-CURRENT_STAGE=R7 / Released-and-Closed
-CURRENT_WORK=NONE — WORK-007 COMPLETED
-ACTIVE_GOAL=NONE
-CURRENT_STATUS=PASS — v3.29.0 RELEASED — R7 CLOSED
+ACTIVE_BASE=66666352e953d90becce420da7d35b649516af76
+ACTIVE_BRANCH=agent/pp02-work8-r7-installer-fix
+ACTIVE_PR=PENDING
+CURRENT_STAGE=R7 Hotfix / Design-Spec-Review
+CURRENT_WORK=WORK-008 — Windows installer defect repair and v3.29.1 patch
+ACTIVE_GOAL=repair assisted per-user NSIS installer without removing directory selection
+CURRENT_STATUS=DESIGN_COMMITTED — USER_SPEC_REVIEW_REQUIRED
 ACTIVE_BLOCKER=NONE
-RELEASE_TAG=v3.29.0
-RELEASE_COMMIT=49759dbd032f577d32e8e0f6670298f700e0f272
-POST_RELEASE_MAIN=b4a0ec11da19b5552ce87dde1ece716f61fd5174
-LAST_MAIN_CI_RUN=30697946093
-NEXT_WORK=NONE_SCHEDULED
-NEXT_ACTION=等待用户提出并授权新的项目目标
-AUTHORIZATION_REQUIRED=TRUE_FOR_ANY_NEW_SCOPE/READY/MERGE/MAIN_WRITE/TAG/RELEASE/REAL_DATA
+FAILED_RELEASE_TAG=v3.29.0
+FAILURE_CLASS=INSTALLER_BOOTSTRAP_CRASH
+FAILURE_REPRODUCIBILITY=2/2
+FAILURE_EXCEPTION=0xC0000005 / System.dll
+NEXT_WORK=NONE_WHILE_WORK_008_ACTIVE
+NEXT_ACTION=user approves committed design, then write implementation plan and enter RED
+AUTHORIZATION_REQUIRED=FALSE_FOR_IN_SCOPE_BRANCH/COMMITS/DRAFT_PR/CI_FIXES;TRUE_FOR_READY/MERGE/MAIN_WRITE/TAG/RELEASE/REAL_DATA
 LAST_UPDATED=2026-08-01
 ```
+
+## 2026-08-01 Work8 / v3.29.0 Windows installer failure and A-design
+
+- Windows native acceptance verified the official installer filename, byte size and SHA-256, then
+  reproduced an installer bootstrap crash twice before installation completed. Both Windows Event
+  records identified `System.dll` and `0xC0000005`; no install registration, install directory or
+  PP02 process remained.
+- Final acceptance Judge is `R7_WINDOWS_FIRST_USE_ACCEPTANCE=FAIL`. Startup, empty-data,
+  safe-default and restart checks were not executed because installation failed.
+- User authorized `Work8｜R7 安装器缺陷修复与 v3.29.1 补丁发布` and selected
+  `A｜保留安装向导`.
+- Root cause matches upstream electron-builder issue #8536 and merged fix #9564: the 24.x NSIS
+  current-user assisted-installer template can race in `System::Store()` on Windows 11.
+- Approved design is committed at
+  `docs/superpowers/specs/2026-08-01-work8-windows-installer-hotfix-design.md`.
+  It pins `electron-builder 26.15.7`, keeps the install-directory wizard and current-user mode,
+  and adds real Windows install/start/uninstall gates to PR and Release workflows.
+- Current authorization covers this branch, normal commits, a Draft PR, CI and in-scope fixes.
+  Ready, merge, main write, `v3.29.1` tag/Release and real data remain separate authorization
+  gates. `v3.29.0` is immutable and must not be moved or rebuilt.
+
 
 ## 2026-08-01 Work7 / R7 最终发布与台账收口
 
