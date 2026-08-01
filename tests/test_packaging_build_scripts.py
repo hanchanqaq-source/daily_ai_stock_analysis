@@ -281,6 +281,11 @@ def test_windows_installer_verifier_is_scoped_and_fail_closed() -> None:
     assert "Verifier did not clean its owned install root." in contract
     assert "Verifier removed a parent sentinel." in contract
     assert "WINDOWS_INSTALLER_CONTRACT_VALIDATION=PASS" in contract
+    assert "Start-Process" in contract
+    assert "-RedirectStandardOutput" in contract
+    assert "-RedirectStandardError" in contract
+    assert "$contractProcess.ExitCode" in contract
+    assert "& $powerShell" not in contract
 
 
 def test_desktop_build_jobs_use_supported_node_22_runtime() -> None:

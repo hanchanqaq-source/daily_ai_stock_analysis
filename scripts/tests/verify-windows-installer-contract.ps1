@@ -49,15 +49,39 @@ try {
 
   [Environment]::SetEnvironmentVariable('RUNNER_TEMP', $fixtureRoot, 'Process')
   $powerShell = (Get-Process -Id $PID).Path
-  $output = @(
-    & $powerShell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass `
-      -File $verifier `
-      -InstallerPath $fakeInstaller `
-      -ExpectedVersion '9.9.9' `
-      -InstallRoot $installRoot 2>&1 |
-      ForEach-Object { $_.ToString() }
+  $stdoutPath = Join-Path $fixtureRoot 'verifier.stdout.log'
+  $stderrPath = Join-Path $fixtureRoot 'verifier.stderr.log'
+  $arguments = @(
+    '-NoLogo'
+    '-NoProfile'
+    '-NonInteractive'
+    '-ExecutionPolicy'
+    'Bypass'
+    '-File'
+    ('"{0}"' -f $verifier)
+    '-InstallerPath'
+    ('"{0}"' -f $fakeInstaller)
+    '-ExpectedVersion'
+    '9.9.9'
+    '-InstallRoot'
+    ('"{0}"' -f $installRoot)
   )
-  $verifierExitCode = $LASTEXITCODE
+  $contractProcess = Start-Process `
+    -FilePath $powerShell `
+    -ArgumentList $arguments `
+    -Wait `
+    -PassThru `
+    -RedirectStandardOutput $stdoutPath `
+    -RedirectStandardError $stderrPath
+  $output = @()
+  foreach ($streamPath in @($stdoutPath, $stderrPath)) {
+    if (Test-Path -LiteralPath $streamPath -PathType Leaf) {
+      $output += @(Get-Content -LiteralPath $streamPath | ForEach-Object {
+        $_.ToString()
+      })
+    }
+  }
+  $verifierExitCode = $contractProcess.ExitCode
 
   if ($verifierExitCode -eq 0) {
     throw 'Verifier accepted a failing installer.'
