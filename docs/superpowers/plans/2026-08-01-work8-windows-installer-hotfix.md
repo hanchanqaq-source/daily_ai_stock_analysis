@@ -114,6 +114,11 @@ Expected: Node prints `v22.x`; the root lock entry and `node_modules/electron-bu
 `26.15.7`; `@electron/rebuild` resolves to a Node-22-compatible 4.x line; `electron` remains on the
 existing 31.x line.
 
+If the clean install shows that the existing portable-update test relied on `archiver` only
+through the old builder's transitive Squirrel dependency, declare the previously resolved
+`archiver 5.3.2` as an exact Desktop test-only development dependency. Do not add it to runtime
+dependencies or change portable-update production code.
+
 - [ ] **Step 3: Upgrade only Desktop build jobs to Node 22**
 
 Set `node-version: '22'` in CI `desktop-test`, Windows/macOS Desktop package jobs and Desktop

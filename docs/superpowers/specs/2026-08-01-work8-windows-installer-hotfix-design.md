@@ -78,6 +78,11 @@ current Electron runtime and application dependencies unchanged unless the lockf
 proves an unavoidable peer incompatibility. Any such incompatibility is a design blocker and
 must be reported before widening scope.
 
+The clean Node 22 install may no longer receive test-only packages accidentally through the old
+builder graph. An existing test fixture dependency may be declared explicitly at its previously
+resolved version when required to preserve the approved test suite; this does not authorize a
+runtime dependency or production behavior change.
+
 Use an exact version instead of a caret range so a future Release cannot silently adopt a new
 installer template.
 

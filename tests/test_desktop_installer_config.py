@@ -34,6 +34,17 @@ def test_windows_installer_uses_fixed_electron_builder_line() -> None:
     )
 
 
+def test_portable_update_fixture_declares_its_archiver_dependency() -> None:
+    package = json.loads((DESKTOP_DIR / "package.json").read_text(encoding="utf-8"))
+    lock = json.loads(
+        (DESKTOP_DIR / "package-lock.json").read_text(encoding="utf-8")
+    )
+
+    assert package["devDependencies"]["archiver"] == "5.3.2"
+    assert lock["packages"][""]["devDependencies"]["archiver"] == "5.3.2"
+    assert lock["packages"]["node_modules/archiver"]["version"] == "5.3.2"
+
+
 def test_installer_blocks_system_protected_directories() -> None:
     installer_script = (DESKTOP_DIR / "installer.nsh").read_text(encoding="utf-8")
 

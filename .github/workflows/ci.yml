@@ -39,6 +39,8 @@ jobs:
               - 'scripts/build-backend.ps1'
               - 'scripts/verify-frozen-backend.ps1'
               - 'scripts/verify-windows-secure-credentials.ps1'
+              - 'scripts/verify-windows-installer.ps1'
+              - 'scripts/tests/verify-windows-installer-contract.ps1'
               - 'scripts/scan-windows-fake-credential.js'
               - 'scripts/build-backend-macos.sh'
               - 'scripts/macos-signature-audit.sh'
@@ -235,6 +237,23 @@ jobs:
           powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/verify-frozen-backend.ps1 -PackagedEntry $finalPackagedEntry
           Remove-FinalExtractWithRetry -Path $finalExtract
 
+      - name: 🧪 Validate Windows installer verifier contracts
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File scripts/tests/verify-windows-installer-contract.ps1
+
+      - name: 🧪 Validate installed Windows lifecycle
+        shell: pwsh
+        run: |
+          $version = (Get-Content apps/dsa-desktop/package.json -Raw | ConvertFrom-Json).version
+          $installerPath = "apps/dsa-desktop/dist/pp02-ai-daily-stock-analysis-windows-installer-v$version.exe"
+          $installer = Get-Item -LiteralPath $installerPath -ErrorAction Stop
+          $installRoot = Join-Path $env:RUNNER_TEMP "pp02-installer-verify-$env:DSA_EXPECTED_PR_HEAD_SHA"
+          powershell -ExecutionPolicy Bypass -File scripts/verify-windows-installer.ps1 `
+            -InstallerPath $installer.FullName `
+            -ExpectedVersion $version `
+            -InstallRoot $installRoot `
+            -ExpectedCommitSha $env:DSA_EXPECTED_PR_HEAD_SHA
+
       - name: 🔍 Scan Windows fake credential leakage
         shell: pwsh
         run: |
@@ -261,11 +280,14 @@ jobs:
             }
           }
 
-      - name: 📤 Upload verified portable candidate
+      - name: 📤 Upload verified Windows candidate
         uses: actions/upload-artifact@v6
         with:
-          name: pp02-windows-portable-${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          name: pp02-windows-candidate-${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           path: |
+            apps/dsa-desktop/dist/pp02-ai-daily-stock-analysis-windows-installer-v*.exe
+            apps/dsa-desktop/dist/pp02-ai-daily-stock-analysis-windows-installer-v*.exe.blockmap
+            apps/dsa-desktop/dist/latest.yml
             dist/pp02-ai-daily-stock-analysis-windows-noinstall-v*.zip
             dist/pp02-ai-daily-stock-analysis-windows-noinstall-v*.zip.sha256
           if-no-files-found: error

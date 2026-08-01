@@ -216,7 +216,7 @@ def test_windows_job_runs_head_bound_safe_storage_fake_credential_gate() -> None
     assert "R3_7_WINDOWS_FAKE_CREDENTIAL_SCAN=PASS" in scanner
     assert "Scan Windows fake credential leakage" in workflow
     assert workflow.index("Scan Windows fake credential leakage") < workflow.index(
-        "Upload verified portable candidate"
+        "Upload verified Windows candidate"
     )
     assert "$finalExtract" in workflow
     assert "$zip" in workflow
@@ -245,6 +245,42 @@ def test_windows_jobs_execute_the_shared_installer_verifier() -> None:
     assert release.index(verifier_call) < release.index(
         "Prepare release artifact (Windows)"
     )
+
+
+def test_windows_installer_verifier_is_scoped_and_fail_closed() -> None:
+    verifier_path = REPO_ROOT / "scripts" / "verify-windows-installer.ps1"
+    contract_path = (
+        REPO_ROOT / "scripts" / "tests" / "verify-windows-installer-contract.ps1"
+    )
+
+    assert verifier_path.exists()
+    assert contract_path.exists()
+
+    verifier = _read_text(verifier_path)
+    contract = _read_text(contract_path)
+    for parameter in (
+        "InstallerPath",
+        "ExpectedVersion",
+        "InstallRoot",
+        "ExpectedCommitSha",
+    ):
+        assert parameter in verifier
+
+    assert "$env:RUNNER_TEMP" in verifier
+    assert "pp02-installer-verify-" in verifier
+    assert "Main UI loaded in" in verifier
+    assert "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall" in verifier
+    assert "WINDOWS_INSTALLER_INSTALL_VALIDATION=PASS" in verifier
+    assert "WINDOWS_INSTALLED_APP_STARTUP_VALIDATION=PASS" in verifier
+    assert "WINDOWS_UNINSTALL_VALIDATION=PASS" in verifier
+    assert "WINDOWS_INSTALLER_VALIDATION=FAIL" in verifier
+
+    assert "created-by-fake-installer.txt" in contract
+    assert "return 17;" in contract
+    assert "Verifier accepted a failing installer." in contract
+    assert "Verifier did not clean its owned install root." in contract
+    assert "Verifier removed a parent sentinel." in contract
+    assert "WINDOWS_INSTALLER_CONTRACT_VALIDATION=PASS" in contract
 
 
 def test_desktop_build_jobs_use_supported_node_22_runtime() -> None:

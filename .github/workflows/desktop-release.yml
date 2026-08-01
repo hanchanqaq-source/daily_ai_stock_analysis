@@ -39,6 +39,7 @@ jobs:
           fi
           echo "DSA_WEB_VERSION=${RELEASE_TAG#v}" >> "$GITHUB_ENV"
           echo "DSA_WEB_REVISION=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_ENV"
+          echo "DSA_RELEASE_COMMIT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
       - uses: actions/setup-python@v6
         with:
@@ -69,6 +70,23 @@ jobs:
           DSA_SKIP_DEVMODE_CHECK: 'true'
         run: |
           powershell -ExecutionPolicy Bypass -File scripts/build-all.ps1
+
+      - name: Validate Windows installer verifier contracts
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File scripts/tests/verify-windows-installer-contract.ps1
+
+      - name: Validate installed Windows lifecycle
+        shell: pwsh
+        run: |
+          $expectedVersion = $env:RELEASE_TAG.TrimStart('v')
+          $installerPath = "apps/dsa-desktop/dist/pp02-ai-daily-stock-analysis-windows-installer-$env:RELEASE_TAG.exe"
+          $installer = Get-Item -LiteralPath $installerPath -ErrorAction Stop
+          $installRoot = Join-Path $env:RUNNER_TEMP "pp02-installer-verify-$env:DSA_RELEASE_COMMIT_SHA"
+          powershell -ExecutionPolicy Bypass -File scripts/verify-windows-installer.ps1 `
+            -InstallerPath $installer.FullName `
+            -ExpectedVersion $expectedVersion `
+            -InstallRoot $installRoot `
+            -ExpectedCommitSha $env:DSA_RELEASE_COMMIT_SHA
 
       - name: Prepare release artifact (Windows)
         shell: pwsh
