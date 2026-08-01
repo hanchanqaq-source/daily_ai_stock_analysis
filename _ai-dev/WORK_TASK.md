@@ -1,3 +1,79 @@
+# WORK-008｜R7 安装器缺陷修复与 v3.29.1 补丁发布
+
+## 当前任务身份
+
+```text
+WORK_ID=WORK-008
+WORK_STATE=ACTIVE
+WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
+BASE=66666352e953d90becce420da7d35b649516af76
+BRANCH=agent/pp02-work8-r7-installer-fix
+TARGET_RELEASE=v3.29.1
+FAILED_RELEASE=v3.29.0
+SCOPE_DRIFT=FALSE
+```
+
+## 用户结果
+
+用户已授权启动 Work8，并选择 `A｜保留安装向导`。修复必须保留选择安装目录、
+当前用户安装、正常卸载、安装版自动更新和免安装 ZIP；不得通过删除安装向导来绕过
+缺陷。
+
+## 根因与设计
+
+- v3.29.0 正式安装器来源、大小、SHA-256 和版本信息通过；Windows 11 build 26200
+  上连续 2/2 在引导阶段以 `System.dll / 0xC0000005` 崩溃。
+- 根因与 electron-builder #8536 / #9564 的 24.x NSIS `System::Store()` 竞态一致。
+- 批准设计见
+  `docs/superpowers/specs/2026-08-01-work8-windows-installer-hotfix-design.md`。
+- 构建链只精确升级 `electron-builder` 到 `26.15.7`；Electron 和业务依赖不顺带升级。
+- 新增可复用 Windows 验证器，并在 PR Windows 打包门和正式 Desktop Release 门中
+  真实执行 install/start/uninstall。
+
+## 范围
+
+- 按已批准设计先写实施计划，再执行 RED→GREEN。
+- 更新 Desktop manifest/lockfile、Windows installer verifier、专项测试、CI 和 Release workflow。
+- 保留现有 frozen backend、portable ZIP、Head binding 与假凭据扫描。
+- 更新 Desktop 打包文档、Unreleased Changelog 和四份 PP02 台账。
+- 创建一个独立 Draft PR，完成固定 Head 全量 CI 和 Windows 安装候选验证。
+- CI 失败只允许在当前最小范围内修复，不扩展业务功能。
+
+## 非目标与硬边界
+
+- 不覆盖、移动、删除或重打 `v3.29.0` Tag/Release。
+- 未经单独授权，不 Ready、不合并、不写 `main`、不创建 `v3.29.1` Tag/Release。
+- 不读取、导入、删除或修改真实数据库、持仓、分析历史、`.env`、API Key、
+  Token、Webhook 或密码。
+- 不改后端/Web 业务逻辑、数据库 Schema、分析行为、自动通知默认值或便携更新事务。
+- 不把云端 Windows CI 冒充最终 Windows 正式版首次使用验收。
+- 不引入 Electron 27.x 或 electron-builder 27.x 预览版。
+
+## 验收标准
+
+1. RED 证明确切缺口：旧 builder line、缺失 verifier、PR/Release workflow 未执行安装器。
+2. manifest 精确锁定 `electron-builder 26.15.7`，lockfile 与 Node 20/npm 一致。
+3. Windows verifier 对唯一安装器执行隔离 install/start/uninstall，稳定输出证据并
+   仅清理自身临时目录。
+4. PR Windows Job 同一 Head 的安装器、便携 ZIP、冻结后端和假凭据扫描全部通过。
+5. macOS 包门与 Desktop 单测通过，完整 CI 无阻断失败。
+6. Draft PR body 与 diff、根因、验证、风险和回滚一致。
+7. Work8 Judge 上限为 `IMPLEMENTATION_PASS — DRAFT_HOLD`；Ready/Merge/Release
+   与最终 Windows v3.29.1 实机验收分别等待授权。
+
+## Plan Challenge Result
+
+| 项目 | 结果 |
+| --- | --- |
+| 用户决定 | `A｜保留安装向导` |
+| 待决产品问题 | 0；功能取舍已锁定 |
+| 根因证据 | 与上游 #8536/#9564 高一致，且新 v26 模板已移除竞态路径 |
+| 当前门 | 已提交设计，等待用户确认书面规格 |
+| 允许进入 Build | 书面规格确认后允许按实施计划进入 RED |
+| 发布授权 | 未授予 |
+
+---
+
 # WORK-007｜R7 主线合并与正式发布任务合同
 
 ## 当前任务身份
