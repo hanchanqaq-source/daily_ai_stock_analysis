@@ -1,6 +1,34 @@
-# WORK-005｜R6-A 正式数据安全只读盘点工具回传
+# WORK-007｜R7 主线合并与正式发布回传
 
-> 当前 Work 运行中。只有本 Work 的新鲜证据可以更新当前结果；旧 Work 内容在下方
+> 当前 Work 运行中。只记录已取得的真实 GitHub、CI、Tag、Release 和产物证据；
+> 未完成的门不得预写为通过。
+
+## 当前进度
+
+- 用户已选择 `A｜v3.29.0`，并授权 PR #12/#13 Ready 与合并、新 `main` CI、
+  annotated Tag `v3.29.0`、GitHub Release 与正式产物验收。
+- 远程 `main`：`eb32298c8f3cbec2ff400dda37d3267a7181af40`。
+- PR #12：Draft/Open/Mergeable，Head `a220e9e146e14722561bc084ec4e5306b30d36c7`，
+  Run `30661990072` success。
+- PR #13：Draft/Open/Mergeable，原 Head
+  `50dd04ca5a49a6e54de01e2d28ce598f690d9931`，Run `30691233934` success；
+  当前 Base 为 PR #12 分支，必须在 #12 合并后改为 `main`。
+- 发布前审计发现 PP02 Release notes 的完整记录链接仍硬编码上游仓库，且 Changelog
+  尚未形成 `3.29.0` 正式段；已以测试先行完成最小发布收口，等待新固定 Head CI。
+- Work6 最终裁决 `NO_FORMAL_DATA_FOUND`：旧项目和数据库从未建立，无真实数据迁移。
+
+## 当前 Judge
+
+`RELEASE_CLOSEOUT_READY — FIXED_HEAD_CI_REQUIRED`
+
+尚未执行 Ready、Merge、`main` 写入、Tag 或 Release；发布收口可提交到现有 PR #13，
+但只有新的固定 Head 通过完整 CI 后，才进入 Ready 与主线写入门。
+
+---
+
+# 历史回传｜WORK-005 / R6-A 正式数据安全只读盘点工具
+
+> 当前 Work 已结束。只有本 Work 的新鲜证据可以更新当前结果；旧 Work 内容在下方
 > 作为追加历史保留。
 
 ## 当前进度
@@ -16,16 +44,17 @@
 - 最终代码完整 CI 等效后端门为 `5070 passed, 1 skipped, 4 deselected,
   48 warnings, 499 subtests passed`；语法、严重 Flake8、确定性检查、AI 资产和
   格式检查通过；独立复核 APPROVE，无剩余发现。
-- 当前阶段：最终本地验证通过；Draft PR #13 已建立，正在等待最终固定 Head CI。
+- 最终固定 Head `50dd04ca5a49a6e54de01e2d28ce598f690d9931` 的 CI Run
+  `30691233934` 全部适用 Job success。
 - 云端只用动态空库和人工假数据；Windows 真实数据库未读取、未备份、未盘点。
 
 ## 当前 Judge
 
-`DRAFT_PR_OPEN — FINAL_CI_PENDING — WINDOWS_REAL_INVENTORY_NOT_RUN`
+`CLOUD_TOOL_IMPLEMENTATION_PASS — WINDOWS_REAL_INVENTORY_NOT_RUN`
 
-工具云端实现和本地验证已经完成，但 Work5 仍需 Draft PR #13 最终固定 Head CI 与
-最终 Judge 才能收口。Windows 真实盘点、真实迁移、Ready、合并、`main`、Tag、Release
-和 R7 仍未授权。
+工具云端实现、本地验证与 Draft PR #13 固定 Head CI 已完成。Work5 已收口；Windows
+真实盘点仍未运行。其历史授权不包含 Ready、合并、`main`、Tag、Release 或 R7，
+这些动作仅由后续 Work7 的新精确授权覆盖。
 
 ---
 

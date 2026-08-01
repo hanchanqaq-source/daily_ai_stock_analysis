@@ -184,12 +184,16 @@ def build(tag: str) -> str:
     else:
         lines.append("Maintainers")
 
-    compare_from = previous_tag or tag
+    repository = os.environ.get("GITHUB_REPOSITORY", "ZhuLinsen/daily_stock_analysis")
+    if previous_tag:
+        history_url = f"https://github.com/{repository}/compare/{previous_tag}...{tag}"
+    else:
+        history_url = f"https://github.com/{repository}/commits/{tag}"
     lines.extend(
         [
             "",
             "### Full changelog",
-            f"https://github.com/ZhuLinsen/daily_stock_analysis/compare/{compare_from}...{tag}",
+            history_url,
             "",
         ]
     )

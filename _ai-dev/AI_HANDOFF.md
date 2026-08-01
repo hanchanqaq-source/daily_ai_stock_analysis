@@ -1,28 +1,28 @@
 # PP02 新聊天交接
 
-## 当前接管入口｜WORK-005 / R6-A
+## 当前接管入口｜WORK-007 / R7
 
 | 项目 | 当前值 |
 | --- | --- |
-| 远程 main | `eb32298c8f3cbec2ff400dda37d3267a7181af40` |
-| 当前 Work | `WORK-005｜R6-A 正式数据安全只读盘点工具` |
-| 当前状态 | `DRAFT_PR_OPEN — FINAL_CI_PENDING`；唯一 Active Work；聊天名称不得修改 |
-| 固定 Base | Work4 PR #12 Head `a220e9e146e14722561bc084ec4e5306b30d36c7` |
+| 远程 main | `eb32298c8f3cbec2ff400dda37d3267a7181af40`；待按顺序合并 PR #12/#13 |
+| 当前 Work | `WORK-007｜R7 主线合并与正式发布` |
+| 当前状态 | `AUTHORIZED — RELEASE_PREPARATION`；目标版本 `v3.29.0` |
+| 固定 Base | `main@eb32298c8f3cbec2ff400dda37d3267a7181af40` |
 | 分支 | `agent/pp02-work5-r6-inventory-tool` |
-| Draft PR | `#13`；保持 Draft；Base 为 Work4 分支 |
-| 数据边界 | 云端只允许动态空库和人工假数据；真实数据库/数据禁止 |
-| 已有产物 | 安全核心、Windows CLI、31 项专项测试、设计与实施计划；审查修复联合门已通过 |
-| 下一动作 | 验证 Draft PR #13 最终固定 Head CI，并在 PR 元数据收口 Judge |
+| 待合并 PR | `#12` Head `a220e9e…`；`#13` 原 Head `50dd04ca…`，且 #13 叠加在 #12 上 |
+| R6 结果 | `NO_FORMAL_DATA_FOUND`；旧项目与数据库从未建立，无真实数据迁移 |
+| 发布授权 | PR #12/#13 Ready 与合并、`main` CI、annotated Tag/Release `v3.29.0` |
+| 下一动作 | 完成 R7 发布说明与状态收口，推送 PR #13 新固定 Head 并验证完整 CI |
 
 新聊天不需要用户复制施工单或回传。必须读取 `AGENTS.md` 和四份 `_ai-dev`
-文件，再核对 GitHub。Work5 已取得云端盘点工具设计与实施授权，不得重复询问；
-Windows 真实盘点、真实迁移、Ready、合并、Tag、Release 和 R7 仍未授权。
+文件，再核对 GitHub。用户已启动 Work7 并选择 A / `v3.29.0`，不得重复询问版本；
+只能对 PR #12/#13、对应新 `main`、annotated Tag 和 Release `v3.29.0` 执行授权动作。
 
 本地新鲜证据：审查修复后专项 `31 passed`，R6-A/R4/备份联合
 `50 passed, 4 warnings`；最终代码完整后端门 `5070 passed, 1 skipped,
 4 deselected, 48 warnings, 499 subtests passed`，独立复核 APPROVE。
-Windows 真实盘点仍为 `NOT_RUN`，不得把本地或云端 CI
-表述为真实数据库已检查。
+Windows 真实盘点仍为 `NOT_RUN`；Work6 结论是旧项目和数据库从未建立，不得把
+本地或云端 CI 表述为真实数据库已检查，也不得扩大搜索路径。
 
 以下内容是旧 Work 的追加历史；与本节冲突时，以 `PROJECT_STATUS.md`、本节和
 GitHub 可验证事实为准。

@@ -15,7 +15,8 @@
 | R3｜功能迁移 | 完成 | R3.1–R3.7 已通过并由 PR #11 合入 `main@eb32298…` |
 | R4｜数据库兼容与脱敏迁移演练 | 完成 | Work4 方案 A；PR #12 固定 Head CI 通过；Draft Hold |
 | R5｜Windows 本机验收 | 完成 | Work2 / PR #9 真机启动与回滚模拟通过并进入 `main` |
-| R6–R7 | 未启动 | 真实数据迁移和发布分别受独立授权门控制 |
+| R6｜正式数据迁移 | 完成（无数据，跳过迁移） | Work6 `NO_FORMAL_DATA_FOUND`；旧项目和数据库从未建立 |
+| R7｜主线与正式发布 | 进行中 | 已选 A / `v3.29.0`；按 PR 固定 Head、`main` CI、Tag 和产物门执行 |
 
 ## Work 1｜官方稳定版干净底座建立（历史）
 
@@ -66,3 +67,13 @@ Ready、合并、Tag、Release 和后续阶段均未授权。
 Work4 最终实现 Head `f1b433a7…` 的 CI Run `30660971800` 全部适用 Job success，
 Judge 为 `PASS — WORK4 COMPLETED — DRAFT_HOLD`。下一未启动大段是 Work5 / R6
 正式数据迁移授权与计划；必须在新聊天接管后先取得单独授权。
+
+## Work5–Work7 / R6–R7（2026-08-01）
+
+Work5 已在 Draft PR #13 完成 Windows 原生安全只读盘点工具，固定 Head
+`50dd04ca…` 的 Run `30691233934` 全部适用 Job success。Work6 在 Windows 本机确认
+旧项目和指定数据库从未建立，裁决 `NO_FORMAL_DATA_FOUND`，因此不执行真实数据迁移。
+
+Work7 已选择方案 A / `v3.29.0`。PR #12 与叠加其上的 PR #13 将按固定 Head 顺序
+进入 `main`；最终 `main` push CI 通过后才创建 annotated Tag，并以 GitHub Release、
+Windows/macOS 正式资产和 Docker/GHCR 结果作为 R7 完成证据。

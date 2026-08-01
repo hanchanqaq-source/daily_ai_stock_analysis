@@ -6,27 +6,58 @@
 PROJECT_ID=PP02
 PROJECT_NAME=AI 每日股票分析
 CHAT_ROLE=AUTO_TAKEOVER
-WORK_ID=WORK-005
+WORK_ID=WORK-007
 ROLE_LOCK=SUPERSEDED_BY_PP02-WORK-HANDOFF-002
 WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
 WORK_STATE=ACTIVE
-EXECUTION_LOCK=HELD_BY_WORK_005
+EXECUTION_LOCK=HELD_BY_WORK_007
 APPLICATION_BASE_VERSION=3.28.0
+TARGET_RELEASE_VERSION=3.29.0
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-ACTIVE_BASE=a220e9e146e14722561bc084ec4e5306b30d36c7
+ACTIVE_BASE=eb32298c8f3cbec2ff400dda37d3267a7181af40
 ACTIVE_BRANCH=agent/pp02-work5-r6-inventory-tool
-ACTIVE_PR=13
-CURRENT_STAGE=R6-A / Plan-Build-Test-CI-Judge
-CURRENT_WORK=正式数据安全只读盘点工具
-ACTIVE_GOAL=云端实现正式数据安全只读盘点工具；仅用空库和人工假数据验证
-CURRENT_STATUS=DRAFT_PR_OPEN — FINAL_CI_PENDING
+ACTIVE_PR=12,13
+CURRENT_STAGE=R7 / Mainline-CI-Tag-Release-Judge
+CURRENT_WORK=主线合并与正式发布
+ACTIVE_GOAL=按固定Head依序合并PR #12/#13并正式发布v3.29.0
+CURRENT_STATUS=AUTHORIZED — RELEASE_PREPARATION
 ACTIVE_BLOCKER=NONE
-NEXT_WORK=NONE_WHILE_WORK_005_ACTIVE
-NEXT_ACTION=验证Draft PR #13最终固定Head CI并在PR元数据收口Judge
-AUTHORIZATION_REQUIRED=TRUE_FOR_WINDOWS_REAL_DATABASE/REAL_INVENTORY/MIGRATION/READY/MERGE/MAIN/TAG/RELEASE/R7
+NEXT_WORK=NONE_WHILE_WORK_007_ACTIVE
+NEXT_ACTION=完成R7发布说明与状态收口，验证新固定Head后进入主线合并门
+AUTHORIZATION_REQUIRED=FALSE_FOR_PR12_PR13_READY/MERGE/MAIN_CI/TAG_v3.29.0/RELEASE_v3.29.0;TRUE_FOR_REAL_DATA/OTHER_RELEASE/OTHER_SCOPE
 LAST_UPDATED=2026-08-01
 ```
+
+## 2026-08-01 Work7 / R7 接管与版本裁决
+
+- 用户正式启动 `Work7｜R7 主线合并与正式发布`，并选择方案 A：目标正式版本
+  `v3.29.0`；该授权覆盖 PR #12/#13 的 Ready、固定 Head 合并、新 `main` CI、
+  annotated Tag `v3.29.0`、对应 GitHub Release 与正式产物验收。
+- 当前远程 `main` 为 `eb32298c8f3cbec2ff400dda37d3267a7181af40`；PR #12
+  固定 Head `a220e9e146e14722561bc084ec4e5306b30d36c7`，PR #13 叠加在
+  PR #12 上，固定 Head `50dd04ca5a49a6e54de01e2d28ce598f690d9931`。
+- PR #12 Run `30661990072` success；PR #13 Run `30691233934` success。
+  R7 发布收口会产生一个新的 PR #13 Head，必须重新通过完整 CI 才能合并。
+- 合并顺序固定为：先 PR #12 → 把 PR #13 Base 改为 `main` → 验证 PR #13 新
+  固定 Head CI → 合并 PR #13 → 验证新 `main` push CI → 创建 annotated Tag
+  `v3.29.0` → 验收 Release 工作流与产物。
+- 正式数据、真实凭据、其他版本 Tag/Release、范围外功能和强推仍未授权。
+
+## 2026-08-01 Work6 / R6 最终裁决
+
+- Windows 本机确认旧项目目录与指定数据库从未建立，最终裁决为
+  `NO_FORMAL_DATA_FOUND`；这不是数据丢失。
+- 未搜索 D 盘其他位置，未创建数据库、备份或隔离检出，未读取或迁移真实数据。
+- R6 正式数据迁移因此按“无正式数据可迁移”跳过；R6-A 安全盘点工具作为未来显式
+  单文件检查能力保留，不得据此声称已盘点某个真实数据库。
+
+## 2026-08-01 Work5 / R6-A 最终收口
+
+- Draft PR #13 固定 Head `50dd04ca5a49a6e54de01e2d28ce598f690d9931` 的
+  CI Run `30691233934` 全部适用 Job success；Work5 Judge 为
+  `CLOUD_TOOL_IMPLEMENTATION_PASS — WINDOWS_REAL_INVENTORY_NOT_RUN`。
+- Work5 已释放施工权；其旧授权边界不覆盖 Work7，但 Work7 的新精确授权已单独记录。
 
 ## 2026-08-01 Work5 / R6-A 接管
 

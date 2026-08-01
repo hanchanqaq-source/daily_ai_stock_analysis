@@ -115,3 +115,20 @@ def test_github_login_from_pr_network_error_warns_with_pr_and_exception_type(
     assert "PR #127" in caplog.text
     assert "exception_type=URLError" in caplog.text
     assert "secret-token" not in caplog.text
+
+
+def test_build_uses_current_repository_history_for_first_release(
+    monkeypatch,
+) -> None:
+    module = _load_release_notes_module()
+    repository = "hanchanqaq-source/daily_ai_stock_analysis"
+
+    monkeypatch.setenv("GITHUB_REPOSITORY", repository)
+    monkeypatch.setattr(module, "_section_for", lambda version: "")
+    monkeypatch.setattr(module, "_previous_tag", lambda tag: "")
+    monkeypatch.setattr(module, "_contributors", lambda previous, tag: [])
+
+    body = module.build("v3.29.0")
+
+    assert f"https://github.com/{repository}/commits/v3.29.0" in body
+    assert "ZhuLinsen/daily_stock_analysis" not in body

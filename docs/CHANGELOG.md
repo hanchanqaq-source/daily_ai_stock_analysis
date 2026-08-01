@@ -5,37 +5,61 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-> For user-friendly release highlights, see the [GitHub Releases](https://github.com/ZhuLinsen/daily_stock_analysis/releases) page.
+> For user-friendly release highlights, see the [GitHub Releases](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/releases) page.
 
 ## [Unreleased]
-- [修复] 隔离 Windows 冻结启动门的 GitHub Actions 与 Python UTF-8 环境，确保真实服务启动验证
-
-- [修复] 补齐 fake-useragent 冻结资源与真实 Windows 后端启动门，阻止不可启动的便携候选上传
-- [新功能] 为 PP02 Windows 便携 ZIP 增加用户触发、完整校验、事务切换和失败回滚的安全更新链路
-- [改进] 统一 Windows CI 与正式 Release 的便携清单、ZIP 和 SHA-256 资产准备及复验流程
-
-- [chore] 将桌面端身份、更新源和发布产物切换为 PP02 专用仓库与 ASCII 技术名称，并让 CI 阻断执行 Desktop 单元测试。
-- [改进] PP02 默认关闭自动通知，并用统一总开关约束股票分析、市场复盘、Web/API、运行时调度与告警发送。
-- [改进] GitHub Actions 每日分析改为仅支持人工触发，移除默认 cron 定时入口。
-- [新功能] 新增基于官方组合事件账本的快捷持仓预览与确认，支持目标数量差额、过期预览冲突和重复确认去重。
-- [测试] Web CI 新增 PortfolioPage 专项 Vitest 阻断门，覆盖快捷持仓必须先预览再确认的交互契约。
-- [新功能] 新增股票组合版本化 JSON 备份、只读恢复预览和人工确认后的单事务整套恢复，派生持仓继续由官方事件账本重放。
-- [修复] 备份摘要对已校验的日期和时间做明确 ISO 规范化，避免恢复预览因 `date/datetime` 无法 JSON 序列化而失败。
-- [测试] PortfolioPage 专项门扩展到 31 项，并修正切换成本法时汇率刷新按钮的异步等待竞态。
-- [新功能] 新增应用内手动周期报告，覆盖本周至今、上一周、5周、10周、1个月和2个月，并将股票、ETF与市场复盘分区展示。
-- [新功能] 新增基于最近14日正式历史的条件化下周展望，保存可追溯的 `period_outlook` 快照；数据不足时不生成方向。
-- [测试] Web CI 阻断门加入周期报告页面、路由与导航测试；周期生成保持无模型调用、无定时器和无自动推送。
-- [改进] Windows Desktop 敏感配置改由 Electron `safeStorage` / DPAPI 加密的版本化 vault 持久化，renderer 不提供明文读取 IPC。
-- [改进] 安全凭据与 `.env` 原始字节版本绑定；解密、版本、origin、事务或重启异常均 fail closed。
-- [改进] 敏感配置全量遮罩，配置导出排除凭据，Windows secure mode 明确拒绝裸键或引号键的敏感 `.env` 导入。
-- [测试] Windows CI 使用与 PR Head 绑定的构造假凭据验证真实 `safeStorage`，并扫描源码根目录、日志、ZIP 和解包产物。
-- [文档] PP02 改用一个大段一个 Work 的自动接力协议，聊天名称保持不变，交接由唯一状态文件和 GitHub 事实自动完成。
-- [新功能] 新增仅接受 SHA-256 绑定人工合成 SQLite 的 PP02 R4 迁移演练 CLI，只迁移正式股票事件账本并输出无行值证据报告。
-- [测试] 新增空库、混合假数据、证明拒绝、排除基金/用户/派生表、源文件不变、原子报告和过期预览回滚覆盖。
-- [新功能] 新增 Windows 原生 PP02 正式数据安全盘点 CLI，对人工指定的 SQLite 先做双备份，再只读统计四类正式股票事件且不输出行值。
-- [测试] 新增双备份哈希、WAL/SHM、源变化、Schema/完整性、Windows/WSL 环境门、Git 输出边界和隐私受限报告覆盖。
 <!-- 新条目格式：- [类型] 描述（类型取值：新功能/改进/修复/文档/测试/chore）-->
 <!-- 每条独立一行追加到本段末尾，无需分类标题，合并时冲突最小 -->
+
+## [3.29.0] - 2026-08-01
+
+### 发布亮点
+
+- PP02 桌面端、更新源和发布产物已切换到独立项目身份，正式发布不再依赖上游仓库。
+- 默认改为人工分析与人工触发，自动通知和每日定时默认关闭，避免后台自动消耗额度。
+- 新增官方股票事件账本上的快捷持仓、版本化备份恢复、手动周期报告和条件化下周展望。
+- Windows 版新增可回滚便携更新与 DPAPI 安全凭据链，正式产物经过固定 Head 和真实冻结后端门验证。
+- 新增仅使用人工假数据的数据库迁移演练，以及显式单文件、双备份、无行值的正式数据安全盘点工具。
+
+### 新功能
+
+- 为 PP02 Windows 便携 ZIP 增加用户触发、完整校验、事务切换和失败回滚的安全更新链路。
+- 新增基于官方组合事件账本的快捷持仓预览与确认，支持目标数量差额、过期预览冲突和重复确认去重。
+- 新增股票组合版本化 JSON 备份、只读恢复预览和人工确认后的单事务整套恢复，派生持仓继续由官方事件账本重放。
+- 新增应用内手动周期报告，覆盖本周至今、上一周、5周、10周、1个月和2个月，并将股票、ETF与市场复盘分区展示。
+- 新增基于最近14日正式历史的条件化下周展望，保存可追溯的 `period_outlook` 快照；数据不足时不生成方向。
+- 新增仅接受 SHA-256 绑定人工合成 SQLite 的 PP02 R4 迁移演练 CLI，只迁移正式股票事件账本并输出无行值证据报告。
+- 新增 Windows 原生 PP02 正式数据安全盘点 CLI，对人工指定的 SQLite 先做双备份，再只读统计四类正式股票事件且不输出行值。
+
+### 改进
+
+- 统一 Windows CI 与正式 Release 的便携清单、ZIP 和 SHA-256 资产准备及复验流程。
+- PP02 默认关闭自动通知，并用统一总开关约束股票分析、市场复盘、Web/API、运行时调度与告警发送。
+- GitHub Actions 每日分析改为仅支持人工触发，移除默认 cron 定时入口。
+- Windows Desktop 敏感配置改由 Electron `safeStorage` / DPAPI 加密的版本化 vault 持久化，renderer 不提供明文读取 IPC。
+- 安全凭据与 `.env` 原始字节版本绑定；解密、版本、origin、事务或重启异常均 fail closed。
+- 敏感配置全量遮罩，配置导出排除凭据，Windows secure mode 明确拒绝裸键或引号键的敏感 `.env` 导入。
+
+### 修复
+
+- 隔离 Windows 冻结启动门的 GitHub Actions 与 Python UTF-8 环境，确保真实服务启动验证。
+- 补齐 fake-useragent 冻结资源与真实 Windows 后端启动门，阻止不可启动的便携候选上传。
+- 备份摘要对已校验的日期和时间做明确 ISO 规范化，避免恢复预览因 `date/datetime` 无法 JSON 序列化而失败。
+- 发布说明使用当前 GitHub 仓库生成更新记录链接；首次 PP02 Release 不再生成上游仓库的无效自比较链接。
+
+### 测试
+
+- Web CI 新增 PortfolioPage 专项 Vitest 阻断门，覆盖快捷持仓必须先预览再确认的交互契约。
+- PortfolioPage 专项门扩展到 31 项，并修正切换成本法时汇率刷新按钮的异步等待竞态。
+- Web CI 阻断门加入周期报告页面、路由与导航测试；周期生成保持无模型调用、无定时器和无自动推送。
+- Windows CI 使用与 PR Head 绑定的构造假凭据验证真实 `safeStorage`，并扫描源码根目录、日志、ZIP 和解包产物。
+- 新增空库、混合假数据、证明拒绝、排除基金/用户/派生表、源文件不变、原子报告和过期预览回滚覆盖。
+- 新增双备份哈希、WAL/SHM、源变化、Schema/完整性、Windows/WSL 环境门、Git 输出边界和隐私受限报告覆盖。
+
+### 文档与治理
+
+- 将桌面端身份、更新源和发布产物切换为 PP02 专用仓库与 ASCII 技术名称，并让 CI 阻断执行 Desktop 单元测试。
+- PP02 改用一个大段一个 Work 的自动接力协议，聊天名称保持不变，交接由唯一状态文件和 GitHub 事实自动完成。
 
 ## [3.28.0] - 2026-07-26
 
