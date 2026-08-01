@@ -18,17 +18,17 @@ PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
 ACTIVE_BASE=66666352e953d90becce420da7d35b649516af76
 ACTIVE_BRANCH=agent/pp02-work8-r7-installer-fix
 ACTIVE_PR=17
-CURRENT_STAGE=R7 Hotfix / Design-Spec-Review
+CURRENT_STAGE=R7 Hotfix / Local Verification
 CURRENT_WORK=WORK-008 — Windows installer defect repair and v3.29.1 patch
 ACTIVE_GOAL=repair assisted per-user NSIS installer without removing directory selection
-CURRENT_STATUS=DRAFT_PR_17 — USER_SPEC_REVIEW_REQUIRED
+CURRENT_STATUS=IMPLEMENTATION_LOCAL_PASS — CI_PENDING
 ACTIVE_BLOCKER=NONE
 FAILED_RELEASE_TAG=v3.29.0
 FAILURE_CLASS=INSTALLER_BOOTSTRAP_CRASH
 FAILURE_REPRODUCIBILITY=2/2
 FAILURE_EXCEPTION=0xC0000005 / System.dll
 NEXT_WORK=NONE_WHILE_WORK_008_ACTIVE
-NEXT_ACTION=user approves committed design, then write implementation plan and enter RED
+NEXT_ACTION=push audited implementation to Draft PR 17 and require fixed-Head CI
 AUTHORIZATION_REQUIRED=FALSE_FOR_IN_SCOPE_BRANCH/COMMITS/DRAFT_PR/CI_FIXES;TRUE_FOR_READY/MERGE/MAIN_WRITE/TAG/RELEASE/REAL_DATA
 LAST_UPDATED=2026-08-01
 ```
@@ -49,6 +49,14 @@ LAST_UPDATED=2026-08-01
   `docs/superpowers/specs/2026-08-01-work8-windows-installer-hotfix-design.md`.
   It pins `electron-builder 26.15.7`, keeps the install-directory wizard and current-user mode,
   and adds real Windows install/start/uninstall gates to PR and Release workflows.
+- User approved the design correction that Desktop test, Windows/macOS packaging and Desktop
+  Release jobs use Node 22 because `@electron/rebuild 4.x` requires Node `>=22.12`; the standalone
+  Web gate remains on Node 20.
+- Implementation commits pin the repaired builder, explicitly declare the existing test-only
+  `archiver 5.3.2` dependency, and add the shared fail-closed Windows verifier plus fixture.
+- Local evidence: Desktop Node 22 tests `81/81`; installer and packaging contracts `23/23`;
+  workflow YAML parsing and `git diff --check` pass. Windows lifecycle and macOS packaging remain
+  pending the PR fixed-Head Actions run.
 - Current authorization covers this branch, normal commits, a Draft PR, CI and in-scope fixes.
   Ready, merge, main write, `v3.29.1` tag/Release and real data remain separate authorization
   gates. `v3.29.0` is immutable and must not be moved or rebuilt.

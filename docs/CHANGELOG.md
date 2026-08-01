@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 <!-- 新条目格式：- [类型] 描述（类型取值：新功能/改进/修复/文档/测试/chore）-->
 <!-- 每条独立一行追加到本段末尾，无需分类标题，合并时冲突最小 -->
+- [修复] Windows 安装器升级到已修复 `System.dll / 0xC0000005` 竞态的 `electron-builder 26.15.7`，并在 PR 与正式发布前真实执行隔离安装、启动和卸载验证。
 
 ## [3.29.0] - 2026-08-01
 

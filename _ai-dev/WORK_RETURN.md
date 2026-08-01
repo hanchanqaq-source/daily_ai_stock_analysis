@@ -32,8 +32,15 @@ R7_WINDOWS_FIRST_USE_ACCEPTANCE=FAIL
   `docs/superpowers/specs/2026-08-01-work8-windows-installer-hotfix-design.md`。
 - 设计锁定 `electron-builder 26.15.7`、保留 assisted/current-user 安装，并新增
   PR 与 Release 共用的 Windows install/start/uninstall verifier。
-- 当前 Judge：`DRAFT_PR_17 — USER_SPEC_REVIEW_REQUIRED`。
-- 尚未修改 manifest、lockfile、verifier、CI 或 Release workflow；尚未执行 Build/CI。
+- 用户已批准设计勘误：Desktop 测试、Windows/macOS 打包和 Desktop Release 使用
+  Node 22，独立 Web 门继续使用 Node 20。
+- 已精确锁定 builder、显式补齐既有测试使用的 `archiver 5.3.2` 开发依赖，并新增
+  fail-closed verifier、失败进程 fixture、PR 与 Release 生命周期门。
+- TDD RED 分别证明旧 builder、缺失 verifier/工作流门、旧 Node 20 和未声明
+  `archiver` 会失败；GREEN 后 Desktop Node 22 测试 `81/81`、安装器与打包专项
+  `23/23` 通过，workflow YAML 与差异格式检查通过。
+- 当前 Judge：`IMPLEMENTATION_LOCAL_PASS — CI_PENDING`。
+- 未验证：GitHub Windows 安装/启动/卸载、macOS 打包和完整固定 Head CI。
 - 未授权 Ready、Merge、main、`v3.29.1` Tag/Release 或真实数据。
 
 ---

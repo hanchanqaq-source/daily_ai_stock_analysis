@@ -18,7 +18,8 @@ SCOPE_DRIFT=FALSE
 
 用户已授权启动 Work8，并选择 `A｜保留安装向导`。修复必须保留选择安装目录、
 当前用户安装、正常卸载、安装版自动更新和免安装 ZIP；不得通过删除安装向导来绕过
-缺陷。
+缺陷。用户随后批准设计勘误：Desktop 测试、Windows/macOS 打包和 Desktop Release
+任务升级至 Node 22，独立 Web 门保持 Node 20。
 
 ## 根因与设计
 
@@ -27,7 +28,9 @@ SCOPE_DRIFT=FALSE
 - 根因与 electron-builder #8536 / #9564 的 24.x NSIS `System::Store()` 竞态一致。
 - 批准设计见
   `docs/superpowers/specs/2026-08-01-work8-windows-installer-hotfix-design.md`。
-- 构建链只精确升级 `electron-builder` 到 `26.15.7`；Electron 和业务依赖不顺带升级。
+- 构建链只精确升级 `electron-builder` 到 `26.15.7`；Electron 和业务运行依赖不顺带升级。
+- `@electron/rebuild 4.x` 要求 Node `>=22.12`，因此所有 Desktop 构建路径使用 Node 22；
+  既有便携测试显式声明此前由旧 builder 偶然带入的测试依赖 `archiver 5.3.2`。
 - 新增可复用 Windows 验证器，并在 PR Windows 打包门和正式 Desktop Release 门中
   真实执行 install/start/uninstall。
 
@@ -53,7 +56,8 @@ SCOPE_DRIFT=FALSE
 ## 验收标准
 
 1. RED 证明确切缺口：旧 builder line、缺失 verifier、PR/Release workflow 未执行安装器。
-2. manifest 精确锁定 `electron-builder 26.15.7`，lockfile 与 Node 20/npm 一致。
+2. manifest 精确锁定 `electron-builder 26.15.7`，lockfile 与 Node 22/npm 一致；
+   独立 Web 门继续使用 Node 20。
 3. Windows verifier 对唯一安装器执行隔离 install/start/uninstall，稳定输出证据并
    仅清理自身临时目录。
 4. PR Windows Job 同一 Head 的安装器、便携 ZIP、冻结后端和假凭据扫描全部通过。
@@ -69,8 +73,8 @@ SCOPE_DRIFT=FALSE
 | 用户决定 | `A｜保留安装向导` |
 | 待决产品问题 | 0；功能取舍已锁定 |
 | 根因证据 | 与上游 #8536/#9564 高一致，且新 v26 模板已移除竞态路径 |
-| 当前门 | Draft PR #17 已创建，等待用户确认书面规格 |
-| 允许进入 Build | 书面规格确认后允许按实施计划进入 RED |
+| 当前门 | 本地实现与专项通过；Draft PR #17 固定 Head CI 待运行 |
+| 允许进入 Build | 已批准并完成；下一门为固定 Head CI |
 | 发布授权 | 未授予 |
 
 ---

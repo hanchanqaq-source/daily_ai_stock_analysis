@@ -32,7 +32,7 @@
 - Consumes: `apps/dsa-desktop/package.json`, `apps/dsa-desktop/package-lock.json`, `.github/workflows/ci.yml`, and `.github/workflows/desktop-release.yml`.
 - Produces: failing regression contracts that identify the affected builder line and both absent installer-execution gates.
 
-- [ ] **Step 1: Add the failing builder regression**
+- [x] **Step 1: Add the failing builder regression**
 
 ```python
 def test_windows_installer_uses_fixed_electron_builder_line() -> None:
@@ -44,7 +44,7 @@ def test_windows_installer_uses_fixed_electron_builder_line() -> None:
     assert lock["packages"]["node_modules/electron-builder"]["version"] == "26.15.7"
 ```
 
-- [ ] **Step 2: Add failing workflow behavior contracts**
+- [x] **Step 2: Add failing workflow behavior contracts**
 
 ```python
 def test_windows_jobs_execute_the_shared_installer_verifier() -> None:
@@ -61,7 +61,7 @@ def test_windows_jobs_execute_the_shared_installer_verifier() -> None:
 Add a separate workflow-runtime contract that requires Node 22 in `desktop-test`, both Desktop
 package jobs, and both Desktop Release build jobs, while requiring Node 20 in `web-gate`.
 
-- [ ] **Step 3: Run RED and confirm the expected causes**
+- [x] **Step 3: Run RED and confirm the expected causes**
 
 Run:
 
@@ -73,7 +73,7 @@ Expected: existing tests pass; the new tests fail because the manifest still res
 neither workflow invokes `scripts/verify-windows-installer.ps1`, and Desktop build jobs still use
 Node 20.
 
-- [ ] **Step 4: Commit the RED evidence**
+- [x] **Step 4: Commit the RED evidence**
 
 ```bash
 git add tests/test_desktop_installer_config.py tests/test_packaging_build_scripts.py
@@ -93,7 +93,7 @@ git commit -m "test: expose Windows installer validation gap"
 - Produces: a deterministic desktop dependency graph with `electron-builder 26.15.7`, unchanged
   Electron 31.4.x, and an officially supported Node 22 runtime for every Desktop build path.
 
-- [ ] **Step 1: Set the exact development dependency**
+- [x] **Step 1: Set the exact development dependency**
 
 ```json
 "devDependencies": {
@@ -102,7 +102,7 @@ git commit -m "test: expose Windows installer validation gap"
 }
 ```
 
-- [ ] **Step 2: Regenerate the lock with Node 22 semantics**
+- [x] **Step 2: Regenerate the lock with Node 22 semantics**
 
 Run:
 
@@ -119,12 +119,12 @@ through the old builder's transitive Squirrel dependency, declare the previously
 `archiver 5.3.2` as an exact Desktop test-only development dependency. Do not add it to runtime
 dependencies or change portable-update production code.
 
-- [ ] **Step 3: Upgrade only Desktop build jobs to Node 22**
+- [x] **Step 3: Upgrade only Desktop build jobs to Node 22**
 
 Set `node-version: '22'` in CI `desktop-test`, Windows/macOS Desktop package jobs and Desktop
 Release Windows/macOS build jobs. Keep CI `web-gate` at `node-version: '20'`.
 
-- [ ] **Step 4: Verify GREEN for dependency and runtime contracts**
+- [x] **Step 4: Verify GREEN for dependency and runtime contracts**
 
 Run:
 
@@ -134,7 +134,7 @@ python -m pytest tests/test_desktop_installer_config.py::test_windows_installer_
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit the dependency repair**
+- [x] **Step 5: Commit the dependency repair**
 
 ```bash
 git add apps/dsa-desktop/package.json apps/dsa-desktop/package-lock.json .github/workflows/ci.yml .github/workflows/desktop-release.yml docs/superpowers/specs/2026-08-01-work8-windows-installer-hotfix-design.md docs/superpowers/plans/2026-08-01-work8-windows-installer-hotfix.md
@@ -153,7 +153,7 @@ git commit -m "fix: upgrade repaired NSIS builder template"
 - Consumes: `-InstallerPath`, `-ExpectedVersion`, `-InstallRoot`, optional `-ExpectedCommitSha`, and the real NSIS artifact.
 - Produces: stable `WINDOWS_INSTALLER_*` evidence, zero/non-zero exit behavior, an installed-app startup proof from `logs/desktop.log`, and safe verifier-owned cleanup.
 
-- [ ] **Step 1: Write the Windows process-boundary fixture before the verifier**
+- [x] **Step 1: Write the Windows process-boundary fixture before the verifier**
 
 Create a PowerShell contract runner that compiles this tiny failing installer executable with `Add-Type -OutputType ConsoleApplication`:
 
@@ -190,7 +190,7 @@ if (-not (Test-Path -LiteralPath $parentSentinel)) { throw 'Verifier removed a p
 Write-Host 'WINDOWS_INSTALLER_CONTRACT_VALIDATION=PASS'
 ```
 
-- [ ] **Step 2: Implement the minimal shared verifier**
+- [x] **Step 2: Implement the minimal shared verifier**
 
 The script must:
 
@@ -215,7 +215,7 @@ if ($installProcess.ExitCode -ne 0) { throw "Installer exited with code $($insta
 
 After exit code 0 it requires `PP02 AI Daily Stock Analysis.exe`, `resources/app.asar`, the frozen backend, one accepted `Uninstall *.exe`, matching file version, and one HKCU uninstall entry whose `InstallLocation` equals the owned root. It temporarily sets `GITHUB_ACTIONS=false`, starts the installed app, polls the new root's `logs/desktop.log` for `Main UI loaded in`, kills only processes whose executable is inside the owned root, runs the generated uninstaller silently, and polls until app binaries plus that registry entry are gone. `finally` restores all changed environment variables and removes only the previously validated owned root.
 
-- [ ] **Step 3: Run the fixture and real artifact in the PR Windows job**
+- [x] **Step 3: Run the fixture and real artifact in the PR Windows job**
 
 Add steps after the existing package build and before leakage scan/upload:
 
@@ -229,7 +229,7 @@ $installRoot = Join-Path $env:RUNNER_TEMP "pp02-installer-verify-$env:DSA_EXPECT
 
 Change the uploaded candidate to include the verified installer, `latest.yml`, its exact `.blockmap`, the portable ZIP, and the ZIP SHA-256.
 
-- [ ] **Step 4: Run the same verifier before Release artifact preparation**
+- [x] **Step 4: Run the same verifier before Release artifact preparation**
 
 After resolving the tag, write the checked-out commit to `DSA_RELEASE_COMMIT_SHA`. Run the fixture and real verifier after `Build desktop package (Windows)` and before `Prepare release artifact (Windows)` with this step:
 
@@ -241,7 +241,7 @@ $installRoot = Join-Path $env:RUNNER_TEMP "pp02-installer-verify-$env:DSA_RELEAS
 ./scripts/verify-windows-installer.ps1 -InstallerPath $installer.FullName -ExpectedVersion $expectedVersion -InstallRoot $installRoot -ExpectedCommitSha $env:DSA_RELEASE_COMMIT_SHA
 ```
 
-- [ ] **Step 5: Verify GREEN locally and commit**
+- [x] **Step 5: Verify GREEN locally and commit**
 
 Run:
 
@@ -272,7 +272,7 @@ git commit -m "ci: validate Windows installer lifecycle"
 - Consumes: the exact local test counts, final diff, remote Head, and GitHub Actions run evidence.
 - Produces: one auditable Work8 status and an updated Draft PR #17; it does not authorize merge or release.
 
-- [ ] **Step 1: Update user and operator documentation**
+- [x] **Step 1: Update user and operator documentation**
 
 Add one flat `[Unreleased]` line:
 
@@ -282,11 +282,11 @@ Add one flat `[Unreleased]` line:
 
 Replace the stale desktop-package statement that CI does not exercise the Release chain with the shared-verifier commands and the distinction between CI lifecycle validation and final visible-wizard acceptance.
 
-- [ ] **Step 2: Update the four ledgers and roadmap from evidence only**
+- [x] **Step 2: Update the four ledgers and roadmap from evidence only**
 
 Record the approved design, implementation commits, RED cause, local results, PR fixed Head, CI run/jobs, remaining final Windows acceptance, and Judge. Before remote CI, use `IMPLEMENTATION_LOCAL_PASS — CI_PENDING`; after a successful fixed-Head run, use at most `IMPLEMENTATION_PASS — DRAFT_HOLD`.
 
-- [ ] **Step 3: Run the complete pre-push verification**
+- [x] **Step 3: Run the complete pre-push verification**
 
 Run:
 
