@@ -9,10 +9,11 @@
 | 当前状态 | `MAIN_CI_FAILED — FIX_IN_PROGRESS`；目标版本 `v3.29.0` |
 | 固定 Base | `main@6650f9c30f394a1ba6b7e7fd99de67d5c11488ab` |
 | 分支 | `agent/pp02-r7-main-web-ci-stabilization` |
+| 修复 PR | Draft `#14`；等待最终固定 Head CI |
 | 已合并 PR | `#12` → `ad5588fb…`；`#13` → `6650f9c3…` |
 | R6 结果 | `NO_FORMAL_DATA_FOUND`；旧项目与数据库从未建立，无真实数据迁移 |
 | 发布授权 | PR #12/#13 Ready 与合并、`main` CI、annotated Tag/Release `v3.29.0` |
-| 下一动作 | 推送 main CI 最小修复 PR，验证并合并；新 main 全绿后再 Tag/Release |
+| 下一动作 | 验证 PR #14 最终固定 Head；通过后合并，新 main 全绿后再 Tag/Release |
 
 新聊天不需要用户复制施工单或回传。必须读取 `AGENTS.md` 和四份 `_ai-dev`
 文件，再核对 GitHub。用户已启动 Work7 并选择 A / `v3.29.0`，不得重复询问版本；

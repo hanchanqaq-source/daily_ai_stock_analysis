@@ -16,11 +16,12 @@
 - 已在 `agent/pp02-r7-main-web-ci-stabilization` 完成最小本地修复：两个
   Web 测试等待真实账户选项；冻结后端从独立运行数据目录启动并设置
   `PYTHONSAFEPATH=1`。
+- Draft PR #14 已创建，等待状态收口后最终固定 Head CI。
 - Work6 最终裁决 `NO_FORMAL_DATA_FOUND`：旧项目和数据库从未建立，无真实数据迁移。
 
 ## 当前 Judge
 
-`MAIN_CI_FAILED — FIX_PR_REQUIRED`
+`MAIN_CI_FAILED — PR14_FIXED_HEAD_CI_REQUIRED`
 
 PR #12/#13 已完成 Ready/Merge；`v3.29.0` Tag 与 Release 仍未创建。
 必须先让修复 PR 和新 `main` push CI 全部通过，再进入 Tag 门。
