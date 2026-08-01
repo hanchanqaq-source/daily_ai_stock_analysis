@@ -1,4 +1,35 @@
-# WORK-004｜R4 数据库兼容与脱敏迁移演练回传
+# WORK-005｜R6-A 正式数据安全只读盘点工具回传
+
+> 当前 Work 运行中。只有本 Work 的新鲜证据可以更新当前结果；旧 Work 内容在下方
+> 作为追加历史保留。
+
+## 当前进度
+
+- 用户已批准 R6-A 书面设计与实施；Work5 为唯一 Active Work。
+- 固定 Base：Work4 Draft PR #12 Head
+  `a220e9e146e14722561bc084ec4e5306b30d36c7`。
+- 独立分支：`agent/pp02-work5-r6-inventory-tool`；Draft PR 尚未创建。
+- 已完成标准库安全核心、Windows 薄 CLI、31 项专项测试、精确 Windows 用法和隐私边界文档。
+- TDD RED 已分别证明服务模块和 CLI 缺失时的新契约失败；GREEN 后专项
+  `26 passed`。独立审查发现 3 项 Important 和 1 项 Minor，已用 5 项新 RED 回归复现
+  并修复；当前专项 `31 passed`，R6-A/R4/备份联合 `50 passed, 4 warnings`。
+- 最终代码完整 CI 等效后端门为 `5070 passed, 1 skipped, 4 deselected,
+  48 warnings, 499 subtests passed`；语法、严重 Flake8、确定性检查、AI 资产和
+  格式检查通过；独立复核 APPROVE，无剩余发现。
+- 当前阶段：最终本地验证通过，正在提交审查修复并准备独立 Draft PR。
+- 云端只用动态空库和人工假数据；Windows 真实数据库未读取、未备份、未盘点。
+
+## 当前 Judge
+
+`LOCAL_PASS — DRAFT_CI_PENDING — WINDOWS_REAL_INVENTORY_NOT_RUN`
+
+工具云端实现和本地验证已经完成，但 Work5 仍需独立 Draft PR 固定 Head CI 与最终
+Judge 才能收口。Windows 真实盘点、真实迁移、Ready、合并、`main`、Tag、Release
+和 R7 仍未授权。
+
+---
+
+# 历史回传｜WORK-004 / R4
 
 > 当前 Work 已结束。只有本 Work 的新鲜证据可以更新当前结果；旧 Work 内容在下方
 > 作为追加历史保留。

@@ -6,27 +6,58 @@
 PROJECT_ID=PP02
 PROJECT_NAME=AI 每日股票分析
 CHAT_ROLE=AUTO_TAKEOVER
-WORK_ID=WORK-004
+WORK_ID=WORK-005
 ROLE_LOCK=SUPERSEDED_BY_PP02-WORK-HANDOFF-002
 WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
-WORK_STATE=COMPLETED
-EXECUTION_LOCK=RELEASED
+WORK_STATE=ACTIVE
+EXECUTION_LOCK=HELD_BY_WORK_005
 APPLICATION_BASE_VERSION=3.28.0
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-ACTIVE_BASE=eb32298c8f3cbec2ff400dda37d3267a7181af40
-ACTIVE_BRANCH=agent/pp02-work4-r4-database-rehearsal
-ACTIVE_PR=12
-CURRENT_STAGE=R4 / Completed
-CURRENT_WORK=数据库兼容与脱敏迁移演练
-ACTIVE_GOAL=只用空库和人工假数据建立可重复的兼容检查、股票事件迁移与回滚演练
-CURRENT_STATUS=COMPLETED — CI_PASS — DRAFT_HOLD
+ACTIVE_BASE=a220e9e146e14722561bc084ec4e5306b30d36c7
+ACTIVE_BRANCH=agent/pp02-work5-r6-inventory-tool
+ACTIVE_PR=NOT_CREATED
+CURRENT_STAGE=R6-A / Plan-Build-Test-CI-Judge
+CURRENT_WORK=正式数据安全只读盘点工具
+ACTIVE_GOAL=云端实现正式数据安全只读盘点工具；仅用空库和人工假数据验证
+CURRENT_STATUS=LOCAL_PASS — DRAFT_CI_PENDING
 ACTIVE_BLOCKER=NONE
-NEXT_WORK=WORK-005 / R6 正式数据迁移授权与计划 / UNSTARTED
-NEXT_ACTION=用户新开同项目Codex聊天且不改聊天名称，只发送“下一步”；新Work先做接管核对和R6白话决策卡
-AUTHORIZATION_REQUIRED=TRUE_FOR_NEXT_STAGE; READY/MERGE/MAIN/TAG/RELEASE/REAL_DATABASE/REAL_DATA/REAL_CREDENTIALS_REQUIRE_SEPARATE_AUTHORIZATION
-LAST_UPDATED=2026-07-31
+NEXT_WORK=NONE_WHILE_WORK_005_ACTIVE
+NEXT_ACTION=提交审查修复、完成最终安全复审、创建独立Draft PR并验证固定Head CI
+AUTHORIZATION_REQUIRED=TRUE_FOR_WINDOWS_REAL_DATABASE/REAL_INVENTORY/MIGRATION/READY/MERGE/MAIN/TAG/RELEASE/R7
+LAST_UPDATED=2026-08-01
 ```
+
+## 2026-08-01 Work5 / R6-A 接管
+
+- 用户选择 A 后确认“采用建议，云端开发盘点工具”，并最终批准“按这个设计做”。
+- Work5 从 Work4 Draft PR #12 固定 Head
+  `a220e9e146e14722561bc084ec4e5306b30d36c7` 建立独立分支
+  `agent/pp02-work5-r6-inventory-tool`；初始只含已批准设计。
+- 本 Work 只在云端开发、用空库和人工假 SQLite 测试；不接触 Windows 真实数据库。
+- 允许范围内正常 Commit、Push、一个 Draft PR、CI 和范围内修复；Draft PR 初始以
+  Work4 分支为 Base，只显示 Work5 增量。
+- Windows 真实盘点、正式迁移、Ready、合并、`main`、Tag、Release 和 R7 均需后续
+  精确授权；云端 CI 不得冒充 Windows 真实盘点。
+
+## 2026-08-01 Work5 / R6-A 云端实现与本地验证证据
+
+- TDD 服务 RED：18 项新契约因实现模块不存在而失败；CLI RED：7 项新契约因脚本
+  不存在而失败，既有通过项未被改写。
+- 已新增标准库安全核心 `src/services/formal_data_inventory_service.py` 与 Windows 薄
+  CLI `scripts/pp02_formal_data_inventory.py`；只接受人工指定文件，不含扫描或迁移入口。
+- 独立审查发现并已修复 3 项 Important：备份期间回滚日志竞态、CLI 无效参数路径
+  回显、未验证输出清理失败被吞掉；同时修正检查副本失败时的完整性状态。
+- 审查修复后 R6-A 专项 `31 passed`；R6-A、R4 迁移演练和组合备份联合回归
+  `50 passed, 4 warnings`。
+- 最终代码完整 CI 等效后端门：`5070 passed, 1 skipped, 4 deselected,
+  48 warnings, 499 subtests passed`；语法、严重 Flake8、确定性检查、AI 资产和
+  差异格式全部通过；独立复核结论为 APPROVE，无剩余发现。
+- 第一轮临时测试环境缺少 AkShare、拼音、Jinja2、飞书 SDK、OpenAI 和 Uvicorn 等
+  正式依赖，补齐后原失败文件 `511` 项仅剩两项明确缺包，再补齐后归零；未修改无关
+  业务代码掩盖环境问题。
+- Windows 真实数据库未读取、未备份、未盘点；当前只完成云端工具实现和人工假库
+  验证。下一门是独立 Draft PR 固定 Head CI，不是正式数据操作授权。
 
 ## 已验证基线
 
@@ -48,12 +79,11 @@ LAST_UPDATED=2026-07-31
 
 ## 当前保护边界
 
-- Work4 已结束并释放施工权；PR #12 继续保持 Draft，不自动进入下一阶段。
+- Work5 是唯一 Active Work；Work4 已结束，PR #12 继续保持 Draft。
 - 不接触真实 `.env`、Token、API Key、Webhook 或真实数据库。
 - 不迁移基金、多用户或旧平行持仓表。
-- R4 输入只允许空 SQLite 或带精确合成证明的人工假数据 fixture；不得以“脱敏”
-  名义读取或复制真实数据库。
-- 不执行 Ready、Merge、`main` 写入、Tag、Release、R6/R7 或真实迁移。
+- R6-A 云端测试只允许动态空库或人工假数据；工具不搜索整盘、不显示行值、不迁移。
+- 不执行 Windows 真实盘点、Ready、Merge、`main` 写入、Tag、Release、R7 或真实迁移。
 - 仓库经只读安全审计和用户授权后已改为 Public；PR、分支和 Actions 历史公开，
   但真实数据、密钥和备份文件仍不得进入仓库。
 
