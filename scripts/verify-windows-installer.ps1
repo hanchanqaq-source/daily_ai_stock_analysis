@@ -61,7 +61,9 @@ function Get-OwnedUninstallEntries {
     [Microsoft.Win32.RegistryView]::Registry64,
     [Microsoft.Win32.RegistryView]::Registry32
   )
-  $entries = @()
+  # HKCU\Software is shared across WOW64 views on supported Windows versions.
+  # Scan both views, then collapse duplicate observations of one physical entry.
+  $entriesByIdentity = @{}
 
   foreach ($view in $views) {
     $baseKey = $null
@@ -89,11 +91,19 @@ function Get-OwnedUninstallEntries {
                 -Command $uninstallString -ExecutablePath $UninstallerPath) -and
               (Test-UninstallCommandTargetsPath `
                 -Command $quietUninstallString -ExecutablePath $UninstallerPath)) {
-            $entries += [pscustomobject]@{
-              RegistryPath = "HKCU:$view\$uninstallKeyPath\$subKeyName"
-              UninstallString = $uninstallString
-              QuietUninstallString = $quietUninstallString
-              DisplayVersion = [string]$entryKey.GetValue('DisplayVersion')
+            $displayVersion = [string]$entryKey.GetValue('DisplayVersion')
+            $identity = "$subKeyName|$uninstallString|$quietUninstallString|$displayVersion"
+            if ($entriesByIdentity.ContainsKey($identity)) {
+              $entriesByIdentity[$identity].RegistryViews += [string]$view
+            }
+            else {
+              $entriesByIdentity[$identity] = [pscustomobject]@{
+                RegistryPath = "HKCU:\$uninstallKeyPath\$subKeyName"
+                RegistryViews = @([string]$view)
+                UninstallString = $uninstallString
+                QuietUninstallString = $quietUninstallString
+                DisplayVersion = $displayVersion
+              }
             }
           }
         }
@@ -114,7 +124,7 @@ function Get-OwnedUninstallEntries {
     }
   }
 
-  return @($entries)
+  return @($entriesByIdentity.Values)
 }
 
 function Stop-StartedProcessTree {

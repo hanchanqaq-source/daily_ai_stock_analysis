@@ -274,6 +274,8 @@ def test_windows_installer_verifier_is_scoped_and_fail_closed() -> None:
     assert "UninstallString" in verifier
     assert "QuietUninstallString" in verifier
     assert "Test-UninstallCommandTargetsPath" in verifier
+    assert "$entriesByIdentity" in verifier
+    assert "RegistryViews" in verifier
     assert "Expected exactly one HKCU uninstall entry for the owned uninstaller" in verifier
     assert "Expected exactly one HKCU uninstall entry for the owned root" not in verifier
     assert "WINDOWS_INSTALLER_INSTALL_VALIDATION=PASS" in verifier
