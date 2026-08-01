@@ -4,11 +4,11 @@
 
 | 项目 | 当前值 |
 | --- | --- |
-| 当前状态 | `DESIGN_COMMITTED — USER_SPEC_REVIEW_REQUIRED` |
+| 当前状态 | `DRAFT_PR_17 — USER_SPEC_REVIEW_REQUIRED` |
 | 当前 Work | `WORK-008｜R7 安装器缺陷修复与 v3.29.1 补丁发布` |
 | 固定 Base | `main@66666352e953d90becce420da7d35b649516af76` |
 | 分支 | `agent/pp02-work8-r7-installer-fix` |
-| Draft PR | 待设计规格自审后创建 |
+| Draft PR | [#17](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/17)，保持 Draft |
 | 失败证据 | v3.29.0 installer 2/2: `System.dll` / `0xC0000005` |
 | 用户决定 | `A｜保留安装向导` |
 | 设计 | `docs/superpowers/specs/2026-08-01-work8-windows-installer-hotfix-design.md` |
