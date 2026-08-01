@@ -36,7 +36,10 @@ def test_windows_backend_build_script_collects_alphasift_adapter() -> None:
     assert "hiddenImports" in script
     assert "Verifying packaged runtime imports" in script
     assert "DSA_PACKAGED_IMPORT_PROBE" in script
-    assert "Start-Process -FilePath $packagedEntry -Wait -PassThru" in script
+    assert (
+        "Start-Process -FilePath $packagedEntry "
+        "-WorkingDirectory $probeWorkingDirectory -Wait -PassThru"
+    ) in script
     assert "$probeProcess.ExitCode" in script
     assert "& $packagedEntry" not in script
     assert "Packaged backend cannot import $module" in script
@@ -99,6 +102,23 @@ def test_macos_backend_build_script_collects_alphasift_adapter() -> None:
     assert 'normalized.startswith("alphasift/dsa_adapter.")' not in script
     assert "DSA_PACKAGED_IMPORT_PROBE" in main_py
     assert "importlib.import_module(_packaged_import_probe)" in main_py
+
+
+def test_packaged_backend_probes_use_safe_runtime_working_directories() -> None:
+    macos_script = _read_text(REPO_ROOT / "scripts" / "build-backend-macos.sh")
+    windows_script = _read_text(REPO_ROOT / "scripts" / "build-backend.ps1")
+    windows_verifier = _read_text(
+        REPO_ROOT / "scripts" / "verify-frozen-backend.ps1"
+    )
+
+    assert "packaged_probe_dir=" in macos_script
+    assert 'cd "${packaged_probe_dir}"' in macos_script
+    assert "PYTHONSAFEPATH=1" in macos_script
+    assert "$packagedEntry = [IO.Path]::GetFullPath" in windows_script
+    assert "-WorkingDirectory $probeWorkingDirectory" in windows_script
+    assert "$env:PYTHONSAFEPATH = '1'" in windows_script
+    assert "-WorkingDirectory $tempRoot" in windows_verifier
+    assert "$env:PYTHONSAFEPATH = '1'" in windows_verifier
 
 
 def test_macos_backend_collects_and_exercises_fake_useragent_runtime() -> None:

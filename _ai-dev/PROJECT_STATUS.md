@@ -15,19 +15,36 @@ APPLICATION_BASE_VERSION=3.28.0
 TARGET_RELEASE_VERSION=3.29.0
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-ACTIVE_BASE=eb32298c8f3cbec2ff400dda37d3267a7181af40
-ACTIVE_BRANCH=agent/pp02-work5-r6-inventory-tool
-ACTIVE_PR=12,13
+ACTIVE_BASE=6650f9c30f394a1ba6b7e7fd99de67d5c11488ab
+ACTIVE_BRANCH=agent/pp02-r7-main-web-ci-stabilization
+ACTIVE_PR=14
 CURRENT_STAGE=R7 / Mainline-CI-Tag-Release-Judge
 CURRENT_WORK=主线合并与正式发布
-ACTIVE_GOAL=按固定Head依序合并PR #12/#13并正式发布v3.29.0
-CURRENT_STATUS=AUTHORIZED — RELEASE_PREPARATION
-ACTIVE_BLOCKER=NONE
+ACTIVE_GOAL=修复首轮main push CI阻塞后正式发布v3.29.0
+CURRENT_STATUS=MAIN_CI_FAILED — PR14_CI_REQUIRED
+ACTIVE_BLOCKER=RUN_30693665810_WEB_RACE_AND_NLTK_FROZEN_CWD
 NEXT_WORK=NONE_WHILE_WORK_007_ACTIVE
-NEXT_ACTION=完成R7发布说明与状态收口，验证新固定Head后进入主线合并门
+NEXT_ACTION=验证PR #14固定Head CI，通过后合并并重新验证main push CI
 AUTHORIZATION_REQUIRED=FALSE_FOR_PR12_PR13_READY/MERGE/MAIN_CI/TAG_v3.29.0/RELEASE_v3.29.0;TRUE_FOR_REAL_DATA/OTHER_RELEASE/OTHER_SCOPE
 LAST_UPDATED=2026-08-01
 ```
+
+## 2026-08-01 Work7 / R7 主线合并与 CI 阻塞
+
+- PR #12 已以固定 Head `a220e9e146e14722561bc084ec4e5306b30d36c7` 合并，合并
+  Commit `ad5588fb5aa12f3424596ada2a411261e8b74916`。
+- PR #13 改以 `main` 为 Base 后，最终 Head
+  `263578266ab4cd604a1dcde701621139e66ea193` 的 Run `30693442671` 通过；已合并
+  为 `main@6650f9c30f394a1ba6b7e7fd99de67d5c11488ab`。
+- 该 `main` 的 push CI Run `30693665810` 未过：`web-gate` 暴露两个账户
+  选项未渲染就交互的测试竞态；macOS 冻结后端因 NLTK 导入安全检查将
+  位于当前可执行目录下的自带 `xml` 误判为 CWD 注入而失败。
+- 修复分支 `agent/pp02-r7-main-web-ci-stabilization` 只增强目标测试就绪等待，
+  并把冻结后端的 CI/正式 Desktop 工作目录切到独立运行数据目录，同时
+  设置 `PYTHONSAFEPATH=1`；不禁用 NLTK 安全检查。
+- Draft PR #14 已创建；必须以本状态收口后的最终固定 Head 验证 CI。
+- `v3.29.0` Tag/Release 尚未创建，必须等修复 PR 与新 `main` push CI
+  全部通过。
 
 ## 2026-08-01 Work7 / R7 接管与版本裁决
 

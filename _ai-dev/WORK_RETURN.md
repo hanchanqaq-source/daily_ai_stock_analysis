@@ -7,22 +7,24 @@
 
 - 用户已选择 `A｜v3.29.0`，并授权 PR #12/#13 Ready 与合并、新 `main` CI、
   annotated Tag `v3.29.0`、GitHub Release 与正式产物验收。
-- 远程 `main`：`eb32298c8f3cbec2ff400dda37d3267a7181af40`。
-- PR #12：Draft/Open/Mergeable，Head `a220e9e146e14722561bc084ec4e5306b30d36c7`，
-  Run `30661990072` success。
-- PR #13：Draft/Open/Mergeable，原 Head
-  `50dd04ca5a49a6e54de01e2d28ce598f690d9931`，Run `30691233934` success；
-  当前 Base 为 PR #12 分支，必须在 #12 合并后改为 `main`。
-- 发布前审计发现 PP02 Release notes 的完整记录链接仍硬编码上游仓库，且 Changelog
-  尚未形成 `3.29.0` 正式段；已以测试先行完成最小发布收口，等待新固定 Head CI。
+- PR #12 已合并为 `ad5588fb5aa12f3424596ada2a411261e8b74916`；PR #13
+  最终 Head `263578266ab4cd604a1dcde701621139e66ea193` 的 Run
+  `30693442671` 成功后已合并。
+- 当前远程 `main` 是 `6650f9c30f394a1ba6b7e7fd99de67d5c11488ab`。
+- 首轮 `main` push CI Run `30693665810` 失败：`web-gate` 有 2 个账户选项
+  渲染竞态测试，macOS 冻结后端受 NLTK CWD 导入安全检查阻断。
+- 已在 `agent/pp02-r7-main-web-ci-stabilization` 完成最小本地修复：两个
+  Web 测试等待真实账户选项；冻结后端从独立运行数据目录启动并设置
+  `PYTHONSAFEPATH=1`。
+- Draft PR #14 已创建，等待状态收口后最终固定 Head CI。
 - Work6 最终裁决 `NO_FORMAL_DATA_FOUND`：旧项目和数据库从未建立，无真实数据迁移。
 
 ## 当前 Judge
 
-`RELEASE_CLOSEOUT_READY — FIXED_HEAD_CI_REQUIRED`
+`MAIN_CI_FAILED — PR14_FIXED_HEAD_CI_REQUIRED`
 
-尚未执行 Ready、Merge、`main` 写入、Tag 或 Release；发布收口可提交到现有 PR #13，
-但只有新的固定 Head 通过完整 CI 后，才进入 Ready 与主线写入门。
+PR #12/#13 已完成 Ready/Merge；`v3.29.0` Tag 与 Release 仍未创建。
+必须先让修复 PR 和新 `main` push CI 全部通过，再进入 Tag 门。
 
 ---
 

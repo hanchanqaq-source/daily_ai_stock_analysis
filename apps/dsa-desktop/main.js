@@ -913,6 +913,7 @@ function buildBackendEnvironment({
     LOG_DIR: logDir,
     PYTHONUTF8: '1',
     PYTHONIOENCODING: 'utf-8',
+    PYTHONSAFEPATH: '1',
     WEBUI_HOST: selectedHost,
     WEBUI_ENABLED: 'false',
     BOT_ENABLED: 'false',
@@ -1331,7 +1332,7 @@ function startBackend({ port, envFile, dbPath, logDir, host = null, secureCreden
     }
     launchMode = 'packaged';
     launchCommand = formatCommand(backendPath, args);
-    launchCwd = path.dirname(backendPath);
+    launchCwd = path.dirname(envFile);
     backendProcess = spawn(backendPath, args, {
       env,
       cwd: launchCwd,
