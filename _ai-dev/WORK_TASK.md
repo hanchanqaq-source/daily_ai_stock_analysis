@@ -1,4 +1,133 @@
-# WORK-004｜R4 数据库兼容与脱敏迁移演练任务合同
+# WORK-007｜R7 主线合并与正式发布任务合同
+
+## 当前任务身份
+
+```text
+WORK_ID=WORK-007
+WORK_STATE=ACTIVE
+WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
+BASE=eb32298c8f3cbec2ff400dda37d3267a7181af40
+TARGET_RELEASE=v3.29.0
+SCOPE_DRIFT=FALSE
+```
+
+## 用户结果
+
+用户正式启动 `Work7｜R7 主线合并与正式发布`，并选择方案 A：承接官方
+`v3.28.0`，把本轮新增功能作为 `v3.29.0` 正式发布。选定后连续执行主线合并、
+新 `main` CI、annotated Tag、GitHub Release 和正式产物验收，不再拆成逐项确认。
+
+## 范围与执行顺序
+
+1. 复核 PR #12/#13 的固定 Head、依赖关系、CI 与发布说明。
+2. 完成最小 R7 状态、Changelog 和 PP02 Release notes 身份收口，并验证新 Head。
+3. 先合并 PR #12，再把 PR #13 Base 改为 `main`；PR #13 新固定 Head CI 通过后合并。
+4. 验证最终 `main` push CI，且 Tag 必须精确指向该已验证 `main` Head。
+5. 创建带说明的 annotated Tag `v3.29.0` 并推送，触发正式发布工作流。
+6. 验收 GitHub Release、Windows 安装/免安装更新资产、macOS x64/arm64 DMG、
+   SHA-256、自动更新元数据以及 Docker/GHCR 发布结果。
+
+## 非目标与硬边界
+
+- 不读取、搜索、创建或迁移任何真实数据库；Work6 已裁决 `NO_FORMAL_DATA_FOUND`。
+- 不读取、输出或上传真实 `.env`、Token、API Key、Webhook、密码或用户数据。
+- 不强推 `main`，不创建 `v3.29.0` 以外的 Tag/Release，不扩大功能范围。
+- 任一固定 Head、PR CI、`main` CI、Tag 绑定或正式产物门失败时立即停止在对应 Judge。
+
+## 验收标准
+
+1. PR #12/#13 均以预期固定 Head 和完整 CI 证据进入 `main`，依赖顺序无误。
+2. 新 `main` push CI 全部适用 Job 成功，Tag 对象最终指向该精确 Commit。
+3. `v3.29.0` 为 annotated Tag，注释非空，Release 非 Draft/非 Prerelease。
+4. Windows 与 macOS 三类正式安装资产齐全；Windows 免安装 ZIP 与 SHA-256 配对、
+   `latest.yml`、blockmap 和版本/文件名一致性通过发布工作流。
+5. Docker/GHCR 正式发布成功；缺少可选 Docker Hub 凭据只可按工作流明确记录为 skipped。
+6. 状态、路线、回传、Changelog、GitHub Release 和可验证 GitHub 事实一致。
+
+## Plan Challenge Result
+
+| 项目 | 结果 |
+| --- | --- |
+| 用户决定 | `A｜v3.29.0（推荐）` |
+| 待决产品问题 | 0 个；版本和执行链已锁定 |
+| 数据风险 | R6 无正式数据可迁移；R7 禁止任何真实数据操作 |
+| Judge 上限 | `PASS — v3.29.0 RELEASED`，但必须逐门取得真实证据 |
+| 允许进入执行 | 是；Ready/Merge/main CI/Tag/Release `v3.29.0` 已精确授权 |
+
+---
+
+# 历史任务合同｜WORK-005 / R6-A 正式数据安全只读盘点工具
+
+## 当前任务身份
+
+```text
+WORK_ID=WORK-005
+WORK_STATE=COMPLETED
+WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
+BASE=a220e9e146e14722561bc084ec4e5306b30d36c7
+BRANCH=agent/pp02-work5-r6-inventory-tool
+SCOPE_DRIFT=FALSE
+```
+
+## 用户结果
+
+用户已批准“按这个设计做”：在云端开发一个 Windows 原生运行的旧数据库安全体检
+工具。工具只接受人工明确指定的一个 SQLite 文件，先做双备份，再只读统计四张正式
+股票事件表；不搜索整机、不显示行值、不迁移、不覆盖、不上传。
+
+## 范围
+
+- 固定并执行 `docs/pp02/R6_FORMAL_DATA_INVENTORY_TOOL_DESIGN.md` 与实施计划。
+- 新建独立标准库服务与薄 CLI，不导入应用数据库模型、配置、恢复或迁移模块。
+- 双备份主文件及已有 WAL/SHM，校验哈希与源未变化后才检查临时副本。
+- 只执行 SQLite 完整性、固定 Schema 和四张正式表的 `COUNT(*)`。
+- 只输出三种裁决、四项计数和固定隐私证明；错误只含稳定代码。
+- 测试仅动态创建空库与人工假数据库；完成专项、关联回归、完整本地门和固定 Head CI。
+- 已授权范围内正常 Commit、Push、一个 Draft PR、CI 与范围内修复。
+
+## 非目标与硬边界
+
+- 不读取、复制、上传、迁移或修改任何 Windows 真实数据库、真实备份或真实数据。
+- 不搜索 Windows 整盘或个人目录，不输出账户名、股票代码、金额、日期、备注或行值。
+- 不迁移基金、用户档案、旧平行持仓、派生持仓、缓存、日志、设置或凭据。
+- 不修改 R4 迁移演练器，不新增依赖，不放宽 Workflow 或仓库权限。
+- 不 Ready、不合并、不写 `main`、不 Tag、不 Release、不进入 R7。
+
+## 验收标准
+
+1. RED 测试在实现缺失时按预期失败，GREEN 覆盖完整安全契约。
+2. 两套备份逐文件哈希一致，源主文件与 sidecar 指纹前后一致。
+3. 检查只针对临时副本，SQLite 为只读/query-only，四张固定表只执行计数。
+4. 路径、journal、部分 Schema、损坏库、源变化和备份不一致全部 fail closed。
+5. 报告和 CLI 不泄漏人工数据、路径、SQL、Schema 或异常正文。
+6. 完整本地门与独立 Draft PR 固定 Head CI 通过；PR 保持 Draft。
+7. 最终 Judge 上限为云端工具实现通过，Windows 真实盘点仍待精确授权。
+
+## 本地实现与验证证据
+
+- 服务 RED：18 项新契约因模块缺失而失败；CLI RED：7 项新契约因脚本缺失而失败。
+- 独立审查后新增 5 项 RED 回归，分别证明备份中途回滚日志、清理失败、检查副本
+  完整性状态、未知参数和重复源参数问题；修复后专项 `31 passed`，R6-A、R4 演练和
+  组合备份联合回归 `50 passed, 4 warnings`。
+- 最终代码完整 CI 等效后端门：`5070 passed, 1 skipped, 4 deselected, 48 warnings,
+  499 subtests passed`；语法、严重 Flake8、确定性检查、AI 资产与格式门均通过；
+  独立复核 APPROVE，无剩余 Critical、Important 或 Minor。
+- 最终固定 Head `50dd04ca5a49a6e54de01e2d28ce598f690d9931` 的 CI Run
+  `30691233934` 全部适用 Job success；尚未执行 Windows 真实盘点。
+
+## Plan Challenge Result
+
+| 项目 | 结果 |
+| --- | --- |
+| 用户决定 | `采用建议，云端开发盘点工具`，随后批准 `按这个设计做` |
+| 待决产品问题 | 0 个；设计已固定显式路径、双备份、临时只读副本方案 |
+| 数据风险 | 云端真实数据库/真实数据禁止；只用空库和人工假数据 |
+| Judge 上限 | `CLOUD_TOOL_IMPLEMENTATION_PASS — WINDOWS_REAL_INVENTORY_PENDING_AUTHORIZATION` |
+| 允许进入 Build | 是；按 RED→GREEN 连续执行 |
+
+---
+
+# 历史任务合同｜WORK-004 / R4
 
 ## 当前任务身份
 

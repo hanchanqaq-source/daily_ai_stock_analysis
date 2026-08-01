@@ -13,6 +13,7 @@
 | WORK-PP02-CLOUD-REBUILD-001-DECISION-001 | 2026-07-26 | Work 1 的 v3.27.0 管理底座作为历史保留；当前 R0 从官方 `v3.28.0` 固定提交重建，并叠加 P000/P001 V1.5.6 控制层 | 消除旧基线、旧状态真源和空白模板覆盖风险，同时保持官方业务树完整 | 当前 Work 只执行 R0；R1–R7 不启动 |
 | WORK-PP02-CLOUD-REBUILD-001-AUTH-001 | 2026-07-26 | 授权在同一 Work 内恢复性重建，并通过已连接的 GitHub App/Git Data API 创建原子 Commit、独立分支、Draft PR、检查真实 CI 和修复范围内问题 | 已验证候选未持久化，需要先建立可恢复的远程检查点再运行完整验证 | 不含 Ready、合并、改写 `main`、Release、真实数据或重复设备认证 |
 | WORK-PP02-CLOUD-REBUILD-001-AUTH-002 | 2026-07-30 | 授权对 PP02 做公开前只读安全审计，审计通过后把仓库从 Private 改为 Public 并继续 R3.4 CI | 私有仓库 2000 分钟免费 Actions 额度已耗尽；公开库标准 Runner 可继续验证 | 公开代码、分支、PR 和 Actions 历史；不包含 Ready、合并、Release、真实数据或密钥 |
+| WORK-007-AUTH-001 | 2026-08-01 | 启动 `Work7｜R7 主线合并与正式发布` 并选择方案 A / `v3.29.0` | 本轮新增功能承接官方 `v3.28.0`，补丁号不足以表达范围 | 授权 PR #12/#13 Ready 与固定 Head 合并、新 `main` CI、annotated Tag、GitHub Release 和 `v3.29.0` 正式产物验收；不含真实数据、其他版本或强推 |
 
 ## 记录规则
 

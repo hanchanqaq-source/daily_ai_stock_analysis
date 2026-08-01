@@ -12,8 +12,8 @@
 | R3｜按优先级迁移旧 PP02 功能 | 每个切片单独测试、CI 和 Judge | 完成 | R3.1–R3.7 已由 PR #11 合入 `main@eb32298…` |
 | R4｜数据库兼容与脱敏迁移演练 | 空库/人工假数据验证 | 完成 | PR #12 Head `f1b433a7…` / Run `30660971800` |
 | R5｜Windows 本机验收 | 安装、启动、Web/Desktop 与安全默认值 | 完成 | Work2 / PR #9 真机启动与回滚模拟通过 |
-| R6｜正式数据迁移 | 迁移经确认的真实数据 | 未启动 | 单独数据授权、备份与回滚 |
-| R7｜替换 main 与 Release | Ready、合并、main、Tag、Release | 未启动 | 每项分别精确授权 |
+| R6｜正式数据迁移 | 迁移经确认的真实数据 | 完成（无数据，跳过迁移） | Work6 `NO_FORMAL_DATA_FOUND`；旧项目和数据库从未建立 |
+| R7｜替换 main 与 Release | Ready、合并、main、Tag、Release | 进行中 | 已选 A / `v3.29.0`；按固定 Head 与 CI 门连续执行 |
 
 ## 当前 R3 顺序
 
@@ -28,7 +28,17 @@
 详细文件边界、契约和验收见
 [`R2_MIGRATION_EXECUTION_PLAN.md`](R2_MIGRATION_EXECUTION_PLAN.md)。
 
-## Mainline Scope Lock
+## Work7 / R7 主线与发布门（2026-08-01）
+
+- 用户已选择 A / `v3.29.0`，精确授权 PR #12/#13 Ready 与合并、最终 `main` CI、
+  annotated Tag 和对应 Release。
+- PR #13 叠加在 PR #12 上；顺序固定为先合并 #12，再把 #13 Base 改为 `main`，
+  验证新固定 Head CI 后合并 #13。
+- Tag 必须精确指向已通过 push CI 的最终 `main` Head；Release 工作流与正式资产未
+  全部成功前不得宣布 R7 完成。
+- Work6 已裁决 `NO_FORMAL_DATA_FOUND`，R7 不进行任何数据库搜索、创建或迁移。
+
+## Mainline Scope Lock（历史）
 
 - 每个新大段使用独立分支和独立 Draft PR；当前 Work4 Base 为 `main@eb32298…`。
 - Draft 不表示 Ready、可合并、可替换 `main` 或可发布 Release。

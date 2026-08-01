@@ -137,3 +137,15 @@ PR Head 验收。Windows Job 必须 checkout `pull_request.head.sha`，并用同
 派生假凭据。泄漏扫描要覆盖仓库根目录、日志、ZIP 和解包产物。
 同时，vault 密文与非敏感 `.env` 不能各自拥有未绑定的“最新值”；必须用精确
 配置版本绑定，任一中途失败都在下次启动 fail closed。
+
+## R7｜首次独立 Release 必须同时切换发布说明身份和无前序 Tag 路径
+
+- 现象：PP02 的桌面更新与产物仓库已切换，但发布说明脚本仍把 Full changelog
+  硬编码到上游仓库；PP02 又没有旧 Tag，首个 `v3.29.0` 会形成无意义的自比较链接。
+- 根因：R3.1 只验证了 Desktop 更新源和产物身份，没有覆盖 Tag → Release notes
+  这一条独立发布消费者；脚本还默认每个仓库至少已有两个可比较的 SemVer Tag。
+- 修复：发布说明从 `GITHUB_REPOSITORY` 读取当前仓库；存在前序 Tag 时生成 compare，
+  首次 Release 则链接当前 Tag 的 commit history；Changelog 同步形成正式版本段。
+- 验证：回归测试先在上游自比较链接上 RED，再验证 PP02 首次发布链接和脚本全套测试。
+- 经验：仓库身份迁移验收必须覆盖应用更新源、Release workflow、release notes、
+  Changelog 首页链接与首个 Tag 边界，不能只检查安装包命名。
