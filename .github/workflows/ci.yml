@@ -148,7 +148,7 @@ jobs:
       - name: 🟢 Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: 🧪 Desktop unit tests
         run: |
@@ -176,7 +176,7 @@ jobs:
       - name: 🟢 Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: apps/dsa-web/package-lock.json
       - name: 📦 Install Desktop dependencies
@@ -288,7 +288,7 @@ jobs:
       - name: 🟢 Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: apps/dsa-web/package-lock.json
       - name: 📦 Install Web dependencies
