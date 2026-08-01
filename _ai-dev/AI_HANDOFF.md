@@ -1,27 +1,27 @@
 # PP02 新聊天交接
 
-## 当前接管入口｜R7 已完成
+## 当前接管入口｜WORK-008 / v3.29.1 installer hotfix
 
 | 项目 | 当前值 |
 | --- | --- |
-| 当前状态 | `PASS — v3.29.0 RELEASED — R7 CLOSED` |
-| 当前 Work | 无；`WORK-007｜R7 主线合并与正式发布` 已完成并释放施工权 |
-| 当前 main | `b4a0ec11da19b5552ce87dde1ece716f61fd5174` |
-| 最终 main CI | Run `30697946093`，8/8 success |
-| 正式版本 | annotated `v3.29.0`，指向发布提交 `49759dbd032f577d32e8e0f6670298f700e0f272` |
-| 正式产物 | GitHub Release、Windows/macOS 7 个资产及 Docker/GHCR 发布成功 |
-| 来源声明 | 三语言 README 与 Release 正文均已注明基于上游 `v3.28.0` 二次开发、非官方版本 |
-| 数据结论 | `NO_FORMAL_DATA_FOUND`；未读取、创建或迁移真实数据库 |
-| 活动分支 / PR | 无 |
-| 下一动作 | 等待用户提出并授权新的项目目标；不得自动启动新范围 |
+| 当前状态 | `DESIGN_COMMITTED — USER_SPEC_REVIEW_REQUIRED` |
+| 当前 Work | `WORK-008｜R7 安装器缺陷修复与 v3.29.1 补丁发布` |
+| 固定 Base | `main@66666352e953d90becce420da7d35b649516af76` |
+| 分支 | `agent/pp02-work8-r7-installer-fix` |
+| Draft PR | 待设计规格自审后创建 |
+| 失败证据 | v3.29.0 installer 2/2: `System.dll` / `0xC0000005` |
+| 用户决定 | `A｜保留安装向导` |
+| 设计 | `docs/superpowers/specs/2026-08-01-work8-windows-installer-hotfix-design.md` |
+| 下一动作 | 用户确认已提交设计后，创建实施计划并进入 RED |
+| 授权边界 | 允许范围内分支、Commit、Draft PR、CI；禁止 Ready/Merge/main/Tag/Release/真实数据 |
 
-新聊天不需要用户复制施工单或回传。必须读取 `AGENTS.md` 和四份
-`_ai-dev` 文件，再核对 GitHub。R0–R7 已全部完成；用户发送“下一步”时，应先
-说明当前路线已结束，并对新的目标建立独立 Work，不得把旧 Work7 授权继承到新功能、
-真实数据、Ready、合并、`main`、Tag 或 Release。
+新聊天接管时必须先核对 `PROJECT_STATUS.md` 和 GitHub 当前 Head。Work8 只修复
+Windows 安装器构建链和缺失的真实安装门：保留选择安装目录、当前用户安装、卸载、
+安装版自动更新和免安装 ZIP；不得改成一键固定目录或便携-only。
 
-发布后来源声明由 PR #15 合入；`v3.29.0` Tag 保持在已验证的发布提交，没有随
-后续文档主线移动。最后更新：2026-08-01。
+`v3.29.0` 的 Release、Tag 与失败证据保持不变，不得覆盖或重打。目标
+`v3.29.1` 尚未授权发布。正式 Windows 首次使用验收必须在补丁 Release 后重新
+执行，云端 CI 不得冒充最终实机验收。最后更新：2026-08-01。
 
 以下内容是旧 Work 的追加历史；与本节冲突时，以 `PROJECT_STATUS.md`、本节和
 GitHub 可验证事实为准。
