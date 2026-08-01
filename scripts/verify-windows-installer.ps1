@@ -127,6 +127,35 @@ function Get-OwnedUninstallEntries {
   return @($entriesByIdentity.Values)
 }
 
+function Write-StartupDiagnostics {
+  param([Parameter(Mandatory=$true)][string]$LogPath)
+
+  Write-Output 'WINDOWS_INSTALLED_APP_STARTUP_DIAGNOSTIC_BEGIN'
+  if (-not (Test-Path -LiteralPath $LogPath -PathType Leaf)) {
+    Write-Output 'WINDOWS_INSTALLED_APP_STARTUP_DIAGNOSTIC=desktop_log_missing'
+  }
+  else {
+    $safeLines = @(
+      Get-Content -LiteralPath $LogPath -ErrorAction Stop |
+        Where-Object {
+          $_.Contains('] Desktop app starting') -or
+          $_.Contains('] [startup +') -or
+          $_ -match '\] \[backend\] (spawned|first stdout|first stderr|exited|failed to start)'
+        } |
+        Select-Object -Last 120
+    )
+    if ($safeLines.Count -eq 0) {
+      Write-Output 'WINDOWS_INSTALLED_APP_STARTUP_DIAGNOSTIC=no_safe_startup_lines'
+    }
+    else {
+      foreach ($line in $safeLines) {
+        Write-Output "WINDOWS_INSTALLED_APP_STARTUP_DIAGNOSTIC=$line"
+      }
+    }
+  }
+  Write-Output 'WINDOWS_INSTALLED_APP_STARTUP_DIAGNOSTIC_END'
+}
+
 function Stop-StartedProcessTree {
   param([System.Diagnostics.Process]$Process)
 
@@ -289,6 +318,7 @@ try {
   do {
     $appProcess.Refresh()
     if ($appProcess.HasExited) {
+      Write-StartupDiagnostics -LogPath $desktopLog
       throw "Installed application exited before readiness with code $($appProcess.ExitCode)."
     }
     if ((Test-Path -LiteralPath $desktopLog -PathType Leaf) -and
@@ -299,6 +329,7 @@ try {
     Start-Sleep -Milliseconds 500
   } while ((Get-Date) -lt $startupDeadline)
   if (-not $startupReady) {
+    Write-StartupDiagnostics -LogPath $desktopLog
     throw "Installed application did not reach readiness within $StartupTimeoutSeconds seconds."
   }
   Write-Output 'WINDOWS_INSTALLED_APP_STARTUP_VALIDATION=PASS'
