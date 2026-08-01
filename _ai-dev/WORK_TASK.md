@@ -9,6 +9,7 @@ WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
 BASE=66666352e953d90becce420da7d35b649516af76
 BRANCH=agent/pp02-work8-r7-installer-fix
 TARGET_RELEASE=v3.29.1
+DRAFT_PR=17
 FAILED_RELEASE=v3.29.0
 SCOPE_DRIFT=FALSE
 ```
@@ -68,7 +69,7 @@ SCOPE_DRIFT=FALSE
 | 用户决定 | `A｜保留安装向导` |
 | 待决产品问题 | 0；功能取舍已锁定 |
 | 根因证据 | 与上游 #8536/#9564 高一致，且新 v26 模板已移除竞态路径 |
-| 当前门 | 已提交设计，等待用户确认书面规格 |
+| 当前门 | Draft PR #17 已创建，等待用户确认书面规格 |
 | 允许进入 Build | 书面规格确认后允许按实施计划进入 RED |
 | 发布授权 | 未授予 |
 
