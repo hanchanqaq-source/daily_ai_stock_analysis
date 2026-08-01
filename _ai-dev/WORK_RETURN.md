@@ -27,11 +27,12 @@ R7_WINDOWS_FIRST_USE_ACCEPTANCE=FAIL
 - 用户已授权 Work8 并选择 `A｜保留安装向导`。
 - 固定 Base：`main@66666352e953d90becce420da7d35b649516af76`。
 - 分支：`agent/pp02-work8-r7-installer-fix`。
+- Draft PR：[#17](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/17)。
 - 已提交设计：
   `docs/superpowers/specs/2026-08-01-work8-windows-installer-hotfix-design.md`。
 - 设计锁定 `electron-builder 26.15.7`、保留 assisted/current-user 安装，并新增
   PR 与 Release 共用的 Windows install/start/uninstall verifier。
-- 当前 Judge：`DESIGN_COMMITTED — USER_SPEC_REVIEW_REQUIRED`。
+- 当前 Judge：`DRAFT_PR_17 — USER_SPEC_REVIEW_REQUIRED`。
 - 尚未修改 manifest、lockfile、verifier、CI 或 Release workflow；尚未执行 Build/CI。
 - 未授权 Ready、Merge、main、`v3.29.1` Tag/Release 或真实数据。
 
