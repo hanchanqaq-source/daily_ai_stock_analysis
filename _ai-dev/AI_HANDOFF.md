@@ -4,19 +4,21 @@
 
 | 项目 | 当前值 |
 | --- | --- |
-| 远程 main | `eb32298c8f3cbec2ff400dda37d3267a7181af40`；待按顺序合并 PR #12/#13 |
+| 远程 main | `6650f9c30f394a1ba6b7e7fd99de67d5c11488ab`；PR #12/#13 已按顺序合并 |
 | 当前 Work | `WORK-007｜R7 主线合并与正式发布` |
-| 当前状态 | `AUTHORIZED — RELEASE_PREPARATION`；目标版本 `v3.29.0` |
-| 固定 Base | `main@eb32298c8f3cbec2ff400dda37d3267a7181af40` |
-| 分支 | `agent/pp02-work5-r6-inventory-tool` |
-| 待合并 PR | `#12` Head `a220e9e…`；`#13` 原 Head `50dd04ca…`，且 #13 叠加在 #12 上 |
+| 当前状态 | `MAIN_CI_FAILED — FIX_IN_PROGRESS`；目标版本 `v3.29.0` |
+| 固定 Base | `main@6650f9c30f394a1ba6b7e7fd99de67d5c11488ab` |
+| 分支 | `agent/pp02-r7-main-web-ci-stabilization` |
+| 已合并 PR | `#12` → `ad5588fb…`；`#13` → `6650f9c3…` |
 | R6 结果 | `NO_FORMAL_DATA_FOUND`；旧项目与数据库从未建立，无真实数据迁移 |
 | 发布授权 | PR #12/#13 Ready 与合并、`main` CI、annotated Tag/Release `v3.29.0` |
-| 下一动作 | 完成 R7 发布说明与状态收口，推送 PR #13 新固定 Head 并验证完整 CI |
+| 下一动作 | 推送 main CI 最小修复 PR，验证并合并；新 main 全绿后再 Tag/Release |
 
 新聊天不需要用户复制施工单或回传。必须读取 `AGENTS.md` 和四份 `_ai-dev`
 文件，再核对 GitHub。用户已启动 Work7 并选择 A / `v3.29.0`，不得重复询问版本；
-只能对 PR #12/#13、对应新 `main`、annotated Tag 和 Release `v3.29.0` 执行授权动作。
+只能对本 R7 修复 PR、对应新 `main`、annotated Tag 和 Release `v3.29.0`
+执行授权动作。Run `30693665810` 的 `web-gate` 与 macOS 冻结后端失败
+是当前硬阻塞；不得在新 `main` 全绿前创建 Tag。
 
 本地新鲜证据：审查修复后专项 `31 passed`，R6-A/R4/备份联合
 `50 passed, 4 warnings`；最终代码完整后端门 `5070 passed, 1 skipped,

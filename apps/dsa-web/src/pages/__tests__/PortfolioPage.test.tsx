@@ -1143,12 +1143,15 @@ describe('PortfolioPage FX refresh', () => {
     render(<PortfolioPage />);
 
     await waitForInitialLoad();
+    await screen.findByRole('option', { name: 'Main (#1)' });
 
     const accountSelect = screen.getAllByRole('combobox')[0];
     fireEvent.change(accountSelect, { target: { value: '1' } });
 
     await waitFor(() => expect(getSnapshot).toHaveBeenLastCalledWith({ accountId: 1, costMethod: 'fifo', includeRealtime: false }));
-    fireEvent.click(screen.getByRole('button', { name: '删除账户' }));
+    const deleteButton = screen.getByRole('button', { name: '删除账户' });
+    await waitFor(() => expect(deleteButton).not.toBeDisabled());
+    fireEvent.click(deleteButton);
 
     const dialog = await screen.findByText('删除持仓账户');
     expect(dialog.closest('[role="dialog"]') ?? document.body).toHaveTextContent(
@@ -1171,6 +1174,7 @@ describe('PortfolioPage FX refresh', () => {
 
     render(<PortfolioPage />);
     await waitForInitialLoad();
+    await screen.findByRole('option', { name: 'Main (#1)' });
 
     fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: '1' } });
     await waitFor(() => expect(getSnapshot).toHaveBeenLastCalledWith({

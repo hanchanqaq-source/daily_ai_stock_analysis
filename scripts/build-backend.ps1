@@ -156,15 +156,18 @@ if (!(Test-Path 'dist\stock_analysis')) {
 Copy-Item -Path 'dist\stock_analysis' -Destination 'dist\backend\stock_analysis' -Recurse -Force
 
 Write-Host 'Verifying packaged runtime imports...'
-$packagedEntry = Join-Path 'dist\backend\stock_analysis' 'stock_analysis.exe'
+$packagedEntry = [IO.Path]::GetFullPath((Join-Path 'dist\backend\stock_analysis' 'stock_analysis.exe'))
 if (-not (Test-Path $packagedEntry)) {
   throw "Packaged backend entrypoint not found: $packagedEntry"
 }
+$probeWorkingDirectory = [IO.Path]::GetTempPath()
 $previousProbe = $env:DSA_PACKAGED_IMPORT_PROBE
+$previousSafePath = $env:PYTHONSAFEPATH
 try {
+  $env:PYTHONSAFEPATH = '1'
   foreach ($module in @('alphasift.dsa_adapter', 'futu', 'orjson')) {
     $env:DSA_PACKAGED_IMPORT_PROBE = $module
-    $probeProcess = Start-Process -FilePath $packagedEntry -Wait -PassThru
+    $probeProcess = Start-Process -FilePath $packagedEntry -WorkingDirectory $probeWorkingDirectory -Wait -PassThru
     if ($probeProcess.ExitCode -ne 0) {
       throw "Packaged backend cannot import $module; probe exited with code $($probeProcess.ExitCode)."
     }
@@ -175,25 +178,28 @@ try {
   } else {
     $env:DSA_PACKAGED_IMPORT_PROBE = $previousProbe
   }
+  if ($null -eq $previousSafePath) { Remove-Item Env:PYTHONSAFEPATH -ErrorAction SilentlyContinue } else { $env:PYTHONSAFEPATH = $previousSafePath }
 }
 
 Write-Host 'Verifying packaged fake-useragent data and efinance import chain...'
 $previousFakeUserAgentProbe = $env:DSA_PACKAGED_FAKE_USERAGENT_PROBE
 try {
+  $env:PYTHONSAFEPATH = '1'
   $env:DSA_PACKAGED_FAKE_USERAGENT_PROBE = '1'
-  $fakeUserAgentProbe = Start-Process -FilePath $packagedEntry -Wait -PassThru
+  $fakeUserAgentProbe = Start-Process -FilePath $packagedEntry -WorkingDirectory $probeWorkingDirectory -Wait -PassThru
   if ($fakeUserAgentProbe.ExitCode -ne 0) {
     throw "Packaged backend cannot load fake-useragent data; probe exited with code $($fakeUserAgentProbe.ExitCode)."
   }
   Remove-Item Env:DSA_PACKAGED_FAKE_USERAGENT_PROBE -ErrorAction SilentlyContinue
   $env:DSA_PACKAGED_IMPORT_PROBE = 'data_provider.efinance_fetcher'
-  $efinanceProbe = Start-Process -FilePath $packagedEntry -Wait -PassThru
+  $efinanceProbe = Start-Process -FilePath $packagedEntry -WorkingDirectory $probeWorkingDirectory -Wait -PassThru
   if ($efinanceProbe.ExitCode -ne 0) {
     throw "Packaged backend cannot import data_provider.efinance_fetcher; probe exited with code $($efinanceProbe.ExitCode)."
   }
 } finally {
   Remove-Item Env:DSA_PACKAGED_IMPORT_PROBE -ErrorAction SilentlyContinue
   if ($null -eq $previousFakeUserAgentProbe) { Remove-Item Env:DSA_PACKAGED_FAKE_USERAGENT_PROBE -ErrorAction SilentlyContinue } else { $env:DSA_PACKAGED_FAKE_USERAGENT_PROBE = $previousFakeUserAgentProbe }
+  if ($null -eq $previousSafePath) { Remove-Item Env:PYTHONSAFEPATH -ErrorAction SilentlyContinue } else { $env:PYTHONSAFEPATH = $previousSafePath }
 }
 
 Write-Host 'Verifying frozen backend startup and HTTP endpoints...'

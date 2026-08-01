@@ -149,3 +149,25 @@ PR Head 验收。Windows Job 必须 checkout `pull_request.head.sha`，并用同
 - 验证：回归测试先在上游自比较链接上 RED，再验证 PP02 首次发布链接和脚本全套测试。
 - 经验：仓库身份迁移验收必须覆盖应用更新源、Release workflow、release notes、
   Changelog 首页链接与首个 Tag 边界，不能只检查安装包命名。
+
+## R7｜冻结 Python 产物的安全工作目录不能包含自身标准库
+
+- 现象：`main` Run `30693665810` 的 macOS 打包在冻结后端 `--help` 启动检查
+  失败；NLTK 阻断了来自“当前目录”的 `xml` 导入。
+- 根因：PyInstaller 把标准库放在可执行文件下的 `_internal`，而 CI 探针
+  和 Desktop 正式进程又把该可执行目录设为 CWD；NLTK 新安全检查因此无法
+  区分冻结标准库与 CWD 注入。
+- 修复：macOS/Windows 冻结探针改从受控临时运行目录启动；Desktop 正式
+  后端以 `.env` 所在的运行数据目录为 CWD，并统一注入
+  `PYTHONSAFEPATH=1`。
+- 经验：冻结运行时的 CWD 应是独立、可写、不包含应用二进制和内置模块的
+  数据目录；不应为了绕过误判而关闭上游安全机制。
+
+## R7｜UI 测试必须等待可交互 DOM，不能只等待 API 被调用
+
+- 现象：同一 `main` Run 的 Web 单测中，账户删除对话框未打开，快捷持仓
+  用例又将账户识别为 `0`；本地高速环境通常通过。
+- 根因：测试 helper 只等待账户 API mock 被调用，没有等待 `Main (#1)`
+  option 真正渲染；过早 change 得到空值，`Number('')` 变成 `0`。
+- 修复：两个目标用例先等待账户 option，删除用例再等待按钮可用；
+  生产组件与业务逻辑不变。

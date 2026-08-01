@@ -193,6 +193,7 @@ test('buildBackendEnvironment extends macOS GUI PATH with Homebrew CLI directori
   assert.equal(env.DATABASE_PATH, '/tmp/dsa/data.db');
   assert.equal(env.LOG_DIR, '/tmp/dsa/logs');
   assert.equal(env.WEBUI_HOST, '127.0.0.1');
+  assert.equal(env.PYTHONSAFEPATH, '1');
 });
 
 test('buildBackendEnvironment keeps non-macOS PATH unchanged', (t) => {
@@ -637,6 +638,58 @@ test('startBackend passes WEBUI_HOST from env file to backend args and env', (t)
   assert.equal(spawned[0].options.env.WEBUI_HOST, '0.0.0.0');
   assert.equal(spawned[0].options.env.DSA_SECURE_CREDENTIAL_MODE, 'windows_dpapi');
   assert.equal(fs.readFileSync(envPath, 'utf8').includes('OPENAI_API_KEY'), false);
+});
+
+test('startBackend runs a packaged backend from the runtime data directory', (t) => {
+  const previousBackendPath = process.env.DSA_BACKEND_PATH;
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsa-packaged-cwd-'));
+  const runtimeDir = path.join(tmpDir, 'runtime');
+  const backendDir = path.join(tmpDir, 'bundle', 'backend', 'stock_analysis');
+  const backendPath = path.join(backendDir, 'stock_analysis');
+  fs.mkdirSync(runtimeDir, { recursive: true });
+  fs.mkdirSync(backendDir, { recursive: true });
+  fs.writeFileSync(path.join(runtimeDir, '.env'), '', 'utf8');
+  fs.writeFileSync(backendPath, '', 'utf8');
+  process.env.DSA_BACKEND_PATH = backendPath;
+  t.after(() => {
+    if (previousBackendPath === undefined) {
+      delete process.env.DSA_BACKEND_PATH;
+    } else {
+      process.env.DSA_BACKEND_PATH = previousBackendPath;
+    }
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  const spawned = [];
+  const fakeBackendProcess = new EventEmitter();
+  fakeBackendProcess.stdout = new EventEmitter();
+  fakeBackendProcess.stderr = new EventEmitter();
+  fakeBackendProcess.exitCode = null;
+  fakeBackendProcess.signalCode = null;
+  fakeBackendProcess.kill = () => true;
+  const mainModule = loadMainModule(t, {
+    platform: 'darwin',
+    childProcess: {
+      spawn: (command, args, options) => {
+        spawned.push({ command, args, options });
+        return fakeBackendProcess;
+      },
+    },
+  });
+  t.after(() => mainModule.__setBackendProcessForTest(null));
+
+  mainModule.startBackend({
+    port: 8123,
+    envFile: path.join(runtimeDir, '.env'),
+    dbPath: path.join(runtimeDir, 'data', 'stock_analysis.db'),
+    logDir: path.join(runtimeDir, 'logs'),
+    secureCredentials: null,
+  });
+
+  assert.equal(spawned.length, 1);
+  assert.equal(spawned[0].command, backendPath);
+  assert.equal(spawned[0].options.cwd, runtimeDir);
+  assert.equal(spawned[0].options.env.PYTHONSAFEPATH, '1');
 });
 
 test('extendMacDesktopBackendPath preserves existing order and avoids duplicates', (t) => {

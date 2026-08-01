@@ -140,16 +140,18 @@ if [[ ! -x "${packaged_entry}" ]]; then
   echo "ERROR: packaged backend entrypoint not found or not executable: ${packaged_entry}."
   exit 1
 fi
+packaged_probe_dir="$(mktemp -d "${TMPDIR:-/tmp}/dsa-packaged-probe.XXXXXX")"
+trap 'rm -rf "${packaged_probe_dir}"' EXIT
 
 # 先校验可执行文件可启动（不进入业务流程的参数），再检查冻结产物中的关键依赖。
-if ! "${packaged_entry}" --help >/tmp/dsa-packaged-help.log 2>&1; then
+if ! (cd "${packaged_probe_dir}" && PYTHONSAFEPATH=1 "${packaged_entry}" --help) >/tmp/dsa-packaged-help.log 2>&1; then
   echo "ERROR: packaged backend help startup check failed."
   cat /tmp/dsa-packaged-help.log
   exit 1
 fi
 
 for module in alphasift.dsa_adapter futu orjson; do
-  if DSA_PACKAGED_IMPORT_PROBE="${module}" "${packaged_entry}" >/tmp/dsa-packaged-import.log 2>&1; then
+  if (cd "${packaged_probe_dir}" && PYTHONSAFEPATH=1 DSA_PACKAGED_IMPORT_PROBE="${module}" "${packaged_entry}") >/tmp/dsa-packaged-import.log 2>&1; then
     cat /tmp/dsa-packaged-import.log
   else
     echo "ERROR: packaged backend artifact cannot import ${module}."
@@ -159,13 +161,13 @@ for module in alphasift.dsa_adapter futu orjson; do
 done
 
 log "Verifying packaged fake-useragent data and efinance import chain..."
-if ! DSA_PACKAGED_FAKE_USERAGENT_PROBE=1 "${packaged_entry}" >/tmp/dsa-packaged-fake-useragent.log 2>&1; then
+if ! (cd "${packaged_probe_dir}" && PYTHONSAFEPATH=1 DSA_PACKAGED_FAKE_USERAGENT_PROBE=1 "${packaged_entry}") >/tmp/dsa-packaged-fake-useragent.log 2>&1; then
   echo "ERROR: packaged backend cannot load fake-useragent data."
   cat /tmp/dsa-packaged-fake-useragent.log
   exit 1
 fi
 cat /tmp/dsa-packaged-fake-useragent.log
-if ! DSA_PACKAGED_IMPORT_PROBE="data_provider.efinance_fetcher" "${packaged_entry}" >/tmp/dsa-packaged-efinance.log 2>&1; then
+if ! (cd "${packaged_probe_dir}" && PYTHONSAFEPATH=1 DSA_PACKAGED_IMPORT_PROBE="data_provider.efinance_fetcher" "${packaged_entry}") >/tmp/dsa-packaged-efinance.log 2>&1; then
   echo "ERROR: packaged backend cannot import data_provider.efinance_fetcher."
   cat /tmp/dsa-packaged-efinance.log
   exit 1
