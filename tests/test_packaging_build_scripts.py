@@ -218,6 +218,25 @@ def test_windows_job_runs_head_bound_safe_storage_fake_credential_gate() -> None
     assert "console.error(fake" not in harness
 
 
+def test_windows_jobs_execute_the_shared_installer_verifier() -> None:
+    ci = _read_text(REPO_ROOT / ".github" / "workflows" / "ci.yml")
+    release = _read_text(
+        REPO_ROOT / ".github" / "workflows" / "desktop-release.yml"
+    )
+    verifier_call = "scripts/verify-windows-installer.ps1"
+
+    assert verifier_call in ci
+    assert "Validate Windows installer verifier contracts" in ci
+    assert "Validate installed Windows lifecycle" in ci
+    assert ci.index(verifier_call) < ci.index("Upload verified Windows candidate")
+    assert verifier_call in release
+    assert "Validate Windows installer verifier contracts" in release
+    assert "Validate installed Windows lifecycle" in release
+    assert release.index(verifier_call) < release.index(
+        "Prepare release artifact (Windows)"
+    )
+
+
 def test_fake_credential_scanner_detects_utf8_and_never_prints_the_value(tmp_path: Path) -> None:
     head = "a" * 40
     suffix = hashlib.sha256(f"pp02-r37-fake:{head}".encode()).hexdigest()

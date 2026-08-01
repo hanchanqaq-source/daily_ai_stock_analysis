@@ -19,6 +19,21 @@ def test_windows_nsis_build_allows_custom_install_directory() -> None:
     assert nsis.get("include") == "installer.nsh"
 
 
+def test_windows_installer_uses_fixed_electron_builder_line() -> None:
+    package = json.loads((DESKTOP_DIR / "package.json").read_text(encoding="utf-8"))
+    lock = json.loads(
+        (DESKTOP_DIR / "package-lock.json").read_text(encoding="utf-8")
+    )
+
+    assert package["devDependencies"]["electron-builder"] == "26.15.7"
+    assert lock["packages"][""]["devDependencies"]["electron-builder"] == (
+        "26.15.7"
+    )
+    assert lock["packages"]["node_modules/electron-builder"]["version"] == (
+        "26.15.7"
+    )
+
+
 def test_installer_blocks_system_protected_directories() -> None:
     installer_script = (DESKTOP_DIR / "installer.nsh").read_text(encoding="utf-8")
 
