@@ -54,7 +54,7 @@ SCOPE_DRIFT=FALSE
 - 最终代码完整 CI 等效后端门：`5070 passed, 1 skipped, 4 deselected, 48 warnings,
   499 subtests passed`；语法、严重 Flake8、确定性检查、AI 资产与格式门均通过；
   独立复核 APPROVE，无剩余 Critical、Important 或 Minor。
-- 当前状态：`LOCAL_PASS — DRAFT_CI_PENDING`；尚未创建 Draft PR，
+- 当前状态：`DRAFT_PR_OPEN — FINAL_CI_PENDING`；Draft PR #13 已创建并保持 Draft，
   尚未执行 Windows 真实盘点，授权硬边界保持不变。
 
 ## Plan Challenge Result

@@ -44,7 +44,7 @@ WORK_ID=WORK-005
 WORK_STATE=ACTIVE
 ACTIVE_BASE=a220e9e146e14722561bc084ec4e5306b30d36c7
 ACTIVE_BRANCH=agent/pp02-work5-r6-inventory-tool
-ACTIVE_PR=NOT_CREATED
+ACTIVE_PR=13
 CURRENT_STAGE=R6-A / Plan-Build-Test-CI-Judge
 ACTIVE_GOAL=云端实现正式数据安全只读盘点工具；仅用空库和人工假数据验证
 ACTIVE_BLOCKER=NONE
@@ -408,7 +408,7 @@ git add docs/pp02/R6_FORMAL_DATA_INVENTORY_TOOL_DESIGN.md docs/CHANGELOG.md \
 git commit -m "docs: record R6 inventory verification"
 ```
 
-- [ ] **Step 7: Push and create/update one Draft PR**
+- [x] **Step 7: Push and create/update one Draft PR**
 
 Push `agent/pp02-work5-r6-inventory-tool`, create one Draft PR whose base is `agent/pp02-work4-r4-database-rehearsal`, and include scope, tests, privacy boundary, risk, rollback, and `Windows real inventory not run` in the body. Do not mark Ready.
 

@@ -16,14 +16,14 @@ FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
 ACTIVE_BASE=a220e9e146e14722561bc084ec4e5306b30d36c7
 ACTIVE_BRANCH=agent/pp02-work5-r6-inventory-tool
-ACTIVE_PR=NOT_CREATED
+ACTIVE_PR=13
 CURRENT_STAGE=R6-A / Plan-Build-Test-CI-Judge
 CURRENT_WORK=正式数据安全只读盘点工具
 ACTIVE_GOAL=云端实现正式数据安全只读盘点工具；仅用空库和人工假数据验证
-CURRENT_STATUS=LOCAL_PASS — DRAFT_CI_PENDING
+CURRENT_STATUS=DRAFT_PR_OPEN — FINAL_CI_PENDING
 ACTIVE_BLOCKER=NONE
 NEXT_WORK=NONE_WHILE_WORK_005_ACTIVE
-NEXT_ACTION=提交审查修复、完成最终安全复审、创建独立Draft PR并验证固定Head CI
+NEXT_ACTION=验证Draft PR #13最终固定Head CI并在PR元数据收口Judge
 AUTHORIZATION_REQUIRED=TRUE_FOR_WINDOWS_REAL_DATABASE/REAL_INVENTORY/MIGRATION/READY/MERGE/MAIN/TAG/RELEASE/R7
 LAST_UPDATED=2026-08-01
 ```
@@ -57,7 +57,8 @@ LAST_UPDATED=2026-08-01
   正式依赖，补齐后原失败文件 `511` 项仅剩两项明确缺包，再补齐后归零；未修改无关
   业务代码掩盖环境问题。
 - Windows 真实数据库未读取、未备份、未盘点；当前只完成云端工具实现和人工假库
-  验证。下一门是独立 Draft PR 固定 Head CI，不是正式数据操作授权。
+  验证。Draft PR #13 已创建并保持 Draft，正在等待最终固定 Head CI；这不是正式
+  数据操作授权。
 
 ## 已验证基线
 

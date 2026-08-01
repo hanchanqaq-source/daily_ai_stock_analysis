@@ -6,13 +6,13 @@
 | --- | --- |
 | 远程 main | `eb32298c8f3cbec2ff400dda37d3267a7181af40` |
 | 当前 Work | `WORK-005｜R6-A 正式数据安全只读盘点工具` |
-| 当前状态 | `LOCAL_PASS — DRAFT_CI_PENDING`；唯一 Active Work；聊天名称不得修改 |
+| 当前状态 | `DRAFT_PR_OPEN — FINAL_CI_PENDING`；唯一 Active Work；聊天名称不得修改 |
 | 固定 Base | Work4 PR #12 Head `a220e9e146e14722561bc084ec4e5306b30d36c7` |
 | 分支 | `agent/pp02-work5-r6-inventory-tool` |
-| Draft PR | 尚未创建；下一步创建并保持 Draft，初始 Base 为 Work4 分支 |
+| Draft PR | `#13`；保持 Draft；Base 为 Work4 分支 |
 | 数据边界 | 云端只允许动态空库和人工假数据；真实数据库/数据禁止 |
 | 已有产物 | 安全核心、Windows CLI、31 项专项测试、设计与实施计划；审查修复联合门已通过 |
-| 下一动作 | 提交审查修复、最终安全复审、推送并验证Draft PR固定Head CI |
+| 下一动作 | 验证 Draft PR #13 最终固定 Head CI，并在 PR 元数据收口 Judge |
 
 新聊天不需要用户复制施工单或回传。必须读取 `AGENTS.md` 和四份 `_ai-dev`
 文件，再核对 GitHub。Work5 已取得云端盘点工具设计与实施授权，不得重复询问；
