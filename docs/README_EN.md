@@ -2,15 +2,16 @@
 
 # AI Stock Analysis System
 
-[![GitHub stars](https://img.shields.io/github/stars/ZhuLinsen/daily_stock_analysis?style=social)](https://github.com/ZhuLinsen/daily_stock_analysis/stargazers)
-[![CI](https://github.com/ZhuLinsen/daily_stock_analysis/actions/workflows/ci.yml/badge.svg)](https://github.com/ZhuLinsen/daily_stock_analysis/actions/workflows/ci.yml)
+[![GitHub stars](https://img.shields.io/github/stars/hanchanqaq-source/daily_ai_stock_analysis?style=social)](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/stargazers)
+[![CI](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/actions/workflows/ci.yml/badge.svg)](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-Ready-2088FF?logo=github-actions&logoColor=white)](https://github.com/features/actions)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/r/zhulinsen/daily_stock_analysis)
+[![Docker](https://img.shields.io/badge/Docker-Release-2496ED?logo=docker&logoColor=white)](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/actions/workflows/docker-publish.yml)
 
 <p align="center">
   <img src="https://trendshift.io/api/badge/trendshift/repositories/18527/daily?language=Python" alt="#1 Python Repository Of The Day | Trendshift" width="250" height="55"/>&nbsp;<a href="https://hellogithub.com/repository/ZhuLinsen/daily_stock_analysis" target="_blank"><img src="https://api.hellogithub.com/v1/widgets/recommend.svg?rid=6daa16e405ce46ed97b4a57706aeb29f&claim_uid=pfiJMqhR9uvDGlT&theme=neutral" alt="Featured｜HelloGitHub" width="230" /></a>
+  <br><sub>The recognition above belongs to the upstream project and is retained to document its provenance.</sub>
 </p>
 
 **AI-powered stock analysis system for A-shares / Hong Kong / US / Japanese / Korean / Taiwan stocks**
@@ -22,6 +23,10 @@ Analyze your watchlist daily -> generate a decision dashboard -> push to Telegra
 English | [简体中文](../README.md) | [繁體中文](README_CHT.md)
 
 </div>
+
+## Project provenance
+
+This project was copied from [ZhuLinsen/daily_stock_analysis](https://github.com/ZhuLinsen/daily_stock_analysis) at version `v3.28.0` and then modified through independent development. Copyright in the original project remains with its author and contributors, and this repository continues to follow the [MIT License](../LICENSE). New features and modifications in this repository are maintained by this project; this is not an official version of the upstream repository.
 
 ## 💖 Sponsors
 
@@ -154,7 +159,7 @@ By default, the workflow runs every weekday at 18:00 Beijing time and skips non-
 
 ```bash
 # Clone the project
-git clone https://github.com/ZhuLinsen/daily_stock_analysis.git && cd daily_stock_analysis
+git clone https://github.com/hanchanqaq-source/daily_ai_stock_analysis.git && cd daily_ai_stock_analysis
 
 # Install dependencies
 pip install -r requirements.txt
@@ -270,7 +275,7 @@ After configuring any available AI API key, the Web `/chat` page can use strateg
   </tr>
   <tr>
     <td width="92" valign="top"><strong>Feedback</strong></td>
-    <td valign="top"><a href="https://github.com/ZhuLinsen/daily_stock_analysis/issues">GitHub Issues</a> · <a href="https://github.com/ZhuLinsen/daily_stock_analysis/discussions">Discussions</a></td>
+    <td valign="top"><a href="https://github.com/hanchanqaq-source/daily_ai_stock_analysis/issues">GitHub Issues</a></td>
   </tr>
 </table>
 

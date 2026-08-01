@@ -2,15 +2,16 @@
 
 # 📈 股票智能分析系统
 
-[![GitHub stars](https://img.shields.io/github/stars/ZhuLinsen/daily_stock_analysis?style=social)](https://github.com/ZhuLinsen/daily_stock_analysis/stargazers)
-[![CI](https://github.com/ZhuLinsen/daily_stock_analysis/actions/workflows/ci.yml/badge.svg)](https://github.com/ZhuLinsen/daily_stock_analysis/actions/workflows/ci.yml)
+[![GitHub stars](https://img.shields.io/github/stars/hanchanqaq-source/daily_ai_stock_analysis?style=social)](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/stargazers)
+[![CI](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/actions/workflows/ci.yml/badge.svg)](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-Ready-2088FF?logo=github-actions&logoColor=white)](https://github.com/features/actions)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/r/zhulinsen/daily_stock_analysis)
+[![Docker](https://img.shields.io/badge/Docker-Release-2496ED?logo=docker&logoColor=white)](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/actions/workflows/docker-publish.yml)
 
 <p align="center">
   <img src="https://trendshift.io/api/badge/trendshift/repositories/18527/daily?language=Python" alt="#1 Python Repository Of The Day | Trendshift" width="250" height="55"/>&nbsp;<a href="https://hellogithub.com/repository/ZhuLinsen/daily_stock_analysis" target="_blank"><img src="https://api.hellogithub.com/v1/widgets/recommend.svg?rid=6daa16e405ce46ed97b4a57706aeb29f&claim_uid=pfiJMqhR9uvDGlT&theme=neutral" alt="Featured｜HelloGitHub" width="230" /></a>
+  <br><sub>以上为源项目的历史收录与荣誉，链接保留用于说明上游来源。</sub>
 </p>
 
 > 🤖 基于 AI 大模型的 A股/港股/美股/日股/韩股/台股自选股智能分析系统，每日自动分析并推送「决策仪表盘」到企业微信/飞书/Telegram/Discord/Slack/邮箱
@@ -20,6 +21,10 @@
 简体中文 | [English](docs/README_EN.md) | [繁體中文](docs/README_CHT.md)
 
 </div>
+
+## 项目来源声明
+
+本项目基于 [ZhuLinsen/daily_stock_analysis](https://github.com/ZhuLinsen/daily_stock_analysis) 的 `v3.28.0` 版本复制并进行二次开发。原始项目版权归原作者及贡献者所有，并继续遵循 [MIT License](LICENSE)。本仓库中的新增功能与修改由本项目维护；本项目不是原仓库的官方版本。
 
 ## 💖 赞助商 (Sponsors)
 <div align="center">
@@ -153,7 +158,7 @@
 
 ```bash
 # 克隆项目
-git clone https://github.com/ZhuLinsen/daily_stock_analysis.git && cd daily_stock_analysis
+git clone https://github.com/hanchanqaq-source/daily_ai_stock_analysis.git && cd daily_ai_stock_analysis
 
 # 安装依赖
 pip install -r requirements.txt
@@ -282,7 +287,7 @@ python main.py --webui-only
   </tr>
   <tr>
     <td width="92" valign="top"><strong>问题反馈</strong></td>
-    <td valign="top"><a href="https://github.com/ZhuLinsen/daily_stock_analysis/issues">提交 Issue</a></td>
+    <td valign="top"><a href="https://github.com/hanchanqaq-source/daily_ai_stock_analysis/issues">提交 Issue</a></td>
   </tr>
 </table>
 
