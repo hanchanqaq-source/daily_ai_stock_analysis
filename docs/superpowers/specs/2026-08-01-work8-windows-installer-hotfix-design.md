@@ -9,6 +9,8 @@
 - Branch: `agent/pp02-work8-r7-installer-fix`
 - Target patch release: `v3.29.1`
 - Design approval source: user selected方案 A on 2026-08-01
+- Design correction approval: Desktop test, Windows/macOS package and Release jobs use Node 22;
+  the standalone Web gate remains on Node 20 (approved 2026-08-01)
 - Implementation authorization: independent branch, normal commits, Draft PR, GitHub Actions and in-scope fixes
 - Still requires separate authorization: Ready, merge, main write, tag, GitHub Release and real-data work
 
@@ -68,7 +70,10 @@ fixed-path one-click installer and will not become portable-only.
 ### 2. Upgrade only the affected build chain
 
 Change the desktop development dependency from the 24.x builder line to exactly
-`electron-builder 26.15.7`, and regenerate the desktop lockfile with Node 20/npm. Keep the
+`electron-builder 26.15.7`, and regenerate the desktop lockfile with Node 22/npm. The builder's
+transitive `@electron/rebuild 4.x` dependency declares Node `>=22.12.0`; therefore Desktop test,
+Windows/macOS package and Desktop Release jobs must use Node 22. The standalone Web gate remains
+on Node 20. Keep the
 current Electron runtime and application dependencies unchanged unless the lockfile operation
 proves an unavoidable peer incompatibility. Any such incompatibility is a design blocker and
 must be reported before widening scope.

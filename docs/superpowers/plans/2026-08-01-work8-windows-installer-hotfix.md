@@ -6,12 +6,14 @@
 
 **Architecture:** Keep PP02's existing `oneClick=false`, selectable directory, current-user install, custom NSIS include, installed updater, and portable ZIP. Add one fail-closed PowerShell verifier as the shared executable contract, plus a Windows fixture that exercises its process and cleanup boundaries before the verifier is trusted against the real package.
 
-**Tech Stack:** Electron 31.4.x, electron-builder 26.15.7, NSIS, PowerShell 7/Windows PowerShell-compatible syntax, GitHub Actions, Python/pytest contract checks, Node 20/npm lockfile.
+**Tech Stack:** Electron 31.4.x, electron-builder 26.15.7, NSIS, PowerShell 7/Windows PowerShell-compatible syntax, GitHub Actions, Python/pytest contract checks, Node 22/npm for Desktop build jobs, Node 20 for the standalone Web gate.
 
 ## Global Constraints
 
 - Preserve `oneClick=false`, `allowToChangeInstallationDirectory=true`, `allowElevation=false`, and `installer.nsh`.
 - Pin `electron-builder` to exactly `26.15.7`; do not upgrade Electron or adopt a 27.x preview.
+- Use Node 22 for Desktop tests, Windows/macOS package jobs and Desktop Release jobs because
+  `@electron/rebuild 4.x` requires Node `>=22.12.0`; keep the standalone Web gate on Node 20.
 - The verifier may create and delete only a new `pp02-installer-verify-*` root under the Windows temporary directory.
 - Do not inspect, reset, or remove an existing PP02 user directory or installation.
 - Keep the frozen-backend, portable ZIP, fake-credential, macOS package, and fixed-Head gates.
@@ -56,6 +58,9 @@ def test_windows_jobs_execute_the_shared_installer_verifier() -> None:
     assert release.index(verifier_call) < release.index("Prepare release artifact (Windows)")
 ```
 
+Add a separate workflow-runtime contract that requires Node 22 in `desktop-test`, both Desktop
+package jobs, and both Desktop Release build jobs, while requiring Node 20 in `web-gate`.
+
 - [ ] **Step 3: Run RED and confirm the expected causes**
 
 Run:
@@ -64,7 +69,9 @@ Run:
 python -m pytest tests/test_desktop_installer_config.py tests/test_packaging_build_scripts.py -q
 ```
 
-Expected: existing tests pass; the new tests fail because the manifest still resolves 24.x and neither workflow invokes `scripts/verify-windows-installer.ps1`.
+Expected: existing tests pass; the new tests fail because the manifest still resolves 24.x,
+neither workflow invokes `scripts/verify-windows-installer.ps1`, and Desktop build jobs still use
+Node 20.
 
 - [ ] **Step 4: Commit the RED evidence**
 
@@ -73,15 +80,18 @@ git add tests/test_desktop_installer_config.py tests/test_packaging_build_script
 git commit -m "test: expose Windows installer validation gap"
 ```
 
-### Task 2: Pin the repaired NSIS template line
+### Task 2: Pin the repaired NSIS template line and supported Node runtime
 
 **Files:**
 - Modify: `apps/dsa-desktop/package.json`
 - Modify: `apps/dsa-desktop/package-lock.json`
+- Modify: `.github/workflows/ci.yml`
+- Modify: `.github/workflows/desktop-release.yml`
 
 **Interfaces:**
 - Consumes: the exact version contract from Task 1.
-- Produces: a deterministic desktop dependency graph with `electron-builder 26.15.7` and unchanged Electron 31.4.x.
+- Produces: a deterministic desktop dependency graph with `electron-builder 26.15.7`, unchanged
+  Electron 31.4.x, and an officially supported Node 22 runtime for every Desktop build path.
 
 - [ ] **Step 1: Set the exact development dependency**
 
@@ -92,30 +102,37 @@ git commit -m "test: expose Windows installer validation gap"
 }
 ```
 
-- [ ] **Step 2: Regenerate the lock with Node 20 semantics**
+- [ ] **Step 2: Regenerate the lock with Node 22 semantics**
 
 Run:
 
 ```bash
-NPM_CONFIG_CACHE=/tmp/pp02-work8-npm-cache npx -p node@20 -c 'node --version && npm install --prefix apps/dsa-desktop --package-lock-only --ignore-scripts --save-dev --save-exact electron-builder@26.15.7'
+NPM_CONFIG_CACHE=/tmp/pp02-work8-npm-cache npx -p node@22 -c 'node --version && npm install --prefix apps/dsa-desktop --package-lock-only --ignore-scripts --save-dev --save-exact electron-builder@26.15.7'
 ```
 
-Expected: Node prints `v20.x`; the root lock entry and `node_modules/electron-builder` both resolve `26.15.7`; `electron` remains on the existing 31.x line.
+Expected: Node prints `v22.x`; the root lock entry and `node_modules/electron-builder` both resolve
+`26.15.7`; `@electron/rebuild` resolves to a Node-22-compatible 4.x line; `electron` remains on the
+existing 31.x line.
 
-- [ ] **Step 3: Verify GREEN for the dependency contract**
+- [ ] **Step 3: Upgrade only Desktop build jobs to Node 22**
+
+Set `node-version: '22'` in CI `desktop-test`, Windows/macOS Desktop package jobs and Desktop
+Release Windows/macOS build jobs. Keep CI `web-gate` at `node-version: '20'`.
+
+- [ ] **Step 4: Verify GREEN for dependency and runtime contracts**
 
 Run:
 
 ```bash
-python -m pytest tests/test_desktop_installer_config.py::test_windows_installer_uses_fixed_electron_builder_line -q
+python -m pytest tests/test_desktop_installer_config.py::test_windows_installer_uses_fixed_electron_builder_line tests/test_packaging_build_scripts.py::test_desktop_build_jobs_use_supported_node_22_runtime -q
 ```
 
 Expected: PASS.
 
-- [ ] **Step 4: Commit the dependency repair**
+- [ ] **Step 5: Commit the dependency repair**
 
 ```bash
-git add apps/dsa-desktop/package.json apps/dsa-desktop/package-lock.json
+git add apps/dsa-desktop/package.json apps/dsa-desktop/package-lock.json .github/workflows/ci.yml .github/workflows/desktop-release.yml docs/superpowers/specs/2026-08-01-work8-windows-installer-hotfix-design.md docs/superpowers/plans/2026-08-01-work8-windows-installer-hotfix.md
 git commit -m "fix: upgrade repaired NSIS builder template"
 ```
 

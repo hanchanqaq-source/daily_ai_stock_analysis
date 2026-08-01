@@ -6,6 +6,7 @@ import os
 import shlex
 import subprocess
 import hashlib
+import re
 from pathlib import Path
 
 
@@ -14,6 +15,15 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
+
+
+def _workflow_job(workflow: str, job_name: str) -> str:
+    match = re.search(
+        rf"(?ms)^  {re.escape(job_name)}:\n(.*?)(?=^  [a-zA-Z0-9_-]+:\n|\Z)",
+        workflow,
+    )
+    assert match is not None, f"workflow job not found: {job_name}"
+    return match.group(0)
 
 
 def _bash_path(path: Path) -> str:
@@ -235,6 +245,30 @@ def test_windows_jobs_execute_the_shared_installer_verifier() -> None:
     assert release.index(verifier_call) < release.index(
         "Prepare release artifact (Windows)"
     )
+
+
+def test_desktop_build_jobs_use_supported_node_22_runtime() -> None:
+    ci = _read_text(REPO_ROOT / ".github" / "workflows" / "ci.yml")
+    release = _read_text(
+        REPO_ROOT / ".github" / "workflows" / "desktop-release.yml"
+    )
+
+    for job_name in (
+        "desktop-test",
+        "desktop-futu-package-windows",
+        "desktop-futu-package-macos",
+    ):
+        job = _workflow_job(ci, job_name)
+        assert "actions/setup-node@v6" in job
+        assert "node-version: '22'" in job
+
+    web_job = _workflow_job(ci, "web-gate")
+    assert "node-version: '20'" in web_job
+
+    for job_name in ("build-windows", "build-macos"):
+        job = _workflow_job(release, job_name)
+        assert "actions/setup-node@v6" in job
+        assert "node-version: '22'" in job
 
 
 def test_fake_credential_scanner_detects_utf8_and_never_prints_the_value(tmp_path: Path) -> None:
