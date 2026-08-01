@@ -269,7 +269,13 @@ def test_windows_installer_verifier_is_scoped_and_fail_closed() -> None:
     assert "$env:RUNNER_TEMP" in verifier
     assert "pp02-installer-verify-" in verifier
     assert "Main UI loaded in" in verifier
-    assert "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall" in verifier
+    assert "RegistryView]::Registry64" in verifier
+    assert "RegistryView]::Registry32" in verifier
+    assert "UninstallString" in verifier
+    assert "QuietUninstallString" in verifier
+    assert "Test-UninstallCommandTargetsPath" in verifier
+    assert "Expected exactly one HKCU uninstall entry for the owned uninstaller" in verifier
+    assert "Expected exactly one HKCU uninstall entry for the owned root" not in verifier
     assert "WINDOWS_INSTALLER_INSTALL_VALIDATION=PASS" in verifier
     assert "WINDOWS_INSTALLED_APP_STARTUP_VALIDATION=PASS" in verifier
     assert "WINDOWS_UNINSTALL_VALIDATION=PASS" in verifier

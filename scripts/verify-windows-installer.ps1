@@ -32,37 +32,89 @@ function Test-PathInsideRoot {
   )
 }
 
-function Get-OwnedUninstallEntries {
-  param([Parameter(Mandatory=$true)][string]$OwnedRoot)
+function Test-UninstallCommandTargetsPath {
+  param(
+    [string]$Command,
+    [Parameter(Mandatory=$true)][string]$ExecutablePath
+  )
 
-  $registryRoot = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall'
-  if (-not (Test-Path -LiteralPath $registryRoot)) {
-    return @()
+  if ([string]::IsNullOrWhiteSpace($Command)) {
+    return $false
   }
 
-  $normalizedOwnedRoot = Get-NormalizedDirectoryPath -Path $OwnedRoot
-  return @(
-    Get-ChildItem -LiteralPath $registryRoot -ErrorAction SilentlyContinue |
-      ForEach-Object {
+  $normalizedExecutable = [IO.Path]::GetFullPath($ExecutablePath)
+  $trimmedCommand = $Command.Trim()
+  $quotedExecutable = '"' + $normalizedExecutable + '"'
+  return (
+    $trimmedCommand.Equals($quotedExecutable, [StringComparison]::OrdinalIgnoreCase) -or
+    $trimmedCommand.StartsWith($quotedExecutable + ' ', [StringComparison]::OrdinalIgnoreCase) -or
+    $trimmedCommand.Equals($normalizedExecutable, [StringComparison]::OrdinalIgnoreCase) -or
+    $trimmedCommand.StartsWith($normalizedExecutable + ' ', [StringComparison]::OrdinalIgnoreCase)
+  )
+}
+
+function Get-OwnedUninstallEntries {
+  param([Parameter(Mandatory=$true)][string]$UninstallerPath)
+
+  $uninstallKeyPath = 'Software\Microsoft\Windows\CurrentVersion\Uninstall'
+  $views = @(
+    [Microsoft.Win32.RegistryView]::Registry64,
+    [Microsoft.Win32.RegistryView]::Registry32
+  )
+  $entries = @()
+
+  foreach ($view in $views) {
+    $baseKey = $null
+    $uninstallKey = $null
+    try {
+      $baseKey = [Microsoft.Win32.RegistryKey]::OpenBaseKey(
+        [Microsoft.Win32.RegistryHive]::CurrentUser,
+        $view
+      )
+      $uninstallKey = $baseKey.OpenSubKey($uninstallKeyPath)
+      if (-not $uninstallKey) {
+        continue
+      }
+
+      foreach ($subKeyName in $uninstallKey.GetSubKeyNames()) {
+        $entryKey = $null
         try {
-          $entry = Get-ItemProperty -LiteralPath $_.PSPath -ErrorAction Stop
-          if ([string]::IsNullOrWhiteSpace([string]$entry.InstallLocation)) {
-            return
+          $entryKey = $uninstallKey.OpenSubKey($subKeyName)
+          if (-not $entryKey) {
+            continue
           }
-          $entryRoot = Get-NormalizedDirectoryPath -Path ([string]$entry.InstallLocation)
-          if ($entryRoot.Equals($normalizedOwnedRoot, [StringComparison]::OrdinalIgnoreCase)) {
-            [pscustomobject]@{
-              RegistryPath = $_.PSPath
-              InstallLocation = $entryRoot
-              DisplayVersion = [string]$entry.DisplayVersion
+          $uninstallString = [string]$entryKey.GetValue('UninstallString')
+          $quietUninstallString = [string]$entryKey.GetValue('QuietUninstallString')
+          if ((Test-UninstallCommandTargetsPath `
+                -Command $uninstallString -ExecutablePath $UninstallerPath) -and
+              (Test-UninstallCommandTargetsPath `
+                -Command $quietUninstallString -ExecutablePath $UninstallerPath)) {
+            $entries += [pscustomobject]@{
+              RegistryPath = "HKCU:$view\$uninstallKeyPath\$subKeyName"
+              UninstallString = $uninstallString
+              QuietUninstallString = $quietUninstallString
+              DisplayVersion = [string]$entryKey.GetValue('DisplayVersion')
             }
           }
         }
-        catch {
-          # Ignore unrelated or concurrently removed uninstall entries.
+        finally {
+          if ($entryKey) {
+            $entryKey.Dispose()
+          }
         }
       }
-  )
+    }
+    finally {
+      if ($uninstallKey) {
+        $uninstallKey.Dispose()
+      }
+      if ($baseKey) {
+        $baseKey.Dispose()
+      }
+    }
+  }
+
+  return @($entries)
 }
 
 function Stop-StartedProcessTree {
@@ -205,14 +257,17 @@ try {
 
   $registryDeadline = (Get-Date).AddSeconds(20)
   do {
-    $ownedEntries = @(Get-OwnedUninstallEntries -OwnedRoot $ownedRoot)
+    $ownedEntries = @(Get-OwnedUninstallEntries -UninstallerPath $uninstaller)
     if ($ownedEntries.Count -eq 1) {
       break
     }
     Start-Sleep -Milliseconds 500
   } while ((Get-Date) -lt $registryDeadline)
   if ($ownedEntries.Count -ne 1) {
-    throw "Expected exactly one HKCU uninstall entry for the owned root; found $($ownedEntries.Count)."
+    throw "Expected exactly one HKCU uninstall entry for the owned uninstaller; found $($ownedEntries.Count)."
+  }
+  if ($ownedEntries[0].DisplayVersion -ne $ExpectedVersion) {
+    throw "HKCU uninstall entry version does not match $ExpectedVersion."
   }
   Write-Output 'WINDOWS_INSTALLER_INSTALL_VALIDATION=PASS'
 
@@ -251,7 +306,7 @@ try {
 
   $uninstallDeadline = (Get-Date).AddSeconds(60)
   do {
-    $ownedEntries = @(Get-OwnedUninstallEntries -OwnedRoot $ownedRoot)
+    $ownedEntries = @(Get-OwnedUninstallEntries -UninstallerPath $uninstaller)
     $programFilesRemain = (
       (Test-Path -LiteralPath $appExe) -or
       (Test-Path -LiteralPath $appAsar) -or
