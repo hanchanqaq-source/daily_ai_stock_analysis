@@ -1,31 +1,27 @@
 # PP02 新聊天交接
 
-## 当前接管入口｜WORK-007 / R7
+## 当前接管入口｜R7 已完成
 
 | 项目 | 当前值 |
 | --- | --- |
-| 远程 main | `6650f9c30f394a1ba6b7e7fd99de67d5c11488ab`；PR #12/#13 已按顺序合并 |
-| 当前 Work | `WORK-007｜R7 主线合并与正式发布` |
-| 当前状态 | `MAIN_CI_FAILED — FIX_IN_PROGRESS`；目标版本 `v3.29.0` |
-| 固定 Base | `main@6650f9c30f394a1ba6b7e7fd99de67d5c11488ab` |
-| 分支 | `agent/pp02-r7-main-web-ci-stabilization` |
-| 修复 PR | Draft `#14`；等待最终固定 Head CI |
-| 已合并 PR | `#12` → `ad5588fb…`；`#13` → `6650f9c3…` |
-| R6 结果 | `NO_FORMAL_DATA_FOUND`；旧项目与数据库从未建立，无真实数据迁移 |
-| 发布授权 | PR #12/#13 Ready 与合并、`main` CI、annotated Tag/Release `v3.29.0` |
-| 下一动作 | 验证 PR #14 最终固定 Head；通过后合并，新 main 全绿后再 Tag/Release |
+| 当前状态 | `PASS — v3.29.0 RELEASED — R7 CLOSED` |
+| 当前 Work | 无；`WORK-007｜R7 主线合并与正式发布` 已完成并释放施工权 |
+| 当前 main | `b4a0ec11da19b5552ce87dde1ece716f61fd5174` |
+| 最终 main CI | Run `30697946093`，8/8 success |
+| 正式版本 | annotated `v3.29.0`，指向发布提交 `49759dbd032f577d32e8e0f6670298f700e0f272` |
+| 正式产物 | GitHub Release、Windows/macOS 7 个资产及 Docker/GHCR 发布成功 |
+| 来源声明 | 三语言 README 与 Release 正文均已注明基于上游 `v3.28.0` 二次开发、非官方版本 |
+| 数据结论 | `NO_FORMAL_DATA_FOUND`；未读取、创建或迁移真实数据库 |
+| 活动分支 / PR | 无 |
+| 下一动作 | 等待用户提出并授权新的项目目标；不得自动启动新范围 |
 
-新聊天不需要用户复制施工单或回传。必须读取 `AGENTS.md` 和四份 `_ai-dev`
-文件，再核对 GitHub。用户已启动 Work7 并选择 A / `v3.29.0`，不得重复询问版本；
-只能对本 R7 修复 PR、对应新 `main`、annotated Tag 和 Release `v3.29.0`
-执行授权动作。Run `30693665810` 的 `web-gate` 与 macOS 冻结后端失败
-是当前硬阻塞；不得在新 `main` 全绿前创建 Tag。
+新聊天不需要用户复制施工单或回传。必须读取 `AGENTS.md` 和四份
+`_ai-dev` 文件，再核对 GitHub。R0–R7 已全部完成；用户发送“下一步”时，应先
+说明当前路线已结束，并对新的目标建立独立 Work，不得把旧 Work7 授权继承到新功能、
+真实数据、Ready、合并、`main`、Tag 或 Release。
 
-本地新鲜证据：审查修复后专项 `31 passed`，R6-A/R4/备份联合
-`50 passed, 4 warnings`；最终代码完整后端门 `5070 passed, 1 skipped,
-4 deselected, 48 warnings, 499 subtests passed`，独立复核 APPROVE。
-Windows 真实盘点仍为 `NOT_RUN`；Work6 结论是旧项目和数据库从未建立，不得把
-本地或云端 CI 表述为真实数据库已检查，也不得扩大搜索路径。
+发布后来源声明由 PR #15 合入；`v3.29.0` Tag 保持在已验证的发布提交，没有随
+后续文档主线移动。最后更新：2026-08-01。
 
 以下内容是旧 Work 的追加历史；与本节冲突时，以 `PROJECT_STATUS.md`、本节和
 GitHub 可验证事实为准。
