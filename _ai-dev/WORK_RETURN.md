@@ -1,30 +1,42 @@
-# WORK-007｜R7 主线合并与正式发布回传
+# WORK-007｜R7 主线合并与正式发布最终回传
 
-> 当前 Work 运行中。只记录已取得的真实 GitHub、CI、Tag、Release 和产物证据；
-> 未完成的门不得预写为通过。
+> 当前 Work 已完成。以下只记录已取得的 GitHub、CI、Tag、Release 和产物证据。
 
-## 当前进度
+## 实际完成
 
-- 用户已选择 `A｜v3.29.0`，并授权 PR #12/#13 Ready 与合并、新 `main` CI、
-  annotated Tag `v3.29.0`、GitHub Release 与正式产物验收。
-- PR #12 已合并为 `ad5588fb5aa12f3424596ada2a411261e8b74916`；PR #13
-  最终 Head `263578266ab4cd604a1dcde701621139e66ea193` 的 Run
-  `30693442671` 成功后已合并。
-- 当前远程 `main` 是 `6650f9c30f394a1ba6b7e7fd99de67d5c11488ab`。
-- 首轮 `main` push CI Run `30693665810` 失败：`web-gate` 有 2 个账户选项
-  渲染竞态测试，macOS 冻结后端受 NLTK CWD 导入安全检查阻断。
-- 已在 `agent/pp02-r7-main-web-ci-stabilization` 完成最小本地修复：两个
-  Web 测试等待真实账户选项；冻结后端从独立运行数据目录启动并设置
-  `PYTHONSAFEPATH=1`。
-- Draft PR #14 已创建，等待状态收口后最终固定 Head CI。
-- Work6 最终裁决 `NO_FORMAL_DATA_FOUND`：旧项目和数据库从未建立，无真实数据迁移。
+- PR #12 合并 Commit：`ad5588fb5aa12f3424596ada2a411261e8b74916`。
+- PR #13 最终 Head `263578266ab4cd604a1dcde701621139e66ea193` 的 Run
+  `30693442671` 成功后合并为 `6650f9c30f394a1ba6b7e7fd99de67d5c11488ab`。
+- 首轮 `main` CI 暴露 Web 账户选项竞态和 macOS 冻结后端 NLTK CWD 安全阻断；
+  PR #14 采用最小修复并合并为发布提交
+  `49759dbd032f577d32e8e0f6670298f700e0f272`，新 `main` 的 8 个适用 Job
+  全部 success。
+- annotated Tag `v3.29.0` 精确指向发布提交；GitHub Release 非 Draft、非
+  Prerelease。Windows 安装版、Windows 免安装 ZIP 与 SHA-256、macOS arm64/x64
+  DMG 等 7 个正式资产已上传，Desktop 与 Docker/GHCR 发布成功。
+- Release 正文和三语言 README 已明确声明：本项目基于
+  `ZhuLinsen/daily_stock_analysis@v3.28.0` 复制后进行二次开发，不是上游官方
+  版本；原 MIT License 未修改。
+- 来源声明 PR #15 已合并为
+  `main@b4a0ec11da19b5552ce87dde1ece716f61fd5174`；合并后 CI Run
+  `30697946093` 8/8 success。Tag 仍保持在发布提交 `49759dbd…`。
+- Work6 结论继续为 `NO_FORMAL_DATA_FOUND`；本 Work 未读取、创建、迁移或上传
+  真实数据库、真实数据、真实账号或真实凭据。
 
-## 当前 Judge
+## 未验证项、风险与回滚
 
-`MAIN_CI_FAILED — PR14_FIXED_HEAD_CI_REQUIRED`
+- 未验证项：无 R7 阻断项；真实数据不适用，因为旧项目和数据库从未建立。
+- 风险：`v3.29.0` 是发布提交，发布后 `main` 另含来源声明文档；不得为追平
+  `main` 而移动或重打已发布 Tag。
+- 回滚：文档可通过后续独立 PR 修正；已发布 Tag/Release 的删除、移动或重建属于
+  破坏性发布操作，未经精确授权不得执行。
 
-PR #12/#13 已完成 Ready/Merge；`v3.29.0` Tag 与 Release 仍未创建。
-必须先让修复 PR 和新 `main` push CI 全部通过，再进入 Tag 门。
+## 最终 Judge
+
+`PASS — v3.29.0 RELEASED — WORK7 COMPLETED`
+
+Work7 施工权已释放，当前无 Active Work。任何新功能、真实数据、Ready、合并、
+`main` 写入、Tag 或 Release 都必须由新的 Work 单独授权。
 
 ---
 

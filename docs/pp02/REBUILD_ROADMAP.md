@@ -13,7 +13,7 @@
 | R4｜数据库兼容与脱敏迁移演练 | 空库/人工假数据验证 | 完成 | PR #12 Head `f1b433a7…` / Run `30660971800` |
 | R5｜Windows 本机验收 | 安装、启动、Web/Desktop 与安全默认值 | 完成 | Work2 / PR #9 真机启动与回滚模拟通过 |
 | R6｜正式数据迁移 | 迁移经确认的真实数据 | 完成（无数据，跳过迁移） | Work6 `NO_FORMAL_DATA_FOUND`；旧项目和数据库从未建立 |
-| R7｜替换 main 与 Release | Ready、合并、main、Tag、Release | 进行中 | 已选 A / `v3.29.0`；按固定 Head 与 CI 门连续执行 |
+| R7｜替换 main 与 Release | Ready、合并、main、Tag、Release | 完成 | `v3.29.0` 已发布；PR #15 后续文档主线 Run `30697946093` 8/8 success |
 
 ## 当前 R3 顺序
 
@@ -28,15 +28,21 @@
 详细文件边界、契约和验收见
 [`R2_MIGRATION_EXECUTION_PLAN.md`](R2_MIGRATION_EXECUTION_PLAN.md)。
 
-## Work7 / R7 主线与发布门（2026-08-01）
+## Work7 / R7 最终完成（2026-08-01）
 
-- 用户已选择 A / `v3.29.0`，精确授权 PR #12/#13 Ready 与合并、最终 `main` CI、
-  annotated Tag 和对应 Release。
-- PR #13 叠加在 PR #12 上；顺序固定为先合并 #12，再把 #13 Base 改为 `main`，
-  验证新固定 Head CI 后合并 #13。
-- Tag 必须精确指向已通过 push CI 的最终 `main` Head；Release 工作流与正式资产未
-  全部成功前不得宣布 R7 完成。
-- Work6 已裁决 `NO_FORMAL_DATA_FOUND`，R7 不进行任何数据库搜索、创建或迁移。
+- PR #12、#13、#14 已按固定 Head 与完整 CI 门合并；发布提交为
+  `49759dbd032f577d32e8e0f6670298f700e0f272`。
+- 该发布提交的 `main` push CI 8/8 success；annotated Tag `v3.29.0`
+  精确指向该提交。
+- GitHub Release 非 Draft、非 Prerelease；Windows、macOS 共 7 个正式资产以及
+  Docker/GHCR 发布成功。
+- PR #15 已补充三语言来源声明并合并为
+  `main@b4a0ec11da19b5552ce87dde1ece716f61fd5174`；合并后 Run
+  `30697946093` 8/8 success，Tag 未移动。
+- Work6 `NO_FORMAL_DATA_FOUND` 结论保持不变；R7 未执行任何真实数据库搜索、
+  创建或迁移。
+- R0–R7 路线已全部完成。下一目标必须建立新 Work 并重新授权；不得继承 Work7
+  的 Ready、合并、`main`、Tag 或 Release 权限。
 
 ## Mainline Scope Lock（历史）
 

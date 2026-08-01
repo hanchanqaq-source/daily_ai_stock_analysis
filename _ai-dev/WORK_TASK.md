@@ -4,7 +4,7 @@
 
 ```text
 WORK_ID=WORK-007
-WORK_STATE=ACTIVE
+WORK_STATE=COMPLETED
 WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
 BASE=eb32298c8f3cbec2ff400dda37d3267a7181af40
 TARGET_RELEASE=v3.29.0
@@ -53,6 +53,23 @@ SCOPE_DRIFT=FALSE
 | 数据风险 | R6 无正式数据可迁移；R7 禁止任何真实数据操作 |
 | Judge 上限 | `PASS — v3.29.0 RELEASED`，但必须逐门取得真实证据 |
 | 允许进入执行 | 是；Ready/Merge/main CI/Tag/Release `v3.29.0` 已精确授权 |
+
+
+## 最终执行结果
+
+- PR #12、#13、#14 已按固定 Head 与 CI 门进入 `main`；发布提交为
+  `49759dbd032f577d32e8e0f6670298f700e0f272`。
+- 该发布提交的 `main` push CI 8/8 success 后创建 annotated Tag
+  `v3.29.0`；Tag 精确指向发布提交且注释非空。
+- GitHub Release 非 Draft、非 Prerelease；Windows 安装/免安装资产、SHA-256、
+  macOS arm64/x64 DMG 与 Docker/GHCR 发布均成功。
+- PR #15 在发布后补充三语言项目来源声明并修正仓库链接，合并为
+  `main@b4a0ec11da19b5552ce87dde1ece716f61fd5174`；Run
+  `30697946093` 8/8 success。
+- Work6 `NO_FORMAL_DATA_FOUND` 边界保持不变；未读取、搜索、创建或迁移真实
+  数据库，未使用真实凭据。
+- 最终 Judge：`PASS — v3.29.0 RELEASED — WORK7 COMPLETED`。本合同不授权任何
+  后续 Work、真实数据、其他 Tag/Release 或新的 `main` 写入。
 
 ---
 
