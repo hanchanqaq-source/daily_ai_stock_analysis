@@ -1,3 +1,42 @@
+# WORK-008｜Windows installer hotfix 回传（进行中）
+
+## 已确认失败
+
+```text
+WINDOWS_NATIVE_ENVIRONMENT=PASS
+RELEASE_PROVENANCE_VALIDATION=PASS
+INSTALLER_HASH_VALIDATION=PASS
+WINDOWS_INSTALLATION_VALIDATION=FAIL
+FIRST_STARTUP_VALIDATION=NOT_EXECUTED_DUE_TO_INSTALLATION_FAILURE
+EMPTY_DATA_VALIDATION=NOT_EXECUTED_DUE_TO_INSTALLATION_FAILURE
+SAFE_DEFAULTS_VALIDATION=NOT_EXECUTED_DUE_TO_INSTALLATION_FAILURE
+RESTART_VALIDATION=NOT_EXECUTED_DUE_TO_INSTALLATION_FAILURE
+R7_WINDOWS_FIRST_USE_ACCEPTANCE=FAIL
+```
+
+- 验收环境：Windows 11 Home China `10.0.26200`，x64。
+- v3.29.0 安装器实际大小 `209712731` 字节，SHA-256
+  `a9a0b547ff9be2c9153a006d3471f350f712a5306a1267d19fd111aa0e54fbdb`，均匹配。
+- Authenticode 为 `NotSigned`；本 Work 不擅自扩大到代码签名。
+- 安装器两次均在显示可操作安装向导前崩溃；Windows Event 指向解包
+  `System.dll`，异常 `0xC0000005`。
+- 未读取或删除预先存在的用户目录；未制造空数据通过。
+
+## Work8 当前进度
+
+- 用户已授权 Work8 并选择 `A｜保留安装向导`。
+- 固定 Base：`main@66666352e953d90becce420da7d35b649516af76`。
+- 分支：`agent/pp02-work8-r7-installer-fix`。
+- 已提交设计：
+  `docs/superpowers/specs/2026-08-01-work8-windows-installer-hotfix-design.md`。
+- 设计锁定 `electron-builder 26.15.7`、保留 assisted/current-user 安装，并新增
+  PR 与 Release 共用的 Windows install/start/uninstall verifier。
+- 当前 Judge：`DESIGN_COMMITTED — USER_SPEC_REVIEW_REQUIRED`。
+- 尚未修改 manifest、lockfile、verifier、CI 或 Release workflow；尚未执行 Build/CI。
+- 未授权 Ready、Merge、main、`v3.29.1` Tag/Release 或真实数据。
+
+---
+
 # WORK-007｜R7 主线合并与正式发布最终回传
 
 > 当前 Work 已完成。以下只记录已取得的 GitHub、CI、Tag、Release 和产物证据。
