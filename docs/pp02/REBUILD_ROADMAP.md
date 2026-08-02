@@ -5,7 +5,7 @@
 - PR #17 is merged as `main@3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65`; post-merge Run
   `30747187504` passed all eight jobs. This fixed product commit remains the v3.29.1 target.
 - Work10-A adds a recoverable manual cloud release entry to the existing Desktop Release workflow.
-  The implementation is locally green; Draft PR and fixed-Head CI are pending.
+  The implementation is locally green and Draft PR #18 is open; fixed-Head CI is pending.
 - v3.29.1 Tag/Release, workflow-PR merge and Windows real-machine acceptance remain unauthorized.
 
 ## 2026-08-02 Work9 fixed-Head closure
@@ -31,7 +31,7 @@
 | R5｜Windows 本机验收 | 安装、启动、Web/Desktop 与安全默认值 | 完成 | Work2 / PR #9 真机启动与回滚模拟通过 |
 | R6｜正式数据迁移 | 迁移经确认的真实数据 | 完成（无数据，跳过迁移） | Work6 `NO_FORMAL_DATA_FOUND`；旧项目和数据库从未建立 |
 | R7｜替换 main 与 Release | Ready、合并、main、Tag、Release | 完成 | `v3.29.0` 已发布；PR #15 后续文档主线 Run `30697946093` 8/8 success |
-| R7-Hotfix｜Windows 安装器补丁 | 修复 v3.29.0 `System.dll / 0xC0000005` 引导崩溃 | 发布入口修复中 | PR #17 已合并；Work10-A 本地门通过，Draft PR/CI 待完成 |
+| R7-Hotfix｜Windows 安装器补丁 | 修复 v3.29.0 `System.dll / 0xC0000005` 引导崩溃 | 发布入口修复中 | PR #17 已合并；Work10-A Draft PR #18 已建立，固定 Head CI 待完成 |
 
 ## 当前 R3 顺序
 

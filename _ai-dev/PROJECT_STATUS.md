@@ -17,7 +17,7 @@ FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
 ACTIVE_BASE=3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65
 ACTIVE_BRANCH=agent/pp02-work10-release-entry
-ACTIVE_PR=PENDING_DRAFT_PR
+ACTIVE_PR=18
 CURRENT_STAGE=R7 Hotfix / Work10-A Cloud Release Entry
 CURRENT_WORK=WORK-010 — v3.29.1 release and Windows real-machine acceptance
 ACTIVE_GOAL=add a recoverable fixed-commit cloud release entry before publishing v3.29.1
@@ -25,14 +25,14 @@ PRODUCT_RELEASE_COMMIT=3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65
 MERGED_PR=17
 MAIN_CI_RUN=30747187504
 MAIN_CI_RESULT=PASS_8_OF_8
-CURRENT_STATUS=LOCAL_GATES_PASS_DRAFT_PR_AND_CI_PENDING
-ACTIVE_BLOCKER=DRAFT_PR_AND_CI_PENDING
+CURRENT_STATUS=DRAFT_PR_18_FIXED_HEAD_CI_PENDING
+ACTIVE_BLOCKER=PR18_FIXED_HEAD_CI_PENDING
 FAILED_RELEASE_TAG=v3.29.0
 TARGET_RELEASE_TAG=v3.29.1
 TARGET_TAG_TYPE=ANNOTATED
 TARGET_TAG_MESSAGE=Release v3.29.1: Windows installer bootstrap fix
 NEXT_WORK=NONE_WHILE_WORK_010_ACTIVE
-NEXT_ACTION=PUBLISH_DRAFT_PR_AND_REQUIRE_FIXED_HEAD_CI
+NEXT_ACTION=MONITOR_PR18_FIXED_HEAD_CI
 AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/MAIN_WRITE/TAG/RELEASE/REAL_DATA/WINDOWS_REAL_MACHINE_ACTION
 LAST_UPDATED=2026-08-02
 ```
@@ -52,8 +52,9 @@ LAST_UPDATED=2026-08-02
   `contents: write`; after every build succeeds it creates or safely reuses the same annotated Tag,
   verifies both the remote Tag object's direct target and peeled commit, and creates the Release in
   the same Workflow Run.
-- Local contracts pass. Draft PR creation and fixed-Head CI remain pending. Ready, merge, v3.29.1
-  Tag/Release and Windows real-machine acceptance remain separate hard authorization gates.
+- Local contracts pass and Draft PR #18 is open as Draft. Fixed-Head CI remains pending. Ready,
+  merge, v3.29.1 Tag/Release and Windows real-machine acceptance remain separate hard
+  authorization gates.
 
 ## 2026-08-02 Work9 / formal takeover
 

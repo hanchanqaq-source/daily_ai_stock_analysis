@@ -8,11 +8,11 @@ BRANCH=agent/pp02-work10-release-entry
 LOCAL_CONTRACTS=PASS_24_OF_24
 WORKFLOW_YAML_PARSE=PASS
 AI_ASSETS=PASS
-DRAFT_PR=PENDING
-PR_CI=NOT_RUN
+DRAFT_PR=18_DRAFT
+PR_CI=PENDING_FIXED_HEAD
 READY_MERGE_TAG_RELEASE=NOT_AUTHORIZED
 WINDOWS_REAL_MACHINE_ACCEPTANCE=NOT_RUN
-JUDGE=LOCAL_GATES_PASS_DRAFT_PR_AND_CI_PENDING
+JUDGE=DRAFT_PR_CREATED_FIXED_HEAD_CI_PENDING
 ```
 
 - Work10-A preserves the existing annotated-Tag push trigger and adds a recoverable manual entry
@@ -23,8 +23,8 @@ JUDGE=LOCAL_GATES_PASS_DRAFT_PR_AND_CI_PENDING
 - Windows and macOS check out the fixed product Commit. The publish job runs only after preflight
   and every build succeeds, is the only job with write permission, and performs remote direct Tag
   object plus peeled-commit verification before `gh release create --verify-tag`.
-- Local deterministic gates pass. Remote branch, Draft PR and CI remain pending; no Tag, Release,
-  main write or Windows real-machine action has occurred.
+- Local deterministic gates pass. Remote branch and Draft PR #18 are published; fixed-Head CI is
+  pending. No Tag, Release, main write or Windows real-machine action has occurred.
 
 ---
 
