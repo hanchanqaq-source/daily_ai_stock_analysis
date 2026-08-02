@@ -229,7 +229,17 @@ jobs:
           $finalExtract = Join-Path $env:RUNNER_TEMP "pp02-portable-final-$env:DSA_EXPECTED_PR_HEAD_SHA"
           Remove-FinalExtractWithRetry -Path $finalExtract
           Expand-Archive -LiteralPath $zip -DestinationPath $finalExtract
-          $fakeUserAgentData = Join-Path $finalExtract 'resources/backend/stock_analysis/_internal/fake_useragent/data/browsers.jsonl'
+          $requiredBrowserRelativePath = 'resources/backend/stock_analysis/_internal/fake_useragent/data/browsers.jsonl'
+          $finalManifestPath = Join-Path $finalExtract 'pp02-portable-release.json'
+          $finalManifest = Get-Content -LiteralPath $finalManifestPath -Raw | ConvertFrom-Json
+          $managedBrowserEntries = @(
+            $finalManifest.managedFiles |
+              Where-Object { $_.relativePath -eq $requiredBrowserRelativePath }
+          )
+          if ($managedBrowserEntries.Count -ne 1) {
+            throw "Final portable manifest does not manage exactly one $requiredBrowserRelativePath entry."
+          }
+          $fakeUserAgentData = Join-Path $finalExtract $requiredBrowserRelativePath
           if (-not (Test-Path -LiteralPath $fakeUserAgentData -PathType Leaf)) {
             throw "Final portable ZIP is missing fake_useragent/data/browsers.jsonl: $fakeUserAgentData"
           }
@@ -239,7 +249,10 @@ jobs:
 
       - name: 🧪 Validate Windows installer verifier contracts
         shell: pwsh
-        run: powershell -ExecutionPolicy Bypass -File scripts/tests/verify-windows-installer-contract.ps1
+        run: |
+          $diagnosticRoot = Join-Path $env:RUNNER_TEMP "pp02-installer-diagnostics-$env:DSA_EXPECTED_PR_HEAD_SHA-$env:GITHUB_RUN_ID"
+          powershell -ExecutionPolicy Bypass -File scripts/tests/verify-windows-installer-contract.ps1 `
+            -ArtifactDiagnosticRoot $diagnosticRoot
 
       - name: 🧪 Validate installed Windows lifecycle
         shell: pwsh

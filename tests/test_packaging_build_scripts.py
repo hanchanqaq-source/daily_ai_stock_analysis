@@ -321,6 +321,7 @@ def test_windows_installer_failure_diagnostics_are_preserved_and_redacted() -> N
     assert "port-process-state.txt" in verifier
     assert "windows-application-events-sanitized.log" in verifier
     assert "installed-files.txt" in verifier
+    assert "diagnostic-collector-status.txt" in verifier
     assert "Get-NetTCPConnection" in verifier
     assert "Get-WinEvent" in verifier
     assert "-RedirectStandardError" in verifier
@@ -331,11 +332,16 @@ def test_windows_installer_failure_diagnostics_are_preserved_and_redacted() -> N
     assert "Get-ChildItem Env:" not in verifier
     assert "-eq '.env'" in verifier
     assert "WINDOWS_INSTALLER_DIAGNOSTIC=AVAILABLE" in verifier
+    assert "failure_stage=" in verifier
+    assert "stage_process_exit_code=" in verifier
 
     assert "-DiagnosticRoot" in contract
     assert "diagnostic-summary.txt" in contract
     assert "WINDOWS_INSTALLER_DIAGNOSTIC=AVAILABLE" in contract
     assert "Verifier did not preserve diagnostic evidence" in contract
+    assert "failure_stage=installer_process" in contract
+    assert "stage_process_exit_code=17" in contract
+    assert "installed_files=PASS" in contract
 
 
 def test_windows_jobs_upload_diagnostics_even_after_lifecycle_failure() -> None:
@@ -349,6 +355,7 @@ def test_windows_jobs_upload_diagnostics_even_after_lifecycle_failure() -> None:
         (release, "env.DSA_RELEASE_COMMIT_SHA"),
     ):
         assert "-DiagnosticRoot $diagnosticRoot" in workflow
+        assert "-ArtifactDiagnosticRoot $diagnosticRoot" in workflow
         assert "Upload Windows installer diagnostics" in workflow
         assert "if: always()" in workflow
         assert "actions/upload-artifact@v6" in workflow

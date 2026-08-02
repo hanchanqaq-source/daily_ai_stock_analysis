@@ -33,6 +33,24 @@ function Test-PathInsideRoot {
   )
 }
 
+function Get-RelativePathInsideRoot {
+  param(
+    [Parameter(Mandatory=$true)][string]$Path,
+    [Parameter(Mandatory=$true)][string]$Root
+  )
+
+  $normalizedPath = [IO.Path]::GetFullPath($Path)
+  $normalizedRoot = Get-NormalizedDirectoryPath -Path $Root
+  $rootPrefix = $normalizedRoot + [IO.Path]::DirectorySeparatorChar
+  if (-not $normalizedPath.StartsWith(
+      $rootPrefix,
+      [StringComparison]::OrdinalIgnoreCase
+    )) {
+    throw 'Installed-file inventory encountered a path outside the owned root.'
+  }
+  return $normalizedPath.Substring($rootPrefix.Length)
+}
+
 function Test-UninstallCommandTargetsPath {
   param(
     [string]$Command,
@@ -199,6 +217,29 @@ function Set-ProtectedDiagnosticContent {
   Set-Content -LiteralPath $Path -Value $protected -Encoding UTF8
 }
 
+function Add-ProtectedDiagnosticContent {
+  param(
+    [Parameter(Mandatory=$true)][string]$Path,
+    [AllowEmptyString()][string]$Text
+  )
+
+  $protected = Protect-DiagnosticText -Text $Text
+  Add-Content -LiteralPath $Path -Value $protected -Encoding UTF8
+}
+
+function Add-InstallerStageReport {
+  param(
+    [Parameter(Mandatory=$true)][string]$Path,
+    [Parameter(Mandatory=$true)][string]$Stage,
+    [Parameter(Mandatory=$true)][string]$Status
+  )
+
+  Add-Content `
+    -LiteralPath $Path `
+    -Value "timestamp_utc=$((Get-Date).ToUniversalTime().ToString('o')) stage=$Stage status=$Status" `
+    -Encoding UTF8
+}
+
 function Get-DesktopDiagnosticLines {
   param([string]$LogPath)
 
@@ -309,10 +350,13 @@ function Write-InstalledFileDiagnostics {
 
   $lines = @()
   foreach ($file in Get-ChildItem -LiteralPath $OwnedRoot -Recurse -File -ErrorAction SilentlyContinue) {
-    $relativePath = [IO.Path]::GetRelativePath($OwnedRoot, $file.FullName)
+    $relativePath = Get-RelativePathInsideRoot -Path $file.FullName -Root $OwnedRoot
     if ($relativePath -eq '.env' -or
         $relativePath.StartsWith('data\', [StringComparison]::OrdinalIgnoreCase) -or
-        $relativePath.StartsWith('logs\', [StringComparison]::OrdinalIgnoreCase)) {
+        $relativePath.StartsWith('logs\', [StringComparison]::OrdinalIgnoreCase) -or
+        @('.db', '.sqlite', '.sqlite3').Contains(
+          [IO.Path]::GetExtension($relativePath).ToLowerInvariant()
+        )) {
       continue
     }
     $lines += "$relativePath`t$($file.Length)"
@@ -476,6 +520,11 @@ function Save-InstallerDiagnostics {
     [Parameter(Mandatory=$true)][string]$DiagnosticRoot,
     [Parameter(Mandatory=$true)][System.Management.Automation.ErrorRecord]$FailureRecord,
     [Parameter(Mandatory=$true)][datetime]$VerificationStartedAt,
+    [Parameter(Mandatory=$true)][string]$FailureStage,
+    [Parameter(Mandatory=$true)][string]$StageProcess,
+    [Parameter(Mandatory=$true)][string]$StageProcessStartedUtc,
+    [Parameter(Mandatory=$true)][string]$StageProcessExitedUtc,
+    [Parameter(Mandatory=$true)][string]$StageProcessExitCode,
     [string]$Installer,
     [string]$OwnedRoot,
     [string]$AppExecutable,
@@ -485,40 +534,19 @@ function Save-InstallerDiagnostics {
   )
 
   New-Item -ItemType Directory -Path $DiagnosticRoot -Force | Out-Null
-  $desktopLines = @(Get-DesktopDiagnosticLines -LogPath $DesktopLog)
-  Set-ProtectedDiagnosticContent `
-    -Path (Join-Path $DiagnosticRoot 'desktop-startup-sanitized.log') `
-    -Text ($desktopLines -join [Environment]::NewLine)
-
-  $backendPort = Get-DesktopBackendPort -DesktopLines $desktopLines
-  $backendProcessId = Get-DesktopBackendPid -DesktopLines $desktopLines
-  Write-PortAndProcessDiagnostics `
-    -Path (Join-Path $DiagnosticRoot 'port-process-state.txt') `
-    -Port $backendPort `
-    -AppProcess $AppProcess `
-    -BackendProcessId $backendProcessId
-  Write-InstalledFileDiagnostics `
-    -Path (Join-Path $DiagnosticRoot 'installed-files.txt') `
-    -OwnedRoot $OwnedRoot
-
-  $relatedNames = @()
-  foreach ($candidate in @($AppExecutable, $BackendExecutable)) {
-    if ($candidate) {
-      $relatedNames += Split-Path -Leaf $candidate
-    }
-  }
-  Write-WindowsApplicationEventDiagnostics `
-    -Path (Join-Path $DiagnosticRoot 'windows-application-events-sanitized.log') `
-    -StartedAt $VerificationStartedAt `
-    -RelatedExecutableNames $relatedNames
-
+  $summaryPath = Join-Path $DiagnosticRoot 'diagnostic-summary.txt'
   $summary = @(
     'WINDOWS_INSTALLER_DIAGNOSTIC=AVAILABLE',
     "verification_start_utc=$($VerificationStartedAt.ToUniversalTime().ToString('o'))",
     "diagnostic_capture_utc=$((Get-Date).ToUniversalTime().ToString('o'))",
+    "failure_stage=$FailureStage",
     "failure_type=$($FailureRecord.Exception.GetType().FullName)",
     "failure_message=$(Protect-DiagnosticText -Text $FailureRecord.Exception.Message)",
     "failure_stack=$(Protect-DiagnosticText -Text ([string]$FailureRecord.ScriptStackTrace))",
+    "stage_process=$StageProcess",
+    "stage_process_start_utc=$StageProcessStartedUtc",
+    "stage_process_exit_utc=$StageProcessExitedUtc",
+    "stage_process_exit_code=$StageProcessExitCode",
     "installer=$Installer",
     "install_root=$OwnedRoot",
     "app_executable=$AppExecutable",
@@ -529,22 +557,105 @@ function Save-InstallerDiagnostics {
     'backend_command_structure=<backend-executable> --serve-only --host 127.0.0.1 --port <selected-port>'
   )
   Set-ProtectedDiagnosticContent `
-    -Path (Join-Path $DiagnosticRoot 'diagnostic-summary.txt') `
+    -Path $summaryPath `
     -Text ($summary -join [Environment]::NewLine)
 
-  if ($AppProcess) {
-    Stop-StartedProcessTree -Process $AppProcess
+  $collectorStatuses = @()
+  $desktopLines = @('desktop_diagnostic_not_collected')
+  $backendPort = 8000
+  $backendProcessId = 0
+  try {
+    $desktopLines = @(Get-DesktopDiagnosticLines -LogPath $DesktopLog)
+    Set-ProtectedDiagnosticContent `
+      -Path (Join-Path $DiagnosticRoot 'desktop-startup-sanitized.log') `
+      -Text ($desktopLines -join [Environment]::NewLine)
+    $backendPort = Get-DesktopBackendPort -DesktopLines $desktopLines
+    $resolvedBackendProcessId = Get-DesktopBackendPid -DesktopLines $desktopLines
+    if ($resolvedBackendProcessId) {
+      $backendProcessId = [int]$resolvedBackendProcessId
+    }
+    Add-ProtectedDiagnosticContent -Path $summaryPath -Text "backend_port=$backendPort"
+    $collectorStatuses += 'desktop_startup=PASS'
   }
+  catch {
+    $collectorStatuses += "desktop_startup=FAIL:$($_.Exception.GetType().FullName)"
+  }
+
+  try {
+    Write-PortAndProcessDiagnostics `
+      -Path (Join-Path $DiagnosticRoot 'port-process-state.txt') `
+      -Port $backendPort `
+      -AppProcess $AppProcess `
+      -BackendProcessId $backendProcessId
+    $collectorStatuses += 'port_process=PASS'
+  }
+  catch {
+    $collectorStatuses += "port_process=FAIL:$($_.Exception.GetType().FullName)"
+  }
+
+  try {
+    Write-InstalledFileDiagnostics `
+      -Path (Join-Path $DiagnosticRoot 'installed-files.txt') `
+      -OwnedRoot $OwnedRoot
+    $collectorStatuses += 'installed_files=PASS'
+  }
+  catch {
+    $collectorStatuses += "installed_files=FAIL:$($_.Exception.GetType().FullName)"
+  }
+
+  try {
+    $relatedNames = @()
+    foreach ($candidate in @($AppExecutable, $BackendExecutable)) {
+      if ($candidate) {
+        $relatedNames += Split-Path -Leaf $candidate
+      }
+    }
+    Write-WindowsApplicationEventDiagnostics `
+      -Path (Join-Path $DiagnosticRoot 'windows-application-events-sanitized.log') `
+      -StartedAt $VerificationStartedAt `
+      -RelatedExecutableNames $relatedNames
+    $collectorStatuses += 'windows_events=PASS'
+  }
+  catch {
+    $collectorStatuses += "windows_events=FAIL:$($_.Exception.GetType().FullName)"
+  }
+
+  if ($AppProcess) {
+    try {
+      Stop-StartedProcessTree -Process $AppProcess
+      $collectorStatuses += 'app_process_stop=PASS'
+    }
+    catch {
+      $collectorStatuses += "app_process_stop=FAIL:$($_.Exception.GetType().FullName)"
+    }
+  }
+  else {
+    $collectorStatuses += 'app_process_stop=NOT_REQUIRED'
+  }
+
   if ($BackendExecutable -and
       (Test-Path -LiteralPath $BackendExecutable -PathType Leaf) -and
       $OwnedRoot -and
       (Test-Path -LiteralPath $OwnedRoot -PathType Container)) {
-    Invoke-BackendDiagnosticProbe `
-      -BackendExecutable $BackendExecutable `
-      -WorkingDirectory $OwnedRoot `
-      -Port $backendPort `
-      -DiagnosticRoot $DiagnosticRoot
+    try {
+      Invoke-BackendDiagnosticProbe `
+        -BackendExecutable $BackendExecutable `
+        -WorkingDirectory $OwnedRoot `
+        -Port $backendPort `
+        -DiagnosticRoot $DiagnosticRoot
+      $collectorStatuses += 'backend_probe=PASS'
+    }
+    catch {
+      $collectorStatuses += "backend_probe=FAIL:$($_.Exception.GetType().FullName)"
+    }
   }
+  else {
+    $collectorStatuses += 'backend_probe=NOT_REQUIRED'
+  }
+
+  Set-ProtectedDiagnosticContent `
+    -Path (Join-Path $DiagnosticRoot 'diagnostic-collector-status.txt') `
+    -Text ($collectorStatuses -join [Environment]::NewLine)
 }
 
 function Stop-StartedProcessTree {
@@ -643,6 +754,22 @@ if (Test-Path -LiteralPath $diagnosticRoot) {
 }
 New-Item -ItemType Directory -Path $diagnosticRoot -Force | Out-Null
 
+$verificationStartedAt = Get-Date
+$failureStage = 'preflight'
+$stageProcess = '<not_started>'
+$stageProcessStartedUtc = '<not_started>'
+$stageProcessExitedUtc = '<not_observed>'
+$stageProcessExitCode = '<not_observed>'
+Set-Content `
+  -LiteralPath (Join-Path $diagnosticRoot 'stage-report.txt') `
+  -Value @(
+    'WINDOWS_INSTALLER_STAGE_REPORT=AVAILABLE',
+    "verification_start_utc=$($verificationStartedAt.ToUniversalTime().ToString('o'))",
+    'current_stage=preflight'
+  ) `
+  -Encoding UTF8
+$stageReportPath = Join-Path $diagnosticRoot 'stage-report.txt'
+
 $expectedHead = $ExpectedCommitSha.Trim().ToLowerInvariant()
 if ($expectedHead) {
   if ($expectedHead -notmatch '^[0-9a-f]{40}$') {
@@ -669,21 +796,30 @@ $savedInstallerDiagnosticRoot = [Environment]::GetEnvironmentVariable(
   'DSA_INSTALLER_DIAGNOSTIC_ROOT',
   'Process'
 )
-$verificationStartedAt = Get-Date
-
 try {
   Write-Output "WINDOWS_INSTALLER_EXPECTED_VERSION=$ExpectedVersion"
   if ($expectedHead) {
     Write-Output "WINDOWS_INSTALLER_HEAD=$expectedHead"
   }
 
+  $failureStage = 'installer_process'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
+  $stageProcess = 'installer'
+  $stageProcessStartedUtc = (Get-Date).ToUniversalTime().ToString('o')
+  $stageProcessExitedUtc = '<not_observed>'
+  $stageProcessExitCode = '<not_observed>'
   $installProcess = Start-Process -FilePath $installer `
     -ArgumentList "/S /D=$ownedRoot" -Wait -PassThru
+  $stageProcessExitedUtc = (Get-Date).ToUniversalTime().ToString('o')
+  $stageProcessExitCode = [string]$installProcess.ExitCode
   Write-Output "WINDOWS_INSTALLER_EXIT_CODE=$($installProcess.ExitCode)"
   if ($installProcess.ExitCode -ne 0) {
     throw "Installer exited with code $($installProcess.ExitCode)."
   }
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'PASS'
 
+  $failureStage = 'installed_payload'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
   $appExe = Join-Path $ownedRoot 'PP02 AI Daily Stock Analysis.exe'
   $appAsar = Join-Path $ownedRoot 'resources/app.asar'
   $backendExe = Join-Path $ownedRoot 'resources/backend/stock_analysis/stock_analysis.exe'
@@ -705,6 +841,8 @@ try {
     throw "Installed executable version does not match $ExpectedVersion."
   }
 
+  $failureStage = 'uninstall_registration'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
   $registryDeadline = (Get-Date).AddSeconds(20)
   do {
     $ownedEntries = @(Get-OwnedUninstallEntries -UninstallerPath $uninstaller)
@@ -727,6 +865,12 @@ try {
     $diagnosticRoot,
     'Process'
   )
+  $failureStage = 'installed_app_startup'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
+  $stageProcess = 'installed_app'
+  $stageProcessStartedUtc = (Get-Date).ToUniversalTime().ToString('o')
+  $stageProcessExitedUtc = '<not_observed>'
+  $stageProcessExitCode = '<not_observed>'
   $appProcess = Start-Process -FilePath $appExe -WorkingDirectory $ownedRoot -PassThru
   $desktopLog = Join-Path $ownedRoot 'logs/desktop.log'
   $startupDeadline = (Get-Date).AddSeconds($StartupTimeoutSeconds)
@@ -734,6 +878,8 @@ try {
   do {
     $appProcess.Refresh()
     if ($appProcess.HasExited) {
+      $stageProcessExitedUtc = (Get-Date).ToUniversalTime().ToString('o')
+      $stageProcessExitCode = [string]$appProcess.ExitCode
       Write-StartupDiagnostics -LogPath $desktopLog
       throw "Installed application exited before readiness with code $($appProcess.ExitCode)."
     }
@@ -749,18 +895,34 @@ try {
     throw "Installed application did not reach readiness within $StartupTimeoutSeconds seconds."
   }
   Write-Output 'WINDOWS_INSTALLED_APP_STARTUP_VALIDATION=PASS'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'PASS'
 
+  $failureStage = 'installed_app_shutdown'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
   Stop-StartedProcessTree -Process $appProcess
+  $stageProcessExitedUtc = (Get-Date).ToUniversalTime().ToString('o')
+  $stageProcessExitCode = '0'
   $appProcess = $null
 
   $uninstallAttempted = $true
+  $failureStage = 'uninstaller_process'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
+  $stageProcess = 'uninstaller'
+  $stageProcessStartedUtc = (Get-Date).ToUniversalTime().ToString('o')
+  $stageProcessExitedUtc = '<not_observed>'
+  $stageProcessExitCode = '<not_observed>'
   $uninstallProcess = Start-Process -FilePath $uninstaller `
     -ArgumentList '/S /KEEP_APP_DATA /currentuser' -Wait -PassThru
+  $stageProcessExitedUtc = (Get-Date).ToUniversalTime().ToString('o')
+  $stageProcessExitCode = [string]$uninstallProcess.ExitCode
   Write-Output "WINDOWS_UNINSTALLER_EXIT_CODE=$($uninstallProcess.ExitCode)"
   if ($uninstallProcess.ExitCode -ne 0) {
     throw "Uninstaller exited with code $($uninstallProcess.ExitCode)."
   }
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'PASS'
 
+  $failureStage = 'uninstall_cleanup'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
   $uninstallDeadline = (Get-Date).AddSeconds(60)
   do {
     $ownedEntries = @(Get-OwnedUninstallEntries -UninstallerPath $uninstaller)
@@ -779,6 +941,7 @@ try {
     throw 'Uninstaller left program binaries or its HKCU uninstall registration behind.'
   }
   Write-Output 'WINDOWS_UNINSTALL_VALIDATION=PASS'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'PASS'
   Set-Content `
     -LiteralPath (Join-Path $diagnosticRoot 'diagnostic-summary.txt') `
     -Value 'WINDOWS_INSTALLER_DIAGNOSTIC=NOT_REQUIRED_VALIDATION_PASS' `
@@ -792,6 +955,11 @@ catch {
       -DiagnosticRoot $diagnosticRoot `
       -FailureRecord $originalFailure `
       -VerificationStartedAt $verificationStartedAt `
+      -FailureStage $failureStage `
+      -StageProcess $stageProcess `
+      -StageProcessStartedUtc $stageProcessStartedUtc `
+      -StageProcessExitedUtc $stageProcessExitedUtc `
+      -StageProcessExitCode $stageProcessExitCode `
       -Installer $installer `
       -OwnedRoot $ownedRoot `
       -AppExecutable $appExe `
@@ -801,7 +969,20 @@ catch {
     Write-Output 'WINDOWS_INSTALLER_DIAGNOSTIC=AVAILABLE'
   }
   catch {
-    Write-Warning "Diagnostic capture failed with $($_.Exception.GetType().FullName)."
+    $captureFailure = $_
+    try {
+      Set-ProtectedDiagnosticContent `
+        -Path (Join-Path $diagnosticRoot 'diagnostic-capture-fallback.txt') `
+        -Text (@(
+          'WINDOWS_INSTALLER_DIAGNOSTIC=CAPTURE_FAILED',
+          "failure_stage=$failureStage",
+          "diagnostic_capture_exception_type=$($captureFailure.Exception.GetType().FullName)"
+        ) -join [Environment]::NewLine)
+    }
+    catch {
+      Write-Warning 'Diagnostic fallback capture could not be completed.'
+    }
+    Write-Warning "Diagnostic capture failed with $($captureFailure.Exception.GetType().FullName)."
   }
   throw $originalFailure
 }

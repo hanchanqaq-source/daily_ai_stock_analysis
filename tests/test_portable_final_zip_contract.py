@@ -67,5 +67,22 @@ def test_windows_ci_smokes_the_final_extracted_portable_zip() -> None:
 
     assert "Expand-Archive -LiteralPath $zip -DestinationPath $finalExtract" in workflow
     assert "fake_useragent/data/browsers.jsonl" in workflow
+    assert "$finalManifestPath" in workflow
+    assert "$finalManifest.managedFiles" in workflow
+    assert "$requiredBrowserRelativePath" in workflow
+    assert "Final portable manifest does not manage exactly one" in workflow
     assert "-PackagedEntry $finalPackagedEntry" in workflow
     assert "win-unpacked/resources/backend/stock_analysis/stock_analysis.exe" not in workflow
+
+
+def test_windows_release_smokes_the_final_extracted_portable_zip() -> None:
+    workflow = (
+        REPO_ROOT / ".github" / "workflows" / "desktop-release.yml"
+    ).read_text(encoding="utf-8")
+
+    assert "Expand-Archive -LiteralPath $zipTarget" in workflow
+    assert "$releaseFinalManifest.managedFiles" in workflow
+    assert "$requiredBrowserRelativePath" in workflow
+    assert "Final Release portable manifest does not manage exactly one" in workflow
+    assert "-PackagedEntry $releaseFinalPackagedEntry" in workflow
+    assert "Remove-Item -LiteralPath $releaseFinalExtract" in workflow

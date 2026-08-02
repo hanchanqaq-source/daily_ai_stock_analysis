@@ -1,3 +1,7 @@
+param(
+  [string]$ArtifactDiagnosticRoot = ''
+)
+
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
@@ -23,6 +27,39 @@ $diagnosticRoot = Join-Path $fixtureRoot (
 )
 $parentSentinel = Join-Path $fixtureRoot 'parent-sentinel.txt'
 $previousRunnerTemp = [Environment]::GetEnvironmentVariable('RUNNER_TEMP', 'Process')
+$contractStage = 'contract_setup'
+$contractOutput = @()
+
+function Protect-ContractText {
+  param([AllowEmptyString()][string]$Text)
+
+  if ([string]::IsNullOrEmpty($Text)) {
+    return ''
+  }
+  $sensitiveKey = '(?:api[_-]?key|token|secret|password|passwd|webhook|authorization|cookie|credential)'
+  $protected = [regex]::Replace(
+    $Text,
+    "(?im)($sensitiveKey\s*[:=]\s*)([^\s,;]+)",
+    '$1<redacted>'
+  )
+  $protected = [regex]::Replace(
+    $protected,
+    "(?i)([?&]$sensitiveKey=)[^&\s]+",
+    '$1<redacted>'
+  )
+  $protected = [regex]::Replace(
+    $protected,
+    '(?i)(Bearer\s+)[A-Za-z0-9._~+/=-]+',
+    '$1<redacted>'
+  )
+  $protected = [regex]::Replace(
+    $protected,
+    '\b(?:sk-[A-Za-z0-9_-]{8,}|gh[opsu]_[A-Za-z0-9_]{12,})\b',
+    '<redacted>',
+    [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+  )
+  return $protected
+}
 
 $fakeInstallerSource = @'
 using System;
@@ -51,6 +88,7 @@ try {
     -OutputAssembly $fakeInstaller -OutputType ConsoleApplication
 
   [Environment]::SetEnvironmentVariable('RUNNER_TEMP', $fixtureRoot, 'Process')
+  $contractStage = 'child_verifier'
   $powerShell = (Get-Process -Id $PID).Path
   $stdoutPath = Join-Path $fixtureRoot 'verifier.stdout.log'
   $stderrPath = Join-Path $fixtureRoot 'verifier.stderr.log'
@@ -78,10 +116,10 @@ try {
     -PassThru `
     -RedirectStandardOutput $stdoutPath `
     -RedirectStandardError $stderrPath
-  $output = @()
+  $contractOutput = @()
   foreach ($streamPath in @($stdoutPath, $stderrPath)) {
     if (Test-Path -LiteralPath $streamPath -PathType Leaf) {
-      $output += @(Get-Content -LiteralPath $streamPath | ForEach-Object {
+      $contractOutput += @(Get-Content -LiteralPath $streamPath | ForEach-Object {
         $_.ToString()
       })
     }
@@ -91,7 +129,8 @@ try {
   if ($verifierExitCode -eq 0) {
     throw 'Verifier accepted a failing installer.'
   }
-  if (-not ($output -contains 'WINDOWS_INSTALLER_VALIDATION=FAIL')) {
+  $contractStage = 'contract_assertions'
+  if (-not ($contractOutput -contains 'WINDOWS_INSTALLER_VALIDATION=FAIL')) {
     throw 'Verifier did not emit its stable failure marker.'
   }
   if (Test-Path -LiteralPath $installRoot) {
@@ -108,10 +147,94 @@ try {
   if (-not $diagnosticText.Contains('WINDOWS_INSTALLER_DIAGNOSTIC=AVAILABLE')) {
     throw 'Verifier did not preserve its stable diagnostic marker.'
   }
+  if (-not $diagnosticText.Contains('failure_stage=installer_process')) {
+    throw 'Verifier did not preserve the failing lifecycle stage.'
+  }
+  if (-not $diagnosticText.Contains('stage_process_exit_code=17')) {
+    throw 'Verifier did not preserve the installer exit code.'
+  }
+  $installedFiles = Join-Path $diagnosticRoot 'installed-files.txt'
+  if (-not (Test-Path -LiteralPath $installedFiles -PathType Leaf)) {
+    throw 'Verifier did not complete its Windows PowerShell file inventory.'
+  }
+  $collectorStatus = Join-Path $diagnosticRoot 'diagnostic-collector-status.txt'
+  if (-not (Test-Path -LiteralPath $collectorStatus -PathType Leaf)) {
+    throw 'Verifier did not preserve collector-level status.'
+  }
+  $collectorText = Get-Content -LiteralPath $collectorStatus -Raw
+  if (-not $collectorText.Contains('installed_files=PASS')) {
+    throw 'Verifier did not record the installed-file collector result.'
+  }
   if ($diagnosticText.Contains('parent-sentinel') -or $diagnosticText.Contains('owned')) {
     throw 'Verifier copied unrelated fixture content into diagnostic evidence.'
   }
   Write-Output 'WINDOWS_INSTALLER_CONTRACT_VALIDATION=PASS'
+}
+catch {
+  $contractFailure = $_
+  if (-not [string]::IsNullOrWhiteSpace($ArtifactDiagnosticRoot)) {
+    try {
+      if ([string]::IsNullOrWhiteSpace($previousRunnerTemp)) {
+        throw 'RUNNER_TEMP is required for contract diagnostic persistence.'
+      }
+      $directorySeparators = [char[]]@(
+        [IO.Path]::DirectorySeparatorChar,
+        [IO.Path]::AltDirectorySeparatorChar
+      )
+      $artifactRoot = [IO.Path]::GetFullPath($ArtifactDiagnosticRoot).TrimEnd(
+        $directorySeparators
+      )
+      $runnerRoot = [IO.Path]::GetFullPath($previousRunnerTemp).TrimEnd(
+        $directorySeparators
+      )
+      $runnerPrefix = $runnerRoot + [IO.Path]::DirectorySeparatorChar
+      $artifactLeaf = Split-Path -Leaf $artifactRoot
+      if (-not $artifactRoot.StartsWith(
+          $runnerPrefix,
+          [StringComparison]::OrdinalIgnoreCase
+        ) -or
+          -not $artifactLeaf.StartsWith(
+            'pp02-installer-diagnostics-',
+            [StringComparison]::OrdinalIgnoreCase
+          )) {
+        throw 'ArtifactDiagnosticRoot must be a verifier diagnostic child of RUNNER_TEMP.'
+      }
+      New-Item -ItemType Directory -Path $artifactRoot -Force | Out-Null
+      $safeFailureMessage = Protect-ContractText -Text $contractFailure.Exception.Message
+      Set-Content `
+        -LiteralPath (Join-Path $artifactRoot 'diagnostic-summary.txt') `
+        -Value @(
+          'WINDOWS_INSTALLER_DIAGNOSTIC=CONTRACT_FAILURE',
+          'failure_stage=diagnostic_contract',
+          "contract_stage=$contractStage",
+          "failure_type=$($contractFailure.Exception.GetType().FullName)",
+          "failure_message=$safeFailureMessage"
+        ) `
+        -Encoding UTF8
+      Set-Content `
+        -LiteralPath (Join-Path $artifactRoot 'stage-report.txt') `
+        -Value @(
+          'WINDOWS_INSTALLER_STAGE_REPORT=AVAILABLE',
+          'current_stage=diagnostic_contract',
+          'current_stage_result=FAIL'
+        ) `
+        -Encoding UTF8
+      $safeChildOutput = @(
+        $contractOutput |
+          Select-Object -Last 160 |
+          ForEach-Object { Protect-ContractText -Text $_.ToString() }
+      )
+      Set-Content `
+        -LiteralPath (Join-Path $artifactRoot 'contract-child-output-sanitized.log') `
+        -Value $safeChildOutput `
+        -Encoding UTF8
+      Write-Output 'WINDOWS_INSTALLER_CONTRACT_DIAGNOSTIC=AVAILABLE'
+    }
+    catch {
+      Write-Warning "Contract diagnostic capture failed with $($_.Exception.GetType().FullName)."
+    }
+  }
+  throw $contractFailure
 }
 finally {
   [Environment]::SetEnvironmentVariable(

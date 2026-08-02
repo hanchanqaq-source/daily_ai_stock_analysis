@@ -73,7 +73,10 @@ jobs:
 
       - name: Validate Windows installer verifier contracts
         shell: pwsh
-        run: powershell -ExecutionPolicy Bypass -File scripts/tests/verify-windows-installer-contract.ps1
+        run: |
+          $diagnosticRoot = Join-Path $env:RUNNER_TEMP "pp02-installer-diagnostics-$env:DSA_RELEASE_COMMIT_SHA-$env:GITHUB_RUN_ID"
+          powershell -ExecutionPolicy Bypass -File scripts/tests/verify-windows-installer-contract.ps1 `
+            -ArtifactDiagnosticRoot $diagnosticRoot
 
       - name: Validate installed Windows lifecycle
         shell: pwsh
@@ -120,6 +123,53 @@ jobs:
           node scripts/prepare-portable-release.js stage $env:RELEASE_TAG $winUnpacked $stage
           Compress-Archive -Path "$stage/*" -DestinationPath $zipTarget -CompressionLevel Optimal -Force
           node scripts/prepare-portable-release.js verify $env:RELEASE_TAG $zipTarget "$zipTarget.sha256"
+          $releaseFinalExtract = Join-Path $env:RUNNER_TEMP "pp02-portable-release-final-$env:DSA_RELEASE_COMMIT_SHA"
+          $directorySeparators = [char[]]@(
+            [IO.Path]::DirectorySeparatorChar,
+            [IO.Path]::AltDirectorySeparatorChar
+          )
+          $normalizedRunnerTemp = [IO.Path]::GetFullPath($env:RUNNER_TEMP).TrimEnd(
+            $directorySeparators
+          )
+          $normalizedReleaseFinalExtract = [IO.Path]::GetFullPath($releaseFinalExtract)
+          $runnerPrefix = $normalizedRunnerTemp + [IO.Path]::DirectorySeparatorChar
+          if (-not $normalizedReleaseFinalExtract.StartsWith(
+              $runnerPrefix,
+              [StringComparison]::OrdinalIgnoreCase
+            ) -or
+              -not (Split-Path -Leaf $normalizedReleaseFinalExtract).StartsWith(
+                'pp02-portable-release-final-',
+                [StringComparison]::OrdinalIgnoreCase
+              )) {
+            throw 'Release final ZIP extraction path is outside the owned runner root.'
+          }
+          try {
+            if (Test-Path -LiteralPath $releaseFinalExtract) {
+              Remove-Item -LiteralPath $releaseFinalExtract -Recurse -Force
+            }
+            Expand-Archive -LiteralPath $zipTarget -DestinationPath $releaseFinalExtract
+            $requiredBrowserRelativePath = 'resources/backend/stock_analysis/_internal/fake_useragent/data/browsers.jsonl'
+            $releaseFinalManifestPath = Join-Path $releaseFinalExtract 'pp02-portable-release.json'
+            $releaseFinalManifest = Get-Content -LiteralPath $releaseFinalManifestPath -Raw | ConvertFrom-Json
+            $managedBrowserEntries = @(
+              $releaseFinalManifest.managedFiles |
+                Where-Object { $_.relativePath -eq $requiredBrowserRelativePath }
+            )
+            if ($managedBrowserEntries.Count -ne 1) {
+              throw "Final Release portable manifest does not manage exactly one $requiredBrowserRelativePath entry."
+            }
+            $releaseBrowserData = Join-Path $releaseFinalExtract $requiredBrowserRelativePath
+            if (-not (Test-Path -LiteralPath $releaseBrowserData -PathType Leaf)) {
+              throw "Final Release portable ZIP is missing $requiredBrowserRelativePath."
+            }
+            $releaseFinalPackagedEntry = Join-Path $releaseFinalExtract 'resources/backend/stock_analysis/stock_analysis.exe'
+            powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/verify-frozen-backend.ps1 -PackagedEntry $releaseFinalPackagedEntry
+          }
+          finally {
+            if (Test-Path -LiteralPath $releaseFinalExtract) {
+              Remove-Item -LiteralPath $releaseFinalExtract -Recurse -Force
+            }
+          }
           Get-ChildItem -Path 'apps/dsa-desktop/dist' -File |
             Where-Object { $_.Name -eq 'latest.yml' -or $_.Name -like '*.blockmap' } |
             ForEach-Object {
