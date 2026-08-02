@@ -302,9 +302,31 @@ jobs:
               )) {
             throw 'Release final ZIP extraction path is outside the owned runner root.'
           }
+          function Remove-OwnedReleaseDirectoryWithRetry {
+            param([Parameter(Mandatory=$true)][string]$OwnedRoot)
+
+            if (-not (Test-Path -LiteralPath $OwnedRoot)) {
+              return
+            }
+            for ($attempt = 1; $attempt -le 15; $attempt++) {
+              try {
+                Remove-Item -LiteralPath $OwnedRoot -Recurse -Force -ErrorAction Stop
+                if (-not (Test-Path -LiteralPath $OwnedRoot)) {
+                  return
+                }
+              }
+              catch {
+                if ($attempt -eq 15) {
+                  throw "Failed to remove release-owned extraction directory after $attempt attempts."
+                }
+              }
+              Start-Sleep -Seconds 1
+            }
+            throw 'Failed to remove release-owned extraction directory.'
+          }
           try {
             if (Test-Path -LiteralPath $releaseFinalExtract) {
-              Remove-Item -LiteralPath $releaseFinalExtract -Recurse -Force
+              Remove-OwnedReleaseDirectoryWithRetry -OwnedRoot $releaseFinalExtract
             }
             Expand-Archive -LiteralPath $zipTarget -DestinationPath $releaseFinalExtract
             $requiredBrowserRelativePath = 'resources/backend/stock_analysis/_internal/fake_useragent/data/browsers.jsonl'
@@ -326,7 +348,7 @@ jobs:
           }
           finally {
             if (Test-Path -LiteralPath $releaseFinalExtract) {
-              Remove-Item -LiteralPath $releaseFinalExtract -Recurse -Force
+              Remove-OwnedReleaseDirectoryWithRetry -OwnedRoot $releaseFinalExtract
             }
           }
           Get-ChildItem -Path 'apps/dsa-desktop/dist' -File |
