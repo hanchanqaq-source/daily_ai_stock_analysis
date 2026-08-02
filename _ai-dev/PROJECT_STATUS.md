@@ -25,14 +25,17 @@ PRODUCT_RELEASE_COMMIT=3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65
 MERGED_PR=17
 MAIN_CI_RUN=30747187504
 MAIN_CI_RESULT=PASS_8_OF_8
-CURRENT_STATUS=DRAFT_PR_18_FIXED_HEAD_CI_PENDING
-ACTIVE_BLOCKER=PR18_FIXED_HEAD_CI_PENDING
+PR_CI_HEAD=e1a619c5867037bf569be5d741194ff792ce948b
+PR_CI_RUN=30750806894
+PR_CI_RESULT=PASS_7_SUCCESS_1_PATH_SKIPPED
+CURRENT_STATUS=WORK10_A_PR_CI_PASS_AWAITING_READY_MERGE_RELEASE_AUTHORIZATION
+ACTIVE_BLOCKER=READY_MERGE_RELEASE_AUTHORIZATION_REQUIRED
 FAILED_RELEASE_TAG=v3.29.0
 TARGET_RELEASE_TAG=v3.29.1
 TARGET_TAG_TYPE=ANNOTATED
 TARGET_TAG_MESSAGE=Release v3.29.1: Windows installer bootstrap fix
 NEXT_WORK=NONE_WHILE_WORK_010_ACTIVE
-NEXT_ACTION=MONITOR_PR18_FIXED_HEAD_CI
+NEXT_ACTION=STOP_AND_REQUEST_READY_MERGE_TAG_RELEASE_AUTHORIZATION
 AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/MAIN_WRITE/TAG/RELEASE/REAL_DATA/WINDOWS_REAL_MACHINE_ACTION
 LAST_UPDATED=2026-08-02
 ```
@@ -52,9 +55,10 @@ LAST_UPDATED=2026-08-02
   `contents: write`; after every build succeeds it creates or safely reuses the same annotated Tag,
   verifies both the remote Tag object's direct target and peeled commit, and creates the Release in
   the same Workflow Run.
-- Local contracts pass and Draft PR #18 is open as Draft. Fixed-Head CI remains pending. Ready,
-  merge, v3.29.1 Tag/Release and Windows real-machine acceptance remain separate hard
-  authorization gates.
+- Local contracts pass and Draft PR #18 remains Draft. Fixed implementation Head `e1a619c58670…`
+  completed Run `30750806894`: all seven applicable jobs succeeded and Web Gate was correctly
+  path-skipped. Ready, merge, v3.29.1 Tag/Release and Windows real-machine acceptance remain
+  separate hard authorization gates.
 
 ## 2026-08-02 Work9 / formal takeover
 

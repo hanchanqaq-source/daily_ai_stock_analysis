@@ -9,10 +9,10 @@ LOCAL_CONTRACTS=PASS_24_OF_24
 WORKFLOW_YAML_PARSE=PASS
 AI_ASSETS=PASS
 DRAFT_PR=18_DRAFT
-PR_CI=PENDING_FIXED_HEAD
+PR_CI=PASS_RUN_30750806894_HEAD_e1a619c5867037bf569be5d741194ff792ce948b_7_SUCCESS_1_PATH_SKIPPED
 READY_MERGE_TAG_RELEASE=NOT_AUTHORIZED
 WINDOWS_REAL_MACHINE_ACCEPTANCE=NOT_RUN
-JUDGE=DRAFT_PR_CREATED_FIXED_HEAD_CI_PENDING
+JUDGE=WORK10_A_PASS_AWAITING_READY_MERGE_TAG_RELEASE_AUTHORIZATION
 ```
 
 - Work10-A preserves the existing annotated-Tag push trigger and adds a recoverable manual entry
@@ -23,8 +23,10 @@ JUDGE=DRAFT_PR_CREATED_FIXED_HEAD_CI_PENDING
 - Windows and macOS check out the fixed product Commit. The publish job runs only after preflight
   and every build succeeds, is the only job with write permission, and performs remote direct Tag
   object plus peeled-commit verification before `gh release create --verify-tag`.
-- Local deterministic gates pass. Remote branch and Draft PR #18 are published; fixed-Head CI is
-  pending. No Tag, Release, main write or Windows real-machine action has occurred.
+- Local deterministic gates pass. Remote branch and Draft PR #18 are published; fixed implementation
+  Head `e1a619c58670…` completed Run `30750806894` with seven applicable jobs successful and Web
+  Gate correctly path-skipped. No Tag, Release, main write or Windows real-machine action has
+  occurred.
 
 ---
 

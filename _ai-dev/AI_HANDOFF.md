@@ -4,7 +4,7 @@
 
 | 项目 | 当前值 |
 | --- | --- |
-| 当前状态 | `DRAFT_PR_18_FIXED_HEAD_CI_PENDING` |
+| 当前状态 | `WORK10_A_PR_CI_PASS_AWAITING_READY_MERGE_RELEASE_AUTHORIZATION` |
 | 当前 Work | `WORK-010｜v3.29.1 发布与 Windows 真机验收` |
 | 固定产品 Commit | `3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65` |
 | 合并后 CI | Run `30747187504` / 8 of 8 success |
@@ -12,7 +12,8 @@
 | Draft PR | [#18](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/18)，保持 Draft |
 | 当前子段 | `Work10-A｜云端发布入口修复` |
 | 本地验证 | Desktop Release 契约及关联打包回归 `24/24` |
-| 下一动作 | 监控 PR #18 固定 Head CI |
+| PR CI | Head `e1a619c5867037bf569be5d741194ff792ce948b` / Run `30750806894` / 7 success + 1 path-skipped |
+| 下一动作 | 停止并请求 Ready＋合并＋v3.29.1 Tag/Release 授权 |
 | 授权边界 | 允许分支/Commit/Draft PR/CI；禁止 Ready/Merge/main/Tag/Release/真实数据/真机动作 |
 
 PR #17 已合并，v3.29.1 的产品内容固定在 `3e1311ee…`；发布工作流修复合并后产生的
@@ -23,8 +24,8 @@ Commit SHA 和 annotated Tag message；只读预检拒绝非 Commit 输入、lig
 错 Commit Tag、已有 Release 和不确定远端状态；Windows/macOS 显式 checkout 固定产品 Commit。全部构建成功
 后，唯一写权限 Job 在同一次 Run 内创建或安全复用 annotated Tag 并创建正式 Release。
 
-本地门已通过，Draft PR #18 已建立并保持 Draft；真实固定 Head CI 尚未完成，不得把
-本地通过冒充远端通过。
+本地门已通过，Draft PR #18 已建立并保持 Draft；固定实现 Head `e1a619c58670…` 的
+Run `30750806894` 已全部通过（七个适用 Job success，Web Gate 按路径正常 skipped）。
 
 `v3.29.0` 保持不变；`v3.29.1` Tag/Release 尚不存在。Work10-A PR 的 Ready、合并，
 以及后续 Tag/Release 和 Windows 真机验收仍需明确授权。最后更新：2026-08-02。
