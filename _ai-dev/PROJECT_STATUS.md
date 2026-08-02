@@ -18,20 +18,51 @@ PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
 ACTIVE_BASE=66666352e953d90becce420da7d35b649516af76
 ACTIVE_BRANCH=agent/pp02-work8-r7-installer-fix
 ACTIVE_PR=17
-CURRENT_STAGE=R7 Hotfix / Local Verification
+CURRENT_STAGE=R7 Hotfix / Diagnostic Evidence Blocked
 CURRENT_WORK=WORK-008 — Windows installer defect repair and v3.29.1 patch
 ACTIVE_GOAL=repair assisted per-user NSIS installer without removing directory selection
-CURRENT_STATUS=IMPLEMENTATION_LOCAL_PASS — CI_PENDING
-ACTIVE_BLOCKER=NONE
+LAST_DIAGNOSTIC_HEAD=eae4b46501c9a183dda20d2975121987e676943b
+LATEST_CI_RUN=30742085965
+CURRENT_STATUS=ROOT_CAUSE_BLOCKED_EVIDENCE_INSUFFICIENT
+ACTIVE_BLOCKER=WINDOWS_DIAGNOSTIC_ARTIFACT_NOT_PRESERVED_OR_UPLOADED
 FAILED_RELEASE_TAG=v3.29.0
 FAILURE_CLASS=INSTALLER_BOOTSTRAP_CRASH
 FAILURE_REPRODUCIBILITY=2/2
 FAILURE_EXCEPTION=0xC0000005 / System.dll
 NEXT_WORK=NONE_WHILE_WORK_008_ACTIVE
-NEXT_ACTION=push audited implementation to Draft PR 17 and require fixed-Head CI
-AUTHORIZATION_REQUIRED=FALSE_FOR_IN_SCOPE_BRANCH/COMMITS/DRAFT_PR/CI_FIXES;TRUE_FOR_READY/MERGE/MAIN_WRITE/TAG/RELEASE/REAL_DATA
-LAST_UPDATED=2026-08-01
+NEXT_ACTION=WAIT_FOR_USER_DIRECTION;NO_FURTHER_PATCH_OR_CI_UNDER_CURRENT_EVIDENCE
+AUTHORIZATION_REQUIRED=TRUE_FOR_ANY_FURTHER_PATCH_OR_CI/READY/MERGE/MAIN_WRITE/TAG/RELEASE/REAL_DATA
+LAST_UPDATED=2026-08-02
 ```
+
+## 2026-08-02 Work8 / corrective diagnostic run blocked on evidence preservation
+
+- The corrective audit rechecked GitHub before making changes: Draft PR #17 was at
+  `eec9a44ce707daf149b3f571761fc27385772e85`, and Run `30717606318` had seven
+  successful jobs plus one failed Windows lifecycle job. The installer completed, but the
+  installed application never opened backend port `127.0.0.1:8000`; no diagnostic artifact was
+  retained.
+- A diagnostics-only commit produced fixed Head
+  `eae4b46501c9a183dda20d2975121987e676943b`. It added redacted backend lifecycle capture,
+  process/port state, relevant Windows events, an installed-file manifest, cleanup-independent
+  evidence storage and an `if: always()` artifact upload whose name binds the full Head and Run ID.
+  It did not change backend logic, dependencies or packaging structure.
+- Local diagnostic checks passed: Desktop tests `82/82`, packaging diagnostic contracts `15/15`,
+  both workflow YAML files, AI asset checks and `git diff --check`.
+- The one fixed-Head diagnostic Run `30742085965` ended with seven successful jobs and one failed
+  Windows job. Windows backend freezing and installer/portable candidate construction passed.
+  The verifier contract then failed with `Verifier did not preserve diagnostic evidence before
+  cleanup`; the installed lifecycle step was skipped. The `if: always()` upload step did execute,
+  but failed because the bound diagnostic directory contained no files. The Run contains no
+  Windows diagnostic artifact.
+- Therefore the installed backend's direct error, component boundary and root cause remain
+  unproven. Mandatory verdict: `ROOT_CAUSE_BLOCKED_EVIDENCE_INSUFFICIENT`. No backend fix, further
+  diagnostic patch or additional CI run is authorized from this evidence.
+- PR #17 remains Draft. `PR17_MERGE_STATUS=BLOCKED`, `V3_29_1_RELEASE_STATUS=BLOCKED`, and
+  `WINDOWS_REAL_MACHINE_ACCEPTANCE=NOT_RUN` for the patch candidate.
+- Deferred follow-up remains out of this PR: concentrated Electron/npm security upgrades,
+  Dependabot/blocking `npm audit`, all 101 Web test files, blocking Playwright E2E, Windows signing,
+  macOS signing/notarization and the final desktop icon.
 
 ## 2026-08-01 Work8 / v3.29.0 Windows installer failure and A-design
 

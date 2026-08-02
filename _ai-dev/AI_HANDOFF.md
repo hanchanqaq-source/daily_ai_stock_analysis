@@ -4,7 +4,7 @@
 
 | 项目 | 当前值 |
 | --- | --- |
-| 当前状态 | `IMPLEMENTATION_LOCAL_PASS — CI_PENDING` |
+| 当前状态 | `ROOT_CAUSE_BLOCKED_EVIDENCE_INSUFFICIENT` |
 | 当前 Work | `WORK-008｜R7 安装器缺陷修复与 v3.29.1 补丁发布` |
 | 固定 Base | `main@66666352e953d90becce420da7d35b649516af76` |
 | 分支 | `agent/pp02-work8-r7-installer-fix` |
@@ -12,20 +12,23 @@
 | 失败证据 | v3.29.0 installer 2/2: `System.dll` / `0xC0000005` |
 | 用户决定 | `A｜保留安装向导` |
 | 设计 | `docs/superpowers/specs/2026-08-01-work8-windows-installer-hotfix-design.md` |
-| 下一动作 | 推送已审计实现，验证 PR #17 固定 Head 的完整 CI 与 Windows 生命周期门 |
-| 授权边界 | 允许范围内分支、Commit、Draft PR、CI；禁止 Ready/Merge/main/Tag/Release/真实数据 |
+| 当前 Head / CI | `eae4b46501c9a183dda20d2975121987e676943b` / Run `30742085965` |
+| 下一动作 | 等待用户决定；当前证据下禁止继续补丁或 CI |
+| 授权边界 | 禁止继续补丁/CI、Ready/Merge/main/Tag/Release/真实数据 |
 
 新聊天接管时必须先核对 `PROJECT_STATUS.md` 和 GitHub 当前 Head。Work8 只修复
 Windows 安装器构建链和缺失的真实安装门：保留选择安装目录、当前用户安装、卸载、
 安装版自动更新和免安装 ZIP；不得改成一键固定目录或便携-only。
 
 用户已批准设计勘误：Desktop 测试、Windows/macOS 打包和 Desktop Release 使用
-Node 22；独立 Web 门保持 Node 20。当前本地实现已完成，Desktop `81/81`、安装器与
-打包专项 `23/23` 通过；尚未取得 GitHub Windows 真安装/启动/卸载和 macOS 包门证据。
+Node 22；独立 Web 门保持 Node 20。诊断增强本地 Desktop `82/82`、专项 `15/15`
+通过。固定 Head Run `30742085965` 的七个非 Windows 作业成功，Windows 候选件也已
+构建；但验证器契约未能在清理前保存诊断摘要，真实安装生命周期被跳过，`always()`
+上传因目录无文件而失败。没有 Windows 诊断 artifact，后端根因仍未证实。
 
 `v3.29.0` 的 Release、Tag 与失败证据保持不变，不得覆盖或重打。目标
 `v3.29.1` 尚未授权发布。正式 Windows 首次使用验收必须在补丁 Release 后重新
-执行，云端 CI 不得冒充最终实机验收。最后更新：2026-08-01。
+执行，云端 CI 不得冒充最终实机验收。最后更新：2026-08-02。
 
 以下内容是旧 Work 的追加历史；与本节冲突时，以 `PROJECT_STATUS.md`、本节和
 GitHub 可验证事实为准。

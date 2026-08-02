@@ -1,5 +1,31 @@
 # WORK-008｜Windows installer hotfix 回传（进行中）
 
+## 2026-08-02 纠偏诊断结果
+
+```text
+DIAGNOSTIC_HEAD=eae4b46501c9a183dda20d2975121987e676943b
+LATEST_CI_RUN=30742085965
+WINDOWS_INSTALLATION=NOT_RUN_ON_DIAGNOSTIC_HEAD
+DIAGNOSTIC_ARTIFACT=FAILED_NOT_PRESERVED
+INSTALLED_BACKEND_STARTUP=NOT_RUN_ON_DIAGNOSTIC_HEAD
+ROOT_CAUSE=ROOT_CAUSE_BLOCKED_EVIDENCE_INSUFFICIENT
+REGRESSION_TEST=LOCAL_PASS_82_DESKTOP_AND_15_DIAGNOSTIC_CONTRACTS;WINDOWS_CONTRACT_FAIL
+FULL_CI=FAIL_7_SUCCESS_1_WINDOWS_FAILURE
+PROJECT_STATUS_SYNC=YES
+PR_BODY_SYNC=YES_EXTERNAL_PR_METADATA
+PR17_MERGE_STATUS=BLOCKED
+V3_29_1_RELEASE_STATUS=BLOCKED
+WINDOWS_REAL_MACHINE_ACCEPTANCE=NOT_RUN
+```
+
+- The one diagnostics-only fixed-Head Run completed without a second attempt. Windows candidate
+  construction succeeded, then the verifier contract failed before installed lifecycle execution.
+- The artifact upload used `if: always()` and a Head/Run-bound name, but failed because the
+  diagnostic directory contained no files. No installed backend stderr or exception artifact is
+  available.
+- No backend or packaging-root-cause patch followed. Work8 stops at the evidence-insufficient
+  verdict and PR #17 remains Draft.
+
 ## 已确认失败
 
 ```text
@@ -39,8 +65,9 @@ R7_WINDOWS_FIRST_USE_ACCEPTANCE=FAIL
 - TDD RED 分别证明旧 builder、缺失 verifier/工作流门、旧 Node 20 和未声明
   `archiver` 会失败；GREEN 后 Desktop Node 22 测试 `81/81`、安装器与打包专项
   `23/23` 通过，workflow YAML 与差异格式检查通过。
-- 当前 Judge：`IMPLEMENTATION_LOCAL_PASS — CI_PENDING`。
-- 未验证：GitHub Windows 安装/启动/卸载、macOS 打包和完整固定 Head CI。
+- 当前 Judge：`ROOT_CAUSE_BLOCKED_EVIDENCE_INSUFFICIENT`。
+- Run `30742085965`：macOS 与其余六个非 Windows Job 成功；Windows 在 verifier
+  contract 失败，安装/启动/卸载生命周期被跳过，诊断 artifact 上传失败。
 - 未授权 Ready、Merge、main、`v3.29.1` Tag/Release 或真实数据。
 
 ---

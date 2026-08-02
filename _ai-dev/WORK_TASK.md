@@ -12,7 +12,20 @@ TARGET_RELEASE=v3.29.1
 DRAFT_PR=17
 FAILED_RELEASE=v3.29.0
 SCOPE_DRIFT=FALSE
+DIAGNOSTIC_HEAD=eae4b46501c9a183dda20d2975121987e676943b
+LATEST_CI_RUN=30742085965
+CURRENT_GATE=ROOT_CAUSE_BLOCKED_EVIDENCE_INSUFFICIENT
 ```
+
+## 2026-08-02 corrective authorization result
+
+- The required diagnostics-only fixed Head was run exactly once as Run `30742085965`.
+- Seven jobs passed. Windows candidate construction passed, but the verifier contract failed before
+  the installed lifecycle could run.
+- The `if: always()` diagnostic upload executed and failed because no diagnostic files had been
+  preserved; consequently no downloadable Windows diagnostic artifact exists.
+- The installed backend root cause is not established. Further patches and CI are stopped pending
+  user direction; Draft/merge/release/real-machine acceptance gates remain closed.
 
 ## 用户结果
 
@@ -73,8 +86,8 @@ SCOPE_DRIFT=FALSE
 | 用户决定 | `A｜保留安装向导` |
 | 待决产品问题 | 0；功能取舍已锁定 |
 | 根因证据 | 与上游 #8536/#9564 高一致，且新 v26 模板已移除竞态路径 |
-| 当前门 | 本地实现与专项通过；Draft PR #17 固定 Head CI 待运行 |
-| 允许进入 Build | 已批准并完成；下一门为固定 Head CI |
+| 当前门 | `ROOT_CAUSE_BLOCKED_EVIDENCE_INSUFFICIENT`；Run `30742085965` 无诊断 artifact |
+| 允许进入 Build | 否；在用户重新授权前停止追加补丁和 CI |
 | 发布授权 | 未授予 |
 
 ---
