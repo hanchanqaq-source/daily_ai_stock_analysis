@@ -6,11 +6,11 @@
 PROJECT_ID=PP02
 PROJECT_NAME=AI 每日股票分析
 CHAT_ROLE=AUTO_TAKEOVER
-WORK_ID=WORK-008
+WORK_ID=WORK-009
 ROLE_LOCK=SUPERSEDED_BY_PP02-WORK-HANDOFF-002
 WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
 WORK_STATE=ACTIVE
-EXECUTION_LOCK=HELD_BY_WORK_008
+EXECUTION_LOCK=HELD_BY_WORK_009
 APPLICATION_BASE_VERSION=3.29.0
 TARGET_RELEASE_VERSION=3.29.1
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
@@ -18,22 +18,41 @@ PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
 ACTIVE_BASE=66666352e953d90becce420da7d35b649516af76
 ACTIVE_BRANCH=agent/pp02-work8-r7-installer-fix
 ACTIVE_PR=17
-CURRENT_STAGE=R7 Hotfix / Diagnostic Evidence Blocked
-CURRENT_WORK=WORK-008 — Windows installer defect repair and v3.29.1 patch
-ACTIVE_GOAL=repair assisted per-user NSIS installer without removing directory selection
+CURRENT_STAGE=R7 Hotfix / Diagnostic Contract Repair
+CURRENT_WORK=WORK-009 — PR #17 diagnostic evidence chain repair and Windows install closure
+ACTIVE_GOAL=preserve cleanup-independent redacted diagnostics, prove the final deliverable, and close the installed Windows lifecycle
+WORK9_TAKEOVER_HEAD=9cb9a70e9176711096adf12ba5674c56d6f314d2
 LAST_DIAGNOSTIC_HEAD=eae4b46501c9a183dda20d2975121987e676943b
 LATEST_CI_RUN=30742085965
-CURRENT_STATUS=ROOT_CAUSE_BLOCKED_EVIDENCE_INSUFFICIENT
+CURRENT_STATUS=WORK9_TAKEOVER_COMPLETE_DIAGNOSTIC_CONTRACT_IN_PROGRESS
 ACTIVE_BLOCKER=WINDOWS_DIAGNOSTIC_ARTIFACT_NOT_PRESERVED_OR_UPLOADED
 FAILED_RELEASE_TAG=v3.29.0
 FAILURE_CLASS=INSTALLER_BOOTSTRAP_CRASH
 FAILURE_REPRODUCIBILITY=2/2
 FAILURE_EXCEPTION=0xC0000005 / System.dll
-NEXT_WORK=NONE_WHILE_WORK_008_ACTIVE
-NEXT_ACTION=WAIT_FOR_USER_DIRECTION;NO_FURTHER_PATCH_OR_CI_UNDER_CURRENT_EVIDENCE
-AUTHORIZATION_REQUIRED=TRUE_FOR_ANY_FURTHER_PATCH_OR_CI/READY/MERGE/MAIN_WRITE/TAG/RELEASE/REAL_DATA
+NEXT_WORK=NONE_WHILE_WORK_009_ACTIVE
+NEXT_ACTION=WRITE_FAILING_DIAGNOSTIC_CONTRACT_TEST_THEN_APPLY_MINIMAL_EVIDENCE_CHAIN_FIX
+AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/MAIN_WRITE/TAG/RELEASE/REAL_DATA/WINDOWS_REAL_MACHINE_ACTION
 LAST_UPDATED=2026-08-02
 ```
+
+## 2026-08-02 Work9 / formal takeover
+
+- User formally authorized `WORK-009｜PR #17 诊断证据链修复与 Windows 安装闭环` to
+  continue the existing Draft PR #17 without restarting the route or changing the approved
+  assisted current-user installer design.
+- GitHub and a clean branch checkout were rechecked at takeover. PR #17 remains Open/Draft on
+  `agent/pp02-work8-r7-installer-fix`; the current full Head is
+  `9cb9a70e9176711096adf12ba5674c56d6f314d2`. No newer branch commit was found.
+- Work8 is closed as `COMPLETED_WITH_BLOCKER`. Its last evidence remains diagnostic Head
+  `eae4b46501c9a183dda20d2975121987e676943b` and Run `30742085965`: seven jobs passed,
+  the Windows verifier contract failed, and no Windows diagnostic artifact was retained.
+- The Work8 execution lock is released and transferred to `HELD_BY_WORK_009`. Work9 is authorized
+  for in-scope tests, commits, pushes and fixed-Head CI on the existing Draft PR. Ready, merge,
+  `main`, Tag, Release, real data/credentials and Windows real-machine actions remain hard gates.
+- Required order is evidence-chain RED/GREEN first, final ZIP verification second, one fixed-Head
+  diagnostic run third, and only then an evidence-backed backend root-cause fix. If the artifact is
+  still unavailable, stop at `ROOT_CAUSE_BLOCKED_EVIDENCE_INSUFFICIENT` without guessing.
 
 ## 2026-08-02 Work8 / corrective diagnostic run blocked on evidence preservation
 

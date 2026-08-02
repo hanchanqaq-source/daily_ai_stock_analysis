@@ -1,10 +1,66 @@
-# WORK-008｜R7 安装器缺陷修复与 v3.29.1 补丁发布
+# WORK-009｜PR #17 诊断证据链修复与 Windows 安装闭环
+
+## 当前任务身份
+
+```text
+WORK_ID=WORK-009
+WORK_STATE=ACTIVE
+WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
+BASE=66666352e953d90becce420da7d35b649516af76
+BRANCH=agent/pp02-work8-r7-installer-fix
+TAKEOVER_HEAD=9cb9a70e9176711096adf12ba5674c56d6f314d2
+TARGET_RELEASE=v3.29.1
+DRAFT_PR=17
+FAILED_RELEASE=v3.29.0
+SCOPE_DRIFT=FALSE
+PREVIOUS_DIAGNOSTIC_HEAD=eae4b46501c9a183dda20d2975121987e676943b
+PREVIOUS_CI_RUN=30742085965
+CURRENT_GATE=DIAGNOSTIC_CONTRACT_REPAIR
+```
+
+## 授权结果
+
+- Work9 承接 Work8，不重启路线，不推翻已有证据支持的 builder/Node 22 修复，继续
+  使用现有 Draft PR #17。
+- 允许修改诊断、Windows 打包和后端启动相关代码，建立 RED/GREEN 测试，正常
+  Commit/Push，并运行固定 Head CI。
+- 必须先证明诊断位于安装清理目录之外、清理后仍存在、失败时上传仍执行且内容已
+  脱敏；证据链通过前不得修改后端根因。
+- 诊断链修复后必须验证最终候选 ZIP，而不是只验证 `win-unpacked`。必须核验
+  `fake_useragent/data/browsers.jsonl`、managed files 清单及复制/清理链路。
+- 取得有效 artifact 后，记录直接错误、组件边界、根因、开发/打包差异与最小复现；
+  再以一个失败测试、一个假设和一个最小修复推进。
+- PR #17 最终门包括安装包/ZIP、安装、首次启动、内置后端健康、退出、再次启动、
+  卸载、诊断 artifact 和全部 CI。完成后停在合并授权门。
+
+## 非目标与硬边界
+
+- 不 Ready、不合并、不写 `main`、不创建 Tag/Release、不发布 `v3.29.1`。
+- 不宣布 Windows 真机验收通过；需要本机操作时停止申请授权。
+- 不读取、输出或上传真实 `.env`、Token、API Key、Webhook、密钥、数据库或用户数据。
+- 不集中升级 Electron/npm 安全依赖，不引入 Dependabot、完整 Web/Playwright 门、
+  代码签名、公证、正式图标、PP02 总控 Skill 或真实业务数据闭环。
+- 若诊断仍无法保留或根因超出 PR #17，立即停止，不做猜测式补丁。
+
+## Plan Challenge Result
+
+| 项目 | 结果 |
+| --- | --- |
+| 待决产品问题 | 0；用户已给出完整顺序、范围、停止门和验收标准 |
+| 当前事实 | PR #17 Draft；Head `9cb9a70…`；Run `30742085965` 为 7 成功、1 Windows 失败 |
+| 第一假设 | Windows PowerShell 5.1 执行诊断清单时不支持 `[IO.Path]::GetRelativePath`，导致摘要写入前再次失败 |
+| 允许进入 Build | 是；必须测试先行并先修诊断证据链 |
+| 发布授权 | 未授予 |
+
+---
+
+# 历史任务合同｜WORK-008 / R7 安装器缺陷修复与 v3.29.1 补丁发布
 
 ## 当前任务身份
 
 ```text
 WORK_ID=WORK-008
-WORK_STATE=ACTIVE
+WORK_STATE=COMPLETED_WITH_BLOCKER
 WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
 BASE=66666352e953d90becce420da7d35b649516af76
 BRANCH=agent/pp02-work8-r7-installer-fix

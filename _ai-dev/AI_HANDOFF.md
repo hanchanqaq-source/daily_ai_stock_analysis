@@ -1,22 +1,22 @@
 # PP02 新聊天交接
 
-## 当前接管入口｜WORK-008 / v3.29.1 installer hotfix
+## 当前接管入口｜WORK-009 / PR #17 diagnostic evidence and Windows closure
 
 | 项目 | 当前值 |
 | --- | --- |
-| 当前状态 | `ROOT_CAUSE_BLOCKED_EVIDENCE_INSUFFICIENT` |
-| 当前 Work | `WORK-008｜R7 安装器缺陷修复与 v3.29.1 补丁发布` |
+| 当前状态 | `WORK9_TAKEOVER_COMPLETE_DIAGNOSTIC_CONTRACT_IN_PROGRESS` |
+| 当前 Work | `WORK-009｜PR #17 诊断证据链修复与 Windows 安装闭环` |
 | 固定 Base | `main@66666352e953d90becce420da7d35b649516af76` |
 | 分支 | `agent/pp02-work8-r7-installer-fix` |
 | Draft PR | [#17](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/17)，保持 Draft |
 | 失败证据 | v3.29.0 installer 2/2: `System.dll` / `0xC0000005` |
 | 用户决定 | `A｜保留安装向导` |
 | 设计 | `docs/superpowers/specs/2026-08-01-work8-windows-installer-hotfix-design.md` |
-| 当前 Head / CI | `eae4b46501c9a183dda20d2975121987e676943b` / Run `30742085965` |
-| 下一动作 | 等待用户决定；当前证据下禁止继续补丁或 CI |
-| 授权边界 | 禁止继续补丁/CI、Ready/Merge/main/Tag/Release/真实数据 |
+| 接管 Head / 旧 CI | `9cb9a70e9176711096adf12ba5674c56d6f314d2` / Run `30742085965` |
+| 下一动作 | 诊断契约 RED→最小证据链修复→最终 ZIP 核验→固定 Head Windows CI |
+| 授权边界 | 允许范围内 Commit/Push/CI；禁止 Ready/Merge/main/Tag/Release/真实数据/真机动作 |
 
-新聊天接管时必须先核对 `PROJECT_STATUS.md` 和 GitHub 当前 Head。Work8 只修复
+Work9 已在 `9cb9a70…` 完成正式接管。Work8 只修复
 Windows 安装器构建链和缺失的真实安装门：保留选择安装目录、当前用户安装、卸载、
 安装版自动更新和免安装 ZIP；不得改成一键固定目录或便携-only。
 
@@ -25,6 +25,9 @@ Node 22；独立 Web 门保持 Node 20。诊断增强本地 Desktop `82/82`、�
 通过。固定 Head Run `30742085965` 的七个非 Windows 作业成功，Windows 候选件也已
 构建；但验证器契约未能在清理前保存诊断摘要，真实安装生命周期被跳过，`always()`
 上传因目录无文件而失败。没有 Windows 诊断 artifact，后端根因仍未证实。
+
+Work8 已固定为 `COMPLETED_WITH_BLOCKER`；其 Run `30742085965` 没有诊断
+artifact。Work9 必须先恢复清理外、可脱敏上传的证据链；失败则停止，不得猜根因。
 
 `v3.29.0` 的 Release、Tag 与失败证据保持不变，不得覆盖或重打。目标
 `v3.29.1` 尚未授权发布。正式 Windows 首次使用验收必须在补丁 Release 后重新

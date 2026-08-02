@@ -1,4 +1,26 @@
-# WORK-008｜Windows installer hotfix 回传（进行中）
+# WORK-009｜PR #17 诊断证据链修复与 Windows 安装闭环（进行中）
+
+## 2026-08-02 正式接管
+
+```text
+WORK8_CLOSEOUT=COMPLETED_WITH_BLOCKER
+WORK9_TAKEOVER=PASS
+CURRENT_HEAD=9cb9a70e9176711096adf12ba5674c56d6f314d2
+LATEST_CI_RUN=30742085965
+DIAGNOSTIC_CONTRACT_TEST=IN_PROGRESS
+DIAGNOSTIC_ARTIFACT=PREVIOUS_RUN_MISSING
+PR17_MERGE_STATUS=BLOCKED
+V3_29_1_RELEASE_STATUS=BLOCKED
+WINDOWS_REAL_MACHINE_ACCEPTANCE=NOT_RUN
+```
+
+- PR #17、远程分支和干净检出已重新核对；未发现晚于 `9cb9a70…` 的提交。
+- Work8 锁已释放，Work9 锁已取得。Work8 的失败快照不回退，也不冒充修复成功。
+- 当前仅进入诊断契约 RED/GREEN；有效 artifact 出现前不修改后端产品根因。
+
+---
+
+# 历史回传｜WORK-008 / Windows installer hotfix
 
 ## 2026-08-02 纠偏诊断结果
 
