@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 <!-- 新条目格式：- [类型] 描述（类型取值：新功能/改进/修复/文档/测试/chore）-->
 <!-- 每条独立一行追加到本段末尾，无需分类标题，合并时冲突最小 -->
 - [修复] Windows 安装器升级到已修复 `System.dll / 0xC0000005` 竞态的 `electron-builder 26.15.7`，并在 PR 与正式发布前真实执行隔离安装、启动和卸载验证。
+- [修复] Desktop Release 新增固定产品 Commit 的云端手动发布入口，在同一次流水线内完成只读预检、双平台构建、annotated Tag 安全创建或恢复及正式 Release，避免工作流修复后的新 `main` Head 被误发。
 
 ## [3.29.0] - 2026-08-01
 
