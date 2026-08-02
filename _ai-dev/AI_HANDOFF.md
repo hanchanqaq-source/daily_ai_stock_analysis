@@ -4,31 +4,32 @@
 
 | 项目 | 当前值 |
 | --- | --- |
-| 当前状态 | `WORK10_A_PR_CI_PASS_AWAITING_READY_MERGE_RELEASE_AUTHORIZATION` |
+| 当前状态 | `WORK10_B_DRAFT_PR19_FULL_CI_PENDING` |
 | 当前 Work | `WORK-010｜v3.29.1 发布与 Windows 真机验收` |
 | 固定产品 Commit | `3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65` |
-| 合并后 CI | Run `30747187504` / 8 of 8 success |
-| 分支 | `agent/pp02-work10-release-entry` |
-| Draft PR | [#18](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/18)，保持 Draft |
-| 当前子段 | `Work10-A｜云端发布入口修复` |
-| 本地验证 | Desktop Release 契约及关联打包回归 `24/24` |
-| PR CI | Head `e1a619c5867037bf569be5d741194ff792ce948b` / Run `30750806894` / 7 success + 1 path-skipped |
-| 下一动作 | 停止并请求 Ready＋合并＋v3.29.1 Tag/Release 授权 |
+| 当前 main | `91e174d30b3d0f2533b0db5df0245bf49778234f`（PR #18 已合并） |
+| 失败发布 | Run `30763628302` / Windows Job `91538466726` / 最终临时目录清理竞态 |
+| 分支 | `agent/pp02-work10-release-cleanup` |
+| Draft PR | [#19](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/19)，保持 Draft |
+| 当前子段 | `Work10-B｜Windows 发布临时目录清理竞态` |
+| 本地验证 | Desktop Release 契约及关联打包回归 `25/25` |
+| PR CI | 最终 Head 完整 CI 待运行 |
+| 下一动作 | 验证 Draft PR #19 最终 Head 的完整 CI，失败则只做范围内修复 |
 | 授权边界 | 允许分支/Commit/Draft PR/CI；禁止 Ready/Merge/main/Tag/Release/真实数据/真机动作 |
 
-PR #17 已合并，v3.29.1 的产品内容固定在 `3e1311ee…`；发布工作流修复合并后产生的
-新 `main` Head 只负责发布编排，不能替代该产品 Commit。
+PR #18 已合并，但发布 Run `30763628302` 在 Windows 最终 ZIP 冒烟成功后的临时目录
+清理阶段失败；Windows 安装生命周期与两个 macOS 构建均已成功，`publish-release`
+被跳过，因此 `v3.29.1` Tag/Release 仍不存在。
 
-Work10-A 只扩展现有 `.github/workflows/desktop-release.yml`：手动入口接收 Tag、完整
-Commit SHA 和 annotated Tag message；只读预检拒绝非 Commit 输入、lightweight/嵌套或
-错 Commit Tag、已有 Release 和不确定远端状态；Windows/macOS 显式 checkout 固定产品 Commit。全部构建成功
-后，唯一写权限 Job 在同一次 Run 内创建或安全复用 annotated Tag 并创建正式 Release。
+Work10-B 只在已有 runner-owned 路径校验后，对最终 ZIP 临时解压目录使用最多 15 次、
+每次 1 秒的删除重试；超过上限仍失败关闭。产品 Commit 继续固定为 `3e1311ee…`，
+不修改产品代码、发布权限、Tag/Release 状态机或固定 Commit checkout。
 
-本地门已通过，Draft PR #18 已建立并保持 Draft；固定实现 Head `e1a619c58670…` 的
-Run `30750806894` 已全部通过（七个适用 Job success，Web Gate 按路径正常 skipped）。
+TDD RED/GREEN 和本地相关门已通过 `25/25`。Draft PR #19 已建立并保持 Draft；当前
+只等待最终 Head 完整 CI，不能把本地合同或旧发布 Run 冒充本轮远端通过。
 
-`v3.29.0` 保持不变；`v3.29.1` Tag/Release 尚不存在。Work10-A PR 的 Ready、合并，
-以及后续 Tag/Release 和 Windows 真机验收仍需明确授权。最后更新：2026-08-02。
+`v3.29.0` 保持不变；`v3.29.1` Tag/Release 尚不存在。PR #19 的 Ready、合并，后续
+Tag/Release 和 Windows 真机验收均未授权。最后更新：2026-08-02。
 
 以下内容是旧 Work 的追加历史；与本节冲突时，以 `PROJECT_STATUS.md`、本节和
 GitHub 可验证事实为准。

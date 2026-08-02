@@ -15,32 +15,52 @@ APPLICATION_BASE_VERSION=3.29.0
 TARGET_RELEASE_VERSION=3.29.1
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-ACTIVE_BASE=3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65
-ACTIVE_BRANCH=agent/pp02-work10-release-entry
-ACTIVE_PR=18
-CURRENT_STAGE=R7 Hotfix / Work10-A Cloud Release Entry
+ACTIVE_BASE=91e174d30b3d0f2533b0db5df0245bf49778234f
+ACTIVE_BRANCH=agent/pp02-work10-release-cleanup
+ACTIVE_PR=19
+CURRENT_STAGE=R7 Hotfix / Work10-B Windows Release Artifact Cleanup Race
 CURRENT_WORK=WORK-010 — v3.29.1 release and Windows real-machine acceptance
-ACTIVE_GOAL=add a recoverable fixed-commit cloud release entry before publishing v3.29.1
+ACTIVE_GOAL=repair the Windows release temporary-directory cleanup race without changing product code
 PRODUCT_RELEASE_COMMIT=3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65
-MERGED_PR=17
-MAIN_CI_RUN=30747187504
-MAIN_CI_RESULT=PASS_8_OF_8
-PR_CI_HEAD=e1a619c5867037bf569be5d741194ff792ce948b
-PR_CI_RUN=30750806894
-PR_CI_RESULT=PASS_7_SUCCESS_1_PATH_SKIPPED
-CURRENT_STATUS=WORK10_A_PR_CI_PASS_AWAITING_READY_MERGE_RELEASE_AUTHORIZATION
-ACTIVE_BLOCKER=READY_MERGE_RELEASE_AUTHORIZATION_REQUIRED
-FAILED_RELEASE_TAG=v3.29.0
+MERGED_PR=18
+MERGED_MAIN_HEAD=91e174d30b3d0f2533b0db5df0245bf49778234f
+FAILED_RELEASE_RUN=30763628302
+FAILED_RELEASE_WINDOWS_JOB=91538466726
+FAILED_RELEASE_STEP=PREPARE_RELEASE_ARTIFACT_WINDOWS
+FAILURE_CLASS=WINDOWS_TEMP_DIRECTORY_CLEANUP_RACE
+FAILURE_PATH=aiohttp/_websocket/mask.cp312-win_amd64.pyd
+IMPLEMENTATION_HEAD=84bcbb060aaa78ebe5d5413cd8a16a7a1eac5512
+LOCAL_CONTRACTS=PASS_25_OF_25
+CURRENT_STATUS=WORK10_B_DRAFT_PR19_FULL_CI_PENDING
+ACTIVE_BLOCKER=PR19_FULL_CI_PENDING
 TARGET_RELEASE_TAG=v3.29.1
 TARGET_TAG_TYPE=ANNOTATED
 TARGET_TAG_MESSAGE=Release v3.29.1: Windows installer bootstrap fix
 NEXT_WORK=NONE_WHILE_WORK_010_ACTIVE
-NEXT_ACTION=STOP_AND_REQUEST_READY_MERGE_TAG_RELEASE_AUTHORIZATION
+NEXT_ACTION=RUN_AND_VERIFY_PR19_FULL_CI_ON_FINAL_HEAD
 AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/MAIN_WRITE/TAG/RELEASE/REAL_DATA/WINDOWS_REAL_MACHINE_ACTION
 LAST_UPDATED=2026-08-02
 ```
 
-## 2026-08-02 Work10 / cloud release entry
+## 2026-08-02 Work10-B / Windows release artifact cleanup race
+
+- PR #18 is merged as `main@91e174d30b3d0f2533b0db5df0245bf49778234f`. Manual Desktop
+  Release Run `30763628302` used fixed product Commit
+  `3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65` and passed preflight, both macOS builds, the
+  Windows package build and the complete installed Windows lifecycle.
+- The Windows final portable ZIP smoke also passed. Its immediate one-shot cleanup then failed on
+  the briefly loaded `aiohttp/_websocket/mask.cp312-win_amd64.pyd` with `Access denied`; Windows
+  Job `91538466726` failed and `publish-release` was skipped. No v3.29.1 Tag or Release was created.
+- The user authorized a minimal Draft PR #19 fix restricted to the Desktop Release workflow,
+  regression tests and required ledgers. Product code, Tag and Release operations are forbidden.
+- TDD RED proved the old workflow had no bounded retry contract. GREEN adds the existing repository
+  pattern of at most 15 delete attempts with one-second waits after the existing runner-owned path
+  validation; exhaustion still fails closed. Local related contracts pass `25/25`.
+- Draft PR #19 is open on `agent/pp02-work10-release-cleanup`; implementation Head
+  `84bcbb060aaa78ebe5d5413cd8a16a7a1eac5512` changes only the release workflow and two tests.
+  The final ledger Head and complete PR CI remain pending.
+
+## 2026-08-02 Work10-A / cloud release entry（historical）
 
 - PR #17 has been merged as `main@3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65`; post-merge
   Run `30747187504` completed all eight jobs successfully. This merge commit is the fixed product
@@ -55,10 +75,9 @@ LAST_UPDATED=2026-08-02
   `contents: write`; after every build succeeds it creates or safely reuses the same annotated Tag,
   verifies both the remote Tag object's direct target and peeled commit, and creates the Release in
   the same Workflow Run.
-- Local contracts pass and Draft PR #18 remains Draft. Fixed implementation Head `e1a619c58670…`
-  completed Run `30750806894`: all seven applicable jobs succeeded and Web Gate was correctly
-  path-skipped. Ready, merge, v3.29.1 Tag/Release and Windows real-machine acceptance remain
-  separate hard authorization gates.
+- Local contracts passed and Draft PR #18 fixed implementation Head `e1a619c58670…` completed Run
+  `30750806894`: all seven applicable jobs succeeded and Web Gate was correctly path-skipped. PR
+  #18 was later merged as `main@91e174d…`; the subsequent release result is recorded in Work10-B.
 
 ## 2026-08-02 Work9 / formal takeover
 

@@ -1,6 +1,39 @@
 # WORK-010｜v3.29.1 发布与 Windows 真机验收（进行中）
 
-## Work10-A｜云端发布入口修复
+## Work10-B｜Windows 发布临时目录清理竞态
+
+```text
+MAIN_HEAD=91e174d30b3d0f2533b0db5df0245bf49778234f
+FAILED_RELEASE_RUN=30763628302
+FAILED_WINDOWS_JOB=91538466726
+WINDOWS_INSTALLED_LIFECYCLE=PASS_IN_FAILED_RELEASE_RUN
+MACOS_BUILDS=PASS_BOTH_IN_FAILED_RELEASE_RUN
+FINAL_ZIP_SMOKE=PASS_BEFORE_CLEANUP_FAILURE
+ROOT_CAUSE=ONE_SHOT_REMOVE_ITEM_RACED_TRANSIENT_PYD_FILE_HANDLE
+MINIMAL_FIX=BOUNDED_15_ATTEMPT_1_SECOND_RETRY_AFTER_OWNED_PATH_VALIDATION
+TDD=RED_THEN_GREEN
+LOCAL_CONTRACTS=PASS_25_OF_25
+WORKFLOW_YAML_PARSE=PASS
+AI_ASSETS=PASS
+DRAFT_PR=19_DRAFT
+IMPLEMENTATION_HEAD=84bcbb060aaa78ebe5d5413cd8a16a7a1eac5512
+FULL_CI=PENDING_FINAL_HEAD
+TAG_RELEASE=NOT_CREATED
+JUDGE=LOCAL_PASS_REMOTE_CI_PENDING
+```
+
+- Run `30763628302` failed only after the final Windows ZIP frozen-backend smoke passed. The
+  immediate cleanup hit `Access denied` on `aiohttp/_websocket/mask.cp312-win_amd64.pyd`; the final
+  publish job was skipped, so no v3.29.1 Tag or Release exists.
+- The minimal workflow change preserves runner-owned path validation, retries deletion at most 15
+  times with one-second waits, and still throws after exhaustion. Both pre-extraction and `finally`
+  cleanup use this contract.
+- No product code, installer logic, dependency, fixed product Commit, Tag or Release was changed.
+  Draft PR #19 remains at the final-Head full-CI gate.
+
+---
+
+## 历史回传｜Work10-A 云端发布入口修复
 
 ```text
 PRODUCT_RELEASE_COMMIT=3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65

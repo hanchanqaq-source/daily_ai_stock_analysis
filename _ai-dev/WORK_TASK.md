@@ -1,6 +1,47 @@
 # WORK-010｜v3.29.1 发布与 Windows 真机验收
 
-## Work10-A｜云端发布入口修复
+## Work10-B｜Windows 发布临时目录清理竞态
+
+```text
+WORK_ID=WORK-010
+WORK_STATE=ACTIVE
+BASE=91e174d30b3d0f2533b0db5df0245bf49778234f
+BRANCH=agent/pp02-work10-release-cleanup
+TARGET_RELEASE=v3.29.1
+PRODUCT_RELEASE_COMMIT=3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65
+FAILED_RELEASE_RUN=30763628302
+DRAFT_PR=19
+CURRENT_GATE=FINAL_HEAD_FULL_CI
+```
+
+## 授权范围
+
+- 只修改现有 Desktop Release 工作流、直接回归测试和 PP02 必需台账/Changelog。
+- 对已通过 runner-owned 路径校验的 Windows 最终 ZIP 临时解压目录增加有限删除重试。
+- 允许正常 Commit、远端分支、Draft PR #19、完整 GitHub Actions CI 和范围内失败修复。
+
+## 安全与失败关闭
+
+- 保留现有 `RUNNER_TEMP` 子目录与固定目录名前缀校验；不得放宽删除目标。
+- 最多尝试 15 次，每次失败等待 1 秒；成功后立即继续。
+- 超过重试上限仍删除失败时必须抛错；不得使用静默忽略、无界循环或删除更大目录。
+- 解压前和最终 `finally` 清理必须使用同一受限逻辑。
+
+## 非目标与停止门
+
+- 不修改产品代码、产品依赖、安装器、后端、Desktop 运行时或固定产品 Commit。
+- 不 Ready、不合并、不写 `main`、不创建或修改 Tag/Release，不执行 Windows 真机操作。
+- Draft PR #19 最终 Head 完整 CI 通过后停止并请求后续明确授权。
+
+## 验收
+
+1. TDD RED/GREEN 证明重试次数、等待、两处调用、安全路径先决条件和 fail-closed。
+2. 相关合同、Workflow YAML、AI 资产、格式和敏感内容检查通过。
+3. Draft PR #19 保持 Draft，完整 CI 绑定最终 Head 且全部适用 Job 成功。
+
+---
+
+## 历史任务合同｜Work10-A 云端发布入口修复
 
 ```text
 WORK_ID=WORK-010
