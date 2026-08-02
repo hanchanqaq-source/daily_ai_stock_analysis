@@ -18,6 +18,9 @@ $fakeInstaller = Join-Path $fixtureRoot 'fake-installer.exe'
 $installRoot = Join-Path $fixtureRoot (
   'pp02-installer-verify-contract-' + [guid]::NewGuid().ToString('N')
 )
+$diagnosticRoot = Join-Path $fixtureRoot (
+  'pp02-installer-diagnostics-contract-' + [guid]::NewGuid().ToString('N')
+)
 $parentSentinel = Join-Path $fixtureRoot 'parent-sentinel.txt'
 $previousRunnerTemp = [Environment]::GetEnvironmentVariable('RUNNER_TEMP', 'Process')
 
@@ -65,6 +68,8 @@ try {
     '9.9.9'
     '-InstallRoot'
     ('"{0}"' -f $installRoot)
+    '-DiagnosticRoot'
+    ('"{0}"' -f $diagnosticRoot)
   )
   $contractProcess = Start-Process `
     -FilePath $powerShell `
@@ -94,6 +99,17 @@ try {
   }
   if (-not (Test-Path -LiteralPath $parentSentinel -PathType Leaf)) {
     throw 'Verifier removed a parent sentinel.'
+  }
+  $diagnosticSummary = Join-Path $diagnosticRoot 'diagnostic-summary.txt'
+  if (-not (Test-Path -LiteralPath $diagnosticSummary -PathType Leaf)) {
+    throw 'Verifier did not preserve diagnostic evidence before cleanup.'
+  }
+  $diagnosticText = Get-Content -LiteralPath $diagnosticSummary -Raw
+  if (-not $diagnosticText.Contains('WINDOWS_INSTALLER_DIAGNOSTIC=AVAILABLE')) {
+    throw 'Verifier did not preserve its stable diagnostic marker.'
+  }
+  if ($diagnosticText.Contains('parent-sentinel') -or $diagnosticText.Contains('owned')) {
+    throw 'Verifier copied unrelated fixture content into diagnostic evidence.'
   }
   Write-Output 'WINDOWS_INSTALLER_CONTRACT_VALIDATION=PASS'
 }

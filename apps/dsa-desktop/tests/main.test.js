@@ -692,6 +692,84 @@ test('startBackend runs a packaged backend from the runtime data directory', (t)
   assert.equal(spawned[0].options.env.PYTHONSAFEPATH, '1');
 });
 
+test('startBackend preserves redacted packaged stderr in the verifier diagnostic root', (t) => {
+  const previousBackendPath = process.env.DSA_BACKEND_PATH;
+  const previousRunnerTemp = process.env.RUNNER_TEMP;
+  const previousDiagnosticRoot = process.env.DSA_INSTALLER_DIAGNOSTIC_ROOT;
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsa-installer-diagnostic-'));
+  const runnerTemp = path.join(tmpDir, 'runner');
+  const diagnosticRoot = path.join(
+    runnerTemp,
+    'pp02-installer-diagnostics-contract-123'
+  );
+  const runtimeDir = path.join(tmpDir, 'runtime');
+  const backendDir = path.join(tmpDir, 'bundle', 'backend', 'stock_analysis');
+  const backendPath = path.join(backendDir, 'stock_analysis.exe');
+  fs.mkdirSync(diagnosticRoot, { recursive: true });
+  fs.mkdirSync(runtimeDir, { recursive: true });
+  fs.mkdirSync(backendDir, { recursive: true });
+  fs.writeFileSync(path.join(runtimeDir, '.env'), '', 'utf8');
+  fs.writeFileSync(backendPath, '', 'utf8');
+  process.env.DSA_BACKEND_PATH = backendPath;
+  process.env.RUNNER_TEMP = runnerTemp;
+  process.env.DSA_INSTALLER_DIAGNOSTIC_ROOT = diagnosticRoot;
+  t.after(() => {
+    for (const [name, value] of Object.entries({
+      DSA_BACKEND_PATH: previousBackendPath,
+      RUNNER_TEMP: previousRunnerTemp,
+      DSA_INSTALLER_DIAGNOSTIC_ROOT: previousDiagnosticRoot,
+    })) {
+      if (value === undefined) {
+        delete process.env[name];
+      } else {
+        process.env[name] = value;
+      }
+    }
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  const fakeBackendProcess = new EventEmitter();
+  fakeBackendProcess.pid = 43210;
+  fakeBackendProcess.stdout = new EventEmitter();
+  fakeBackendProcess.stderr = new EventEmitter();
+  fakeBackendProcess.exitCode = null;
+  fakeBackendProcess.signalCode = null;
+  fakeBackendProcess.kill = () => true;
+  const mainModule = loadMainModule(t, {
+    platform: 'win32',
+    childProcess: {
+      spawn: () => fakeBackendProcess,
+    },
+  });
+  t.after(() => mainModule.__setBackendProcessForTest(null));
+
+  mainModule.startBackend({
+    port: 8000,
+    envFile: path.join(runtimeDir, '.env'),
+    dbPath: path.join(runtimeDir, 'data', 'stock_analysis.db'),
+    logDir: path.join(runtimeDir, 'logs'),
+    secureCredentials: { OPENAI_API_KEY: 'not-written-by-test' },
+  });
+  fakeBackendProcess.emit('spawn');
+  fakeBackendProcess.stderr.emit(
+    'data',
+    Buffer.from('RuntimeError: API_KEY=super-secret-value\n  at packaged_backend.py:42\n')
+  );
+  fakeBackendProcess.exitCode = 1;
+  fakeBackendProcess.emit('exit', 1, null);
+
+  const diagnosticPath = path.join(
+    diagnosticRoot,
+    'backend-stderr-sanitized.log'
+  );
+  assert.equal(fs.existsSync(diagnosticPath), true);
+  const diagnostic = fs.readFileSync(diagnosticPath, 'utf8');
+  assert.match(diagnostic, /RuntimeError/);
+  assert.match(diagnostic, /<redacted>/);
+  assert.equal(diagnostic.includes('super-secret-value'), false);
+  assert.match(diagnostic, /exit_code=1/);
+});
+
 test('extendMacDesktopBackendPath preserves existing order and avoids duplicates', (t) => {
   const mainModule = loadMainModule(t, { platform: 'darwin' });
 

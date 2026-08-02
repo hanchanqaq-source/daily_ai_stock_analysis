@@ -248,11 +248,22 @@ jobs:
           $installerPath = "apps/dsa-desktop/dist/pp02-ai-daily-stock-analysis-windows-installer-v$version.exe"
           $installer = Get-Item -LiteralPath $installerPath -ErrorAction Stop
           $installRoot = Join-Path $env:RUNNER_TEMP "pp02-installer-verify-$env:DSA_EXPECTED_PR_HEAD_SHA"
+          $diagnosticRoot = Join-Path $env:RUNNER_TEMP "pp02-installer-diagnostics-$env:DSA_EXPECTED_PR_HEAD_SHA-$env:GITHUB_RUN_ID"
           powershell -ExecutionPolicy Bypass -File scripts/verify-windows-installer.ps1 `
             -InstallerPath $installer.FullName `
             -ExpectedVersion $version `
             -InstallRoot $installRoot `
+            -DiagnosticRoot $diagnosticRoot `
             -ExpectedCommitSha $env:DSA_EXPECTED_PR_HEAD_SHA
+
+      - name: 📤 Upload Windows installer diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: pp02-windows-installer-diagnostics-${{ env.DSA_EXPECTED_PR_HEAD_SHA }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/pp02-installer-diagnostics-${{ env.DSA_EXPECTED_PR_HEAD_SHA }}-${{ github.run_id }}
+          if-no-files-found: error
+          retention-days: 14
 
       - name: 🔍 Scan Windows fake credential leakage
         shell: pwsh

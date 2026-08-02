@@ -299,6 +299,68 @@ def test_windows_installer_verifier_is_scoped_and_fail_closed() -> None:
     assert "& $powerShell" not in contract
 
 
+def test_windows_installer_failure_diagnostics_are_preserved_and_redacted() -> None:
+    verifier = _read_text(
+        REPO_ROOT / "scripts" / "verify-windows-installer.ps1"
+    )
+    contract = _read_text(
+        REPO_ROOT
+        / "scripts"
+        / "tests"
+        / "verify-windows-installer-contract.ps1"
+    )
+
+    assert "DiagnosticRoot" in verifier
+    assert "pp02-installer-diagnostics-" in verifier
+    assert "Save-InstallerDiagnostics" in verifier
+    assert "Protect-DiagnosticText" in verifier
+    assert "diagnostic-summary.txt" in verifier
+    assert "desktop-startup-sanitized.log" in verifier
+    assert "backend-probe-stderr-sanitized.log" in verifier
+    assert "backend-probe-summary.txt" in verifier
+    assert "port-process-state.txt" in verifier
+    assert "windows-application-events-sanitized.log" in verifier
+    assert "installed-files.txt" in verifier
+    assert "Get-NetTCPConnection" in verifier
+    assert "Get-WinEvent" in verifier
+    assert "-RedirectStandardError" in verifier
+    assert "-RedirectStandardOutput" in verifier
+    assert "Remove-Item -LiteralPath $rawBackendStderr" in verifier
+    assert "Remove-Item -LiteralPath $rawBackendStdout" in verifier
+    assert "Environment.GetEnvironmentVariables" not in verifier
+    assert "Get-ChildItem Env:" not in verifier
+    assert "-eq '.env'" in verifier
+    assert "WINDOWS_INSTALLER_DIAGNOSTIC=AVAILABLE" in verifier
+
+    assert "-DiagnosticRoot" in contract
+    assert "diagnostic-summary.txt" in contract
+    assert "WINDOWS_INSTALLER_DIAGNOSTIC=AVAILABLE" in contract
+    assert "Verifier did not preserve diagnostic evidence" in contract
+
+
+def test_windows_jobs_upload_diagnostics_even_after_lifecycle_failure() -> None:
+    ci = _read_text(REPO_ROOT / ".github" / "workflows" / "ci.yml")
+    release = _read_text(
+        REPO_ROOT / ".github" / "workflows" / "desktop-release.yml"
+    )
+
+    for workflow, sha_expression in (
+        (ci, "env.DSA_EXPECTED_PR_HEAD_SHA"),
+        (release, "env.DSA_RELEASE_COMMIT_SHA"),
+    ):
+        assert "-DiagnosticRoot $diagnosticRoot" in workflow
+        assert "Upload Windows installer diagnostics" in workflow
+        assert "if: always()" in workflow
+        assert "actions/upload-artifact@v6" in workflow
+        assert "github.run_id" in workflow
+        assert sha_expression in workflow
+        assert "pp02-windows-installer-diagnostics-" in workflow
+        assert "pp02-installer-diagnostics-" in workflow
+        assert workflow.index("Validate installed Windows lifecycle") < workflow.index(
+            "Upload Windows installer diagnostics"
+        )
+
+
 def test_desktop_build_jobs_use_supported_node_22_runtime() -> None:
     ci = _read_text(REPO_ROOT / ".github" / "workflows" / "ci.yml")
     release = _read_text(
