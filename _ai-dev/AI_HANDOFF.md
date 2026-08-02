@@ -4,7 +4,7 @@
 
 | 项目 | 当前值 |
 | --- | --- |
-| 当前状态 | `WORK9_TAKEOVER_COMPLETE_DIAGNOSTIC_CONTRACT_IN_PROGRESS` |
+| 当前状态 | `ROOT_CAUSE_CONFIRMED_MINIMAL_FIX_LOCAL_PASS_FULL_CI_PENDING` |
 | 当前 Work | `WORK-009｜PR #17 诊断证据链修复与 Windows 安装闭环` |
 | 固定 Base | `main@66666352e953d90becce420da7d35b649516af76` |
 | 分支 | `agent/pp02-work8-r7-installer-fix` |
@@ -12,8 +12,9 @@
 | 失败证据 | v3.29.0 installer 2/2: `System.dll` / `0xC0000005` |
 | 用户决定 | `A｜保留安装向导` |
 | 设计 | `docs/superpowers/specs/2026-08-01-work8-windows-installer-hotfix-design.md` |
-| 接管 Head / 旧 CI | `9cb9a70e9176711096adf12ba5674c56d6f314d2` / Run `30742085965` |
-| 下一动作 | 诊断契约 RED→最小证据链修复→最终 ZIP 核验→固定 Head Windows CI |
+| 诊断 Head / CI | `b4684f0be8a818b5b29688933e2a738663e1a638` / Run `30744115030` |
+| 诊断 artifact | `8832664000`；SHA-256 `6fa6366761d608572c04b401e69caa764483c7bab3c5bc61ecc96e958989ea65` |
+| 下一动作 | 推送安装态 CWD 最小修复与 restart 门，运行新的固定 Head 完整 CI |
 | 授权边界 | 允许范围内 Commit/Push/CI；禁止 Ready/Merge/main/Tag/Release/真实数据/真机动作 |
 
 Work9 已在 `9cb9a70…` 完成正式接管。Work8 只修复
@@ -26,8 +27,10 @@ Node 22；独立 Web 门保持 Node 20。诊断增强本地 Desktop `82/82`、�
 构建；但验证器契约未能在清理前保存诊断摘要，真实安装生命周期被跳过，`always()`
 上传因目录无文件而失败。没有 Windows 诊断 artifact，后端根因仍未证实。
 
-Work8 已固定为 `COMPLETED_WITH_BLOCKER`；其 Run `30742085965` 没有诊断
-artifact。Work9 必须先恢复清理外、可脱敏上传的证据链；失败则停止，不得猜根因。
+Work8 已固定为 `COMPLETED_WITH_BLOCKER`。Work9 的 Run `30744115030` 已恢复清理外、
+可脱敏上传的证据链：诊断 artifact `8832664000` 证明 NLTK 3.10.1 在安装根 CWD 下
+阻断 PyInstaller bundle 内的 `xml`。最小 CWD 修复和退出/重启/卸载门本地通过，新的
+固定 Head 完整 CI 待运行。
 
 `v3.29.0` 的 Release、Tag 与失败证据保持不变，不得覆盖或重打。目标
 `v3.29.1` 尚未授权发布。正式 Windows 首次使用验收必须在补丁 Release 后重新

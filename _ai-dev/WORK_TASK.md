@@ -15,7 +15,7 @@ FAILED_RELEASE=v3.29.0
 SCOPE_DRIFT=FALSE
 PREVIOUS_DIAGNOSTIC_HEAD=eae4b46501c9a183dda20d2975121987e676943b
 PREVIOUS_CI_RUN=30742085965
-CURRENT_GATE=DIAGNOSTIC_CONTRACT_REPAIR
+CURRENT_GATE=MINIMAL_ROOT_CAUSE_FIX_LOCAL_GREEN_FULL_CI_PENDING
 ```
 
 ## 授权结果
@@ -41,6 +41,19 @@ CURRENT_GATE=DIAGNOSTIC_CONTRACT_REPAIR
 - 不集中升级 Electron/npm 安全依赖，不引入 Dependabot、完整 Web/Playwright 门、
   代码签名、公证、正式图标、PP02 总控 Skill 或真实业务数据闭环。
 - 若诊断仍无法保留或根因超出 PR #17，立即停止，不做猜测式补丁。
+
+## 当前证据门结果
+
+- Fixed diagnostic Head `b4684f0be8a818b5b29688933e2a738663e1a638`, Run
+  `30744115030`: seven non-Windows jobs passed; Windows PowerShell diagnostic contract, final ZIP
+  manifest/file check, final-ZIP frozen backend start, installation and registration passed.
+- Head/Run-bound diagnostic artifact `8832664000` was preserved and uploaded. Both installed child
+  stderr and the independent backend probe identify the same NLTK 3.10.1 bundled-`xml` CWD block.
+- The only product fix changes the packaged backend working directory from the runtime/install root
+  to its database parent directory so the CWD is no longer an ancestor of the PyInstaller bundle.
+  A separate verifier gate now requires exit, restart readiness, second exit and uninstall order.
+- Local gates pass; the current gate is a new fixed-Head full CI. Merge/Release/real-machine gates
+  remain closed.
 
 ## Plan Challenge Result
 

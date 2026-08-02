@@ -18,20 +18,22 @@ PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
 ACTIVE_BASE=66666352e953d90becce420da7d35b649516af76
 ACTIVE_BRANCH=agent/pp02-work8-r7-installer-fix
 ACTIVE_PR=17
-CURRENT_STAGE=R7 Hotfix / Diagnostic Contract Repair
+CURRENT_STAGE=R7 Hotfix / Root Cause Minimal Fix Local Green
 CURRENT_WORK=WORK-009 — PR #17 diagnostic evidence chain repair and Windows install closure
 ACTIVE_GOAL=preserve cleanup-independent redacted diagnostics, prove the final deliverable, and close the installed Windows lifecycle
 WORK9_TAKEOVER_HEAD=9cb9a70e9176711096adf12ba5674c56d6f314d2
-LAST_DIAGNOSTIC_HEAD=eae4b46501c9a183dda20d2975121987e676943b
-LATEST_CI_RUN=30742085965
-CURRENT_STATUS=WORK9_TAKEOVER_COMPLETE_DIAGNOSTIC_CONTRACT_IN_PROGRESS
-ACTIVE_BLOCKER=WINDOWS_DIAGNOSTIC_ARTIFACT_NOT_PRESERVED_OR_UPLOADED
+LAST_DIAGNOSTIC_HEAD=b4684f0be8a818b5b29688933e2a738663e1a638
+LATEST_CI_RUN=30744115030
+DIAGNOSTIC_ARTIFACT_ID=8832664000
+DIAGNOSTIC_ARTIFACT_SHA256=6fa6366761d608572c04b401e69caa764483c7bab3c5bc61ecc96e958989ea65
+CURRENT_STATUS=ROOT_CAUSE_CONFIRMED_MINIMAL_FIX_LOCAL_PASS_FULL_CI_PENDING
+ACTIVE_BLOCKER=WINDOWS_FIXED_HEAD_FULL_LIFECYCLE_CI_PENDING
 FAILED_RELEASE_TAG=v3.29.0
 FAILURE_CLASS=INSTALLER_BOOTSTRAP_CRASH
 FAILURE_REPRODUCIBILITY=2/2
 FAILURE_EXCEPTION=0xC0000005 / System.dll
 NEXT_WORK=NONE_WHILE_WORK_009_ACTIVE
-NEXT_ACTION=WRITE_FAILING_DIAGNOSTIC_CONTRACT_TEST_THEN_APPLY_MINIMAL_EVIDENCE_CHAIN_FIX
+NEXT_ACTION=PUSH_MINIMAL_CWD_FIX_AND_RESTART_GATE_THEN_REQUIRE_FIXED_HEAD_FULL_CI
 AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/MAIN_WRITE/TAG/RELEASE/REAL_DATA/WINDOWS_REAL_MACHINE_ACTION
 LAST_UPDATED=2026-08-02
 ```
@@ -53,6 +55,40 @@ LAST_UPDATED=2026-08-02
 - Required order is evidence-chain RED/GREEN first, final ZIP verification second, one fixed-Head
   diagnostic run third, and only then an evidence-backed backend root-cause fix. If the artifact is
   still unavailable, stop at `ROOT_CAUSE_BLOCKED_EVIDENCE_INSUFFICIENT` without guessing.
+
+## 2026-08-02 Work9 / diagnostic evidence and minimal root-cause fix
+
+- The cleanup-independent diagnostic change was pushed at fixed Head
+  `b4684f0be8a818b5b29688933e2a738663e1a638`. Run `30744115030` finished with seven
+  successful non-Windows jobs and one failed Windows lifecycle job. The Windows PowerShell 5.1
+  diagnostic contract passed before the installed lifecycle ran.
+- Final candidate verification passed before installation: the final ZIP was extracted, its
+  `pp02-portable-release.json.managedFiles` contained exactly one
+  `resources/backend/stock_analysis/_internal/fake_useragent/data/browsers.jsonl`, the file was
+  present, and the frozen backend started from the final extracted ZIP.
+- The installer returned exit code 0 and its install/registration checks passed. The installed
+  desktop launched the bundled backend but never opened port 8000. The Head/Run-bound
+  `if: always()` upload succeeded as artifact `8832664000` (52,836 bytes, SHA-256
+  `6fa6366761d608572c04b401e69caa764483c7bab3c5bc61ecc96e958989ea65`).
+- The artifact contains stage/process timing, exit status, sanitized desktop/backend stderr,
+  executable and working-directory evidence, port/process state, Windows event status, installed
+  package inventory and collector status. It contains no raw stderr, credential/token prefix,
+  complete environment dump, database, or user-data file.
+- Direct error, reproduced by both the Electron child and an independent backend probe:
+  NLTK 3.10.1 `pyi_rth_nltk.py` imports `nltk.internals`, whose `xml` import is rejected with
+  `ImportError: Blocked import of xml from current working directory for security reasons`.
+- Confirmed boundary/root cause: installed Electron starts the packaged backend with the install
+  root as CWD while the PyInstaller bundle is inside that root under `resources/backend/...`.
+  NLTK's import-security finder therefore classifies bundled stdlib `xml` as CWD content. The
+  build/final-ZIP smoke uses an unrelated temporary CWD and does not reproduce this topology.
+- TDD RED reproduced the installed ancestry in the Desktop launcher test. The single product fix
+  changes packaged-backend CWD to the database parent directory (created before spawn), keeping it
+  outside bundle ancestry while retaining `PYTHONSAFEPATH=1`; no NLTK guard, dependency or
+  packaging file was disabled or upgraded. The verifier also has a RED/GREEN gate for first exit,
+  fresh restart readiness, second exit and uninstall ordering.
+- Local GREEN: Desktop `82/82`; Windows packaging/diagnostic/final-ZIP targets `29/29`; workflow
+  YAML, AI assets and `git diff --check` pass. Fixed-Head full CI remains required before any merge
+  request.
 
 ## 2026-08-02 Work8 / corrective diagnostic run blocked on evidence preservation
 

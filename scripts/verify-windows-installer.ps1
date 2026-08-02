@@ -283,6 +283,20 @@ function Get-DesktopBackendPid {
   return $null
 }
 
+function Get-DesktopReadyMarkerCount {
+  param([string]$LogPath)
+
+  if (-not $LogPath -or -not (Test-Path -LiteralPath $LogPath -PathType Leaf)) {
+    return 0
+  }
+  return @(
+    Select-String `
+      -LiteralPath $LogPath `
+      -SimpleMatch 'Main UI loaded in' `
+      -ErrorAction Stop
+  ).Count
+}
+
 function Get-SafeProcessState {
   param(
     [Parameter(Mandatory=$true)][int]$ProcessId,
@@ -903,6 +917,49 @@ try {
   $stageProcessExitedUtc = (Get-Date).ToUniversalTime().ToString('o')
   $stageProcessExitCode = '0'
   $appProcess = $null
+  Write-Output 'WINDOWS_INSTALLED_APP_EXIT_VALIDATION=PASS'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'PASS'
+
+  $restartReadyMarkerBaseline = Get-DesktopReadyMarkerCount -LogPath $desktopLog
+  $failureStage = 'installed_app_restart'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
+  $stageProcess = 'installed_app_restart'
+  $stageProcessStartedUtc = (Get-Date).ToUniversalTime().ToString('o')
+  $stageProcessExitedUtc = '<not_observed>'
+  $stageProcessExitCode = '<not_observed>'
+  $appProcess = Start-Process -FilePath $appExe -WorkingDirectory $ownedRoot -PassThru
+  $restartDeadline = (Get-Date).AddSeconds($StartupTimeoutSeconds)
+  $restartReady = $false
+  do {
+    $appProcess.Refresh()
+    if ($appProcess.HasExited) {
+      $stageProcessExitedUtc = (Get-Date).ToUniversalTime().ToString('o')
+      $stageProcessExitCode = [string]$appProcess.ExitCode
+      Write-StartupDiagnostics -LogPath $desktopLog
+      throw "Restarted installed application exited before readiness with code $($appProcess.ExitCode)."
+    }
+    $restartReadyMarkerCount = Get-DesktopReadyMarkerCount -LogPath $desktopLog
+    if ($restartReadyMarkerCount -gt $restartReadyMarkerBaseline) {
+      $restartReady = $true
+      break
+    }
+    Start-Sleep -Milliseconds 500
+  } while ((Get-Date) -lt $restartDeadline)
+  if (-not $restartReady) {
+    Write-StartupDiagnostics -LogPath $desktopLog
+    throw "Restarted installed application did not reach readiness within $StartupTimeoutSeconds seconds."
+  }
+  Write-Output 'WINDOWS_INSTALLED_APP_RESTART_VALIDATION=PASS'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'PASS'
+
+  $failureStage = 'installed_app_restart_shutdown'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
+  Stop-StartedProcessTree -Process $appProcess
+  $stageProcessExitedUtc = (Get-Date).ToUniversalTime().ToString('o')
+  $stageProcessExitCode = '0'
+  $appProcess = $null
+  Write-Output 'WINDOWS_INSTALLED_APP_RESTART_EXIT_VALIDATION=PASS'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'PASS'
 
   $uninstallAttempted = $true
   $failureStage = 'uninstaller_process'

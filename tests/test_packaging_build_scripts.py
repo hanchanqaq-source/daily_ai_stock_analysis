@@ -368,6 +368,27 @@ def test_windows_jobs_upload_diagnostics_even_after_lifecycle_failure() -> None:
         )
 
 
+def test_windows_installer_validates_exit_restart_before_uninstall() -> None:
+    verifier = _read_text(
+        REPO_ROOT / "scripts" / "verify-windows-installer.ps1"
+    )
+
+    first_start = "WINDOWS_INSTALLED_APP_STARTUP_VALIDATION=PASS"
+    first_exit = "WINDOWS_INSTALLED_APP_EXIT_VALIDATION=PASS"
+    restart = "WINDOWS_INSTALLED_APP_RESTART_VALIDATION=PASS"
+    restart_exit = "WINDOWS_INSTALLED_APP_RESTART_EXIT_VALIDATION=PASS"
+    uninstall = "WINDOWS_UNINSTALL_VALIDATION=PASS"
+
+    for marker in (first_start, first_exit, restart, restart_exit, uninstall):
+        assert marker in verifier
+    assert "installed_app_restart" in verifier
+    assert "$restartReadyMarkerBaseline" in verifier
+    assert verifier.index(first_start) < verifier.index(first_exit)
+    assert verifier.index(first_exit) < verifier.index(restart)
+    assert verifier.index(restart) < verifier.index(restart_exit)
+    assert verifier.index(restart_exit) < verifier.index(uninstall)
+
+
 def test_desktop_build_jobs_use_supported_node_22_runtime() -> None:
     ci = _read_text(REPO_ROOT / ".github" / "workflows" / "ci.yml")
     release = _read_text(
