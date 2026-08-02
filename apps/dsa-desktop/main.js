@@ -1389,7 +1389,8 @@ function startBackend({ port, envFile, dbPath, logDir, host = null, secureCreden
     }
     launchMode = 'packaged';
     launchCommand = formatCommand(backendPath, args);
-    launchCwd = path.dirname(envFile);
+    launchCwd = path.dirname(dbPath);
+    ensureDirectory(launchCwd);
     backendProcess = spawn(backendPath, args, {
       env,
       cwd: launchCwd,

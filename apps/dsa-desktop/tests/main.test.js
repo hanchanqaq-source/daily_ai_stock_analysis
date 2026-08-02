@@ -640,13 +640,20 @@ test('startBackend passes WEBUI_HOST from env file to backend args and env', (t)
   assert.equal(fs.readFileSync(envPath, 'utf8').includes('OPENAI_API_KEY'), false);
 });
 
-test('startBackend runs a packaged backend from the runtime data directory', (t) => {
+test('startBackend keeps packaged backend CWD outside the installed bundle ancestry', (t) => {
   const previousBackendPath = process.env.DSA_BACKEND_PATH;
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsa-packaged-cwd-'));
   const runtimeDir = path.join(tmpDir, 'runtime');
-  const backendDir = path.join(tmpDir, 'bundle', 'backend', 'stock_analysis');
+  const dataDir = path.join(runtimeDir, 'data');
+  const backendDir = path.join(
+    runtimeDir,
+    'resources',
+    'backend',
+    'stock_analysis'
+  );
   const backendPath = path.join(backendDir, 'stock_analysis');
   fs.mkdirSync(runtimeDir, { recursive: true });
+  fs.mkdirSync(dataDir, { recursive: true });
   fs.mkdirSync(backendDir, { recursive: true });
   fs.writeFileSync(path.join(runtimeDir, '.env'), '', 'utf8');
   fs.writeFileSync(backendPath, '', 'utf8');
@@ -681,14 +688,18 @@ test('startBackend runs a packaged backend from the runtime data directory', (t)
   mainModule.startBackend({
     port: 8123,
     envFile: path.join(runtimeDir, '.env'),
-    dbPath: path.join(runtimeDir, 'data', 'stock_analysis.db'),
+    dbPath: path.join(dataDir, 'stock_analysis.db'),
     logDir: path.join(runtimeDir, 'logs'),
     secureCredentials: null,
   });
 
   assert.equal(spawned.length, 1);
   assert.equal(spawned[0].command, backendPath);
-  assert.equal(spawned[0].options.cwd, runtimeDir);
+  assert.equal(spawned[0].options.cwd, dataDir);
+  assert.equal(
+    path.relative(spawned[0].options.cwd, backendPath).startsWith(`..${path.sep}`),
+    true
+  );
   assert.equal(spawned[0].options.env.PYTHONSAFEPATH, '1');
 });
 
