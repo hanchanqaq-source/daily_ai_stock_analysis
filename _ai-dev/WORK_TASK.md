@@ -1,3 +1,174 @@
+# WORK-009｜PR #17 诊断证据链修复与 Windows 安装闭环
+
+## 当前任务身份
+
+```text
+WORK_ID=WORK-009
+WORK_STATE=ACTIVE
+WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
+BASE=66666352e953d90becce420da7d35b649516af76
+BRANCH=agent/pp02-work8-r7-installer-fix
+TAKEOVER_HEAD=9cb9a70e9176711096adf12ba5674c56d6f314d2
+TARGET_RELEASE=v3.29.1
+DRAFT_PR=17
+FAILED_RELEASE=v3.29.0
+SCOPE_DRIFT=FALSE
+PREVIOUS_DIAGNOSTIC_HEAD=eae4b46501c9a183dda20d2975121987e676943b
+PREVIOUS_CI_RUN=30742085965
+CURRENT_GATE=FULL_CI_PASS_AWAITING_PR17_MERGE_AUTHORIZATION
+```
+
+## 授权结果
+
+- Work9 承接 Work8，不重启路线，不推翻已有证据支持的 builder/Node 22 修复，继续
+  使用现有 Draft PR #17。
+- 允许修改诊断、Windows 打包和后端启动相关代码，建立 RED/GREEN 测试，正常
+  Commit/Push，并运行固定 Head CI。
+- 必须先证明诊断位于安装清理目录之外、清理后仍存在、失败时上传仍执行且内容已
+  脱敏；证据链通过前不得修改后端根因。
+- 诊断链修复后必须验证最终候选 ZIP，而不是只验证 `win-unpacked`。必须核验
+  `fake_useragent/data/browsers.jsonl`、managed files 清单及复制/清理链路。
+- 取得有效 artifact 后，记录直接错误、组件边界、根因、开发/打包差异与最小复现；
+  再以一个失败测试、一个假设和一个最小修复推进。
+- PR #17 最终门包括安装包/ZIP、安装、首次启动、内置后端健康、退出、再次启动、
+  卸载、诊断 artifact 和全部 CI。完成后停在合并授权门。
+
+## 非目标与硬边界
+
+- 不 Ready、不合并、不写 `main`、不创建 Tag/Release、不发布 `v3.29.1`。
+- 不宣布 Windows 真机验收通过；需要本机操作时停止申请授权。
+- 不读取、输出或上传真实 `.env`、Token、API Key、Webhook、密钥、数据库或用户数据。
+- 不集中升级 Electron/npm 安全依赖，不引入 Dependabot、完整 Web/Playwright 门、
+  代码签名、公证、正式图标、PP02 总控 Skill 或真实业务数据闭环。
+- 若诊断仍无法保留或根因超出 PR #17，立即停止，不做猜测式补丁。
+
+## 当前证据门结果
+
+- Fixed diagnostic Head `b4684f0be8a818b5b29688933e2a738663e1a638`, Run
+  `30744115030`: seven non-Windows jobs passed; Windows PowerShell diagnostic contract, final ZIP
+  manifest/file check, final-ZIP frozen backend start, installation and registration passed.
+- Head/Run-bound diagnostic artifact `8832664000` was preserved and uploaded. Both installed child
+  stderr and the independent backend probe identify the same NLTK 3.10.1 bundled-`xml` CWD block.
+- The only product fix changes the packaged backend working directory from the runtime/install root
+  to its database parent directory so the CWD is no longer an ancestor of the PyInstaller bundle.
+  A separate verifier gate now requires exit, restart readiness, second exit and uninstall order.
+- Local gates pass; the current gate is a new fixed-Head full CI. Merge/Release/real-machine gates
+  remain closed.
+
+## 固定 Head Judge
+
+- Head `db02221b92e210925044c5af5a4aacd2f08fcb4f`, Run `30745575186`: all eight CI jobs
+  passed. Windows proved the final ZIP, installation, first startup/health, exit, fresh restart and
+  health, second exit, uninstall and the always-uploaded diagnostic artifact.
+- The current Work gate is explicit authorization to merge Draft PR #17. Ready, merge, Tag,
+  Release and Windows real-machine acceptance remain unauthorized.
+
+## Plan Challenge Result
+
+| 项目 | 结果 |
+| --- | --- |
+| 待决产品问题 | 0；用户已给出完整顺序、范围、停止门和验收标准 |
+| 当前事实 | PR #17 Draft；Head `9cb9a70…`；Run `30742085965` 为 7 成功、1 Windows 失败 |
+| 第一假设 | Windows PowerShell 5.1 执行诊断清单时不支持 `[IO.Path]::GetRelativePath`，导致摘要写入前再次失败 |
+| 允许进入 Build | 是；必须测试先行并先修诊断证据链 |
+| 发布授权 | 未授予 |
+
+---
+
+# 历史任务合同｜WORK-008 / R7 安装器缺陷修复与 v3.29.1 补丁发布
+
+## 当前任务身份
+
+```text
+WORK_ID=WORK-008
+WORK_STATE=COMPLETED_WITH_BLOCKER
+WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
+BASE=66666352e953d90becce420da7d35b649516af76
+BRANCH=agent/pp02-work8-r7-installer-fix
+TARGET_RELEASE=v3.29.1
+DRAFT_PR=17
+FAILED_RELEASE=v3.29.0
+SCOPE_DRIFT=FALSE
+DIAGNOSTIC_HEAD=eae4b46501c9a183dda20d2975121987e676943b
+LATEST_CI_RUN=30742085965
+CURRENT_GATE=ROOT_CAUSE_BLOCKED_EVIDENCE_INSUFFICIENT
+```
+
+## 2026-08-02 corrective authorization result
+
+- The required diagnostics-only fixed Head was run exactly once as Run `30742085965`.
+- Seven jobs passed. Windows candidate construction passed, but the verifier contract failed before
+  the installed lifecycle could run.
+- The `if: always()` diagnostic upload executed and failed because no diagnostic files had been
+  preserved; consequently no downloadable Windows diagnostic artifact exists.
+- The installed backend root cause is not established. Further patches and CI are stopped pending
+  user direction; Draft/merge/release/real-machine acceptance gates remain closed.
+
+## 用户结果
+
+用户已授权启动 Work8，并选择 `A｜保留安装向导`。修复必须保留选择安装目录、
+当前用户安装、正常卸载、安装版自动更新和免安装 ZIP；不得通过删除安装向导来绕过
+缺陷。用户随后批准设计勘误：Desktop 测试、Windows/macOS 打包和 Desktop Release
+任务升级至 Node 22，独立 Web 门保持 Node 20。
+
+## 根因与设计
+
+- v3.29.0 正式安装器来源、大小、SHA-256 和版本信息通过；Windows 11 build 26200
+  上连续 2/2 在引导阶段以 `System.dll / 0xC0000005` 崩溃。
+- 根因与 electron-builder #8536 / #9564 的 24.x NSIS `System::Store()` 竞态一致。
+- 批准设计见
+  `docs/superpowers/specs/2026-08-01-work8-windows-installer-hotfix-design.md`。
+- 构建链只精确升级 `electron-builder` 到 `26.15.7`；Electron 和业务运行依赖不顺带升级。
+- `@electron/rebuild 4.x` 要求 Node `>=22.12`，因此所有 Desktop 构建路径使用 Node 22；
+  既有便携测试显式声明此前由旧 builder 偶然带入的测试依赖 `archiver 5.3.2`。
+- 新增可复用 Windows 验证器，并在 PR Windows 打包门和正式 Desktop Release 门中
+  真实执行 install/start/uninstall。
+
+## 范围
+
+- 按已批准设计先写实施计划，再执行 RED→GREEN。
+- 更新 Desktop manifest/lockfile、Windows installer verifier、专项测试、CI 和 Release workflow。
+- 保留现有 frozen backend、portable ZIP、Head binding 与假凭据扫描。
+- 更新 Desktop 打包文档、Unreleased Changelog 和四份 PP02 台账。
+- 创建一个独立 Draft PR，完成固定 Head 全量 CI 和 Windows 安装候选验证。
+- CI 失败只允许在当前最小范围内修复，不扩展业务功能。
+
+## 非目标与硬边界
+
+- 不覆盖、移动、删除或重打 `v3.29.0` Tag/Release。
+- 未经单独授权，不 Ready、不合并、不写 `main`、不创建 `v3.29.1` Tag/Release。
+- 不读取、导入、删除或修改真实数据库、持仓、分析历史、`.env`、API Key、
+  Token、Webhook 或密码。
+- 不改后端/Web 业务逻辑、数据库 Schema、分析行为、自动通知默认值或便携更新事务。
+- 不把云端 Windows CI 冒充最终 Windows 正式版首次使用验收。
+- 不引入 Electron 27.x 或 electron-builder 27.x 预览版。
+
+## 验收标准
+
+1. RED 证明确切缺口：旧 builder line、缺失 verifier、PR/Release workflow 未执行安装器。
+2. manifest 精确锁定 `electron-builder 26.15.7`，lockfile 与 Node 22/npm 一致；
+   独立 Web 门继续使用 Node 20。
+3. Windows verifier 对唯一安装器执行隔离 install/start/uninstall，稳定输出证据并
+   仅清理自身临时目录。
+4. PR Windows Job 同一 Head 的安装器、便携 ZIP、冻结后端和假凭据扫描全部通过。
+5. macOS 包门与 Desktop 单测通过，完整 CI 无阻断失败。
+6. Draft PR body 与 diff、根因、验证、风险和回滚一致。
+7. Work8 Judge 上限为 `IMPLEMENTATION_PASS — DRAFT_HOLD`；Ready/Merge/Release
+   与最终 Windows v3.29.1 实机验收分别等待授权。
+
+## Plan Challenge Result
+
+| 项目 | 结果 |
+| --- | --- |
+| 用户决定 | `A｜保留安装向导` |
+| 待决产品问题 | 0；功能取舍已锁定 |
+| 根因证据 | 与上游 #8536/#9564 高一致，且新 v26 模板已移除竞态路径 |
+| 当前门 | `ROOT_CAUSE_BLOCKED_EVIDENCE_INSUFFICIENT`；Run `30742085965` 无诊断 artifact |
+| 允许进入 Build | 否；在用户重新授权前停止追加补丁和 CI |
+| 发布授权 | 未授予 |
+
+---
+
 # WORK-007｜R7 主线合并与正式发布任务合同
 
 ## 当前任务身份

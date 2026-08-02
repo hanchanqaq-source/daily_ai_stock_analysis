@@ -39,6 +39,8 @@ jobs:
               - 'scripts/build-backend.ps1'
               - 'scripts/verify-frozen-backend.ps1'
               - 'scripts/verify-windows-secure-credentials.ps1'
+              - 'scripts/verify-windows-installer.ps1'
+              - 'scripts/tests/verify-windows-installer-contract.ps1'
               - 'scripts/scan-windows-fake-credential.js'
               - 'scripts/build-backend-macos.sh'
               - 'scripts/macos-signature-audit.sh'
@@ -148,7 +150,7 @@ jobs:
       - name: 🟢 Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: 🧪 Desktop unit tests
         run: |
@@ -176,7 +178,7 @@ jobs:
       - name: 🟢 Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: apps/dsa-web/package-lock.json
       - name: 📦 Install Desktop dependencies
@@ -227,13 +229,54 @@ jobs:
           $finalExtract = Join-Path $env:RUNNER_TEMP "pp02-portable-final-$env:DSA_EXPECTED_PR_HEAD_SHA"
           Remove-FinalExtractWithRetry -Path $finalExtract
           Expand-Archive -LiteralPath $zip -DestinationPath $finalExtract
-          $fakeUserAgentData = Join-Path $finalExtract 'resources/backend/stock_analysis/_internal/fake_useragent/data/browsers.jsonl'
+          $requiredBrowserRelativePath = 'resources/backend/stock_analysis/_internal/fake_useragent/data/browsers.jsonl'
+          $finalManifestPath = Join-Path $finalExtract 'pp02-portable-release.json'
+          $finalManifest = Get-Content -LiteralPath $finalManifestPath -Raw | ConvertFrom-Json
+          $managedBrowserEntries = @(
+            $finalManifest.managedFiles |
+              Where-Object { $_.relativePath -eq $requiredBrowserRelativePath }
+          )
+          if ($managedBrowserEntries.Count -ne 1) {
+            throw "Final portable manifest does not manage exactly one $requiredBrowserRelativePath entry."
+          }
+          $fakeUserAgentData = Join-Path $finalExtract $requiredBrowserRelativePath
           if (-not (Test-Path -LiteralPath $fakeUserAgentData -PathType Leaf)) {
             throw "Final portable ZIP is missing fake_useragent/data/browsers.jsonl: $fakeUserAgentData"
           }
           $finalPackagedEntry = Join-Path $finalExtract 'resources/backend/stock_analysis/stock_analysis.exe'
           powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/verify-frozen-backend.ps1 -PackagedEntry $finalPackagedEntry
           Remove-FinalExtractWithRetry -Path $finalExtract
+
+      - name: 🧪 Validate Windows installer verifier contracts
+        shell: pwsh
+        run: |
+          $diagnosticRoot = Join-Path $env:RUNNER_TEMP "pp02-installer-diagnostics-$env:DSA_EXPECTED_PR_HEAD_SHA-$env:GITHUB_RUN_ID"
+          powershell -ExecutionPolicy Bypass -File scripts/tests/verify-windows-installer-contract.ps1 `
+            -ArtifactDiagnosticRoot $diagnosticRoot
+
+      - name: 🧪 Validate installed Windows lifecycle
+        shell: pwsh
+        run: |
+          $version = (Get-Content apps/dsa-desktop/package.json -Raw | ConvertFrom-Json).version
+          $installerPath = "apps/dsa-desktop/dist/pp02-ai-daily-stock-analysis-windows-installer-v$version.exe"
+          $installer = Get-Item -LiteralPath $installerPath -ErrorAction Stop
+          $installRoot = Join-Path $env:RUNNER_TEMP "pp02-installer-verify-$env:DSA_EXPECTED_PR_HEAD_SHA"
+          $diagnosticRoot = Join-Path $env:RUNNER_TEMP "pp02-installer-diagnostics-$env:DSA_EXPECTED_PR_HEAD_SHA-$env:GITHUB_RUN_ID"
+          powershell -ExecutionPolicy Bypass -File scripts/verify-windows-installer.ps1 `
+            -InstallerPath $installer.FullName `
+            -ExpectedVersion $version `
+            -InstallRoot $installRoot `
+            -DiagnosticRoot $diagnosticRoot `
+            -ExpectedCommitSha $env:DSA_EXPECTED_PR_HEAD_SHA
+
+      - name: 📤 Upload Windows installer diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: pp02-windows-installer-diagnostics-${{ env.DSA_EXPECTED_PR_HEAD_SHA }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/pp02-installer-diagnostics-${{ env.DSA_EXPECTED_PR_HEAD_SHA }}-${{ github.run_id }}
+          if-no-files-found: error
+          retention-days: 14
 
       - name: 🔍 Scan Windows fake credential leakage
         shell: pwsh
@@ -261,11 +304,14 @@ jobs:
             }
           }
 
-      - name: 📤 Upload verified portable candidate
+      - name: 📤 Upload verified Windows candidate
         uses: actions/upload-artifact@v6
         with:
-          name: pp02-windows-portable-${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          name: pp02-windows-candidate-${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           path: |
+            apps/dsa-desktop/dist/pp02-ai-daily-stock-analysis-windows-installer-v*.exe
+            apps/dsa-desktop/dist/pp02-ai-daily-stock-analysis-windows-installer-v*.exe.blockmap
+            apps/dsa-desktop/dist/latest.yml
             dist/pp02-ai-daily-stock-analysis-windows-noinstall-v*.zip
             dist/pp02-ai-daily-stock-analysis-windows-noinstall-v*.zip.sha256
           if-no-files-found: error
@@ -288,7 +334,7 @@ jobs:
       - name: 🟢 Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: apps/dsa-web/package-lock.json
       - name: 📦 Install Web dependencies

@@ -39,6 +39,7 @@ jobs:
           fi
           echo "DSA_WEB_VERSION=${RELEASE_TAG#v}" >> "$GITHUB_ENV"
           echo "DSA_WEB_REVISION=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_ENV"
+          echo "DSA_RELEASE_COMMIT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
       - uses: actions/setup-python@v6
         with:
@@ -47,7 +48,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: |
             apps/dsa-web/package-lock.json
@@ -70,6 +71,37 @@ jobs:
         run: |
           powershell -ExecutionPolicy Bypass -File scripts/build-all.ps1
 
+      - name: Validate Windows installer verifier contracts
+        shell: pwsh
+        run: |
+          $diagnosticRoot = Join-Path $env:RUNNER_TEMP "pp02-installer-diagnostics-$env:DSA_RELEASE_COMMIT_SHA-$env:GITHUB_RUN_ID"
+          powershell -ExecutionPolicy Bypass -File scripts/tests/verify-windows-installer-contract.ps1 `
+            -ArtifactDiagnosticRoot $diagnosticRoot
+
+      - name: Validate installed Windows lifecycle
+        shell: pwsh
+        run: |
+          $expectedVersion = $env:RELEASE_TAG.TrimStart('v')
+          $installerPath = "apps/dsa-desktop/dist/pp02-ai-daily-stock-analysis-windows-installer-$env:RELEASE_TAG.exe"
+          $installer = Get-Item -LiteralPath $installerPath -ErrorAction Stop
+          $installRoot = Join-Path $env:RUNNER_TEMP "pp02-installer-verify-$env:DSA_RELEASE_COMMIT_SHA"
+          $diagnosticRoot = Join-Path $env:RUNNER_TEMP "pp02-installer-diagnostics-$env:DSA_RELEASE_COMMIT_SHA-$env:GITHUB_RUN_ID"
+          powershell -ExecutionPolicy Bypass -File scripts/verify-windows-installer.ps1 `
+            -InstallerPath $installer.FullName `
+            -ExpectedVersion $expectedVersion `
+            -InstallRoot $installRoot `
+            -DiagnosticRoot $diagnosticRoot `
+            -ExpectedCommitSha $env:DSA_RELEASE_COMMIT_SHA
+
+      - name: Upload Windows installer diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: pp02-windows-installer-diagnostics-${{ env.DSA_RELEASE_COMMIT_SHA }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/pp02-installer-diagnostics-${{ env.DSA_RELEASE_COMMIT_SHA }}-${{ github.run_id }}
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Prepare release artifact (Windows)
         shell: pwsh
         run: |
@@ -91,6 +123,53 @@ jobs:
           node scripts/prepare-portable-release.js stage $env:RELEASE_TAG $winUnpacked $stage
           Compress-Archive -Path "$stage/*" -DestinationPath $zipTarget -CompressionLevel Optimal -Force
           node scripts/prepare-portable-release.js verify $env:RELEASE_TAG $zipTarget "$zipTarget.sha256"
+          $releaseFinalExtract = Join-Path $env:RUNNER_TEMP "pp02-portable-release-final-$env:DSA_RELEASE_COMMIT_SHA"
+          $directorySeparators = [char[]]@(
+            [IO.Path]::DirectorySeparatorChar,
+            [IO.Path]::AltDirectorySeparatorChar
+          )
+          $normalizedRunnerTemp = [IO.Path]::GetFullPath($env:RUNNER_TEMP).TrimEnd(
+            $directorySeparators
+          )
+          $normalizedReleaseFinalExtract = [IO.Path]::GetFullPath($releaseFinalExtract)
+          $runnerPrefix = $normalizedRunnerTemp + [IO.Path]::DirectorySeparatorChar
+          if (-not $normalizedReleaseFinalExtract.StartsWith(
+              $runnerPrefix,
+              [StringComparison]::OrdinalIgnoreCase
+            ) -or
+              -not (Split-Path -Leaf $normalizedReleaseFinalExtract).StartsWith(
+                'pp02-portable-release-final-',
+                [StringComparison]::OrdinalIgnoreCase
+              )) {
+            throw 'Release final ZIP extraction path is outside the owned runner root.'
+          }
+          try {
+            if (Test-Path -LiteralPath $releaseFinalExtract) {
+              Remove-Item -LiteralPath $releaseFinalExtract -Recurse -Force
+            }
+            Expand-Archive -LiteralPath $zipTarget -DestinationPath $releaseFinalExtract
+            $requiredBrowserRelativePath = 'resources/backend/stock_analysis/_internal/fake_useragent/data/browsers.jsonl'
+            $releaseFinalManifestPath = Join-Path $releaseFinalExtract 'pp02-portable-release.json'
+            $releaseFinalManifest = Get-Content -LiteralPath $releaseFinalManifestPath -Raw | ConvertFrom-Json
+            $managedBrowserEntries = @(
+              $releaseFinalManifest.managedFiles |
+                Where-Object { $_.relativePath -eq $requiredBrowserRelativePath }
+            )
+            if ($managedBrowserEntries.Count -ne 1) {
+              throw "Final Release portable manifest does not manage exactly one $requiredBrowserRelativePath entry."
+            }
+            $releaseBrowserData = Join-Path $releaseFinalExtract $requiredBrowserRelativePath
+            if (-not (Test-Path -LiteralPath $releaseBrowserData -PathType Leaf)) {
+              throw "Final Release portable ZIP is missing $requiredBrowserRelativePath."
+            }
+            $releaseFinalPackagedEntry = Join-Path $releaseFinalExtract 'resources/backend/stock_analysis/stock_analysis.exe'
+            powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/verify-frozen-backend.ps1 -PackagedEntry $releaseFinalPackagedEntry
+          }
+          finally {
+            if (Test-Path -LiteralPath $releaseFinalExtract) {
+              Remove-Item -LiteralPath $releaseFinalExtract -Recurse -Force
+            }
+          }
           Get-ChildItem -Path 'apps/dsa-desktop/dist' -File |
             Where-Object { $_.Name -eq 'latest.yml' -or $_.Name -like '*.blockmap' } |
             ForEach-Object {
@@ -168,7 +247,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: |
             apps/dsa-web/package-lock.json

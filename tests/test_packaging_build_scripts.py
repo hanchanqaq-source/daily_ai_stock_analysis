@@ -6,6 +6,7 @@ import os
 import shlex
 import subprocess
 import hashlib
+import re
 from pathlib import Path
 
 
@@ -14,6 +15,15 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
+
+
+def _workflow_job(workflow: str, job_name: str) -> str:
+    match = re.search(
+        rf"(?ms)^  {re.escape(job_name)}:\n(.*?)(?=^  [a-zA-Z0-9_-]+:\n|\Z)",
+        workflow,
+    )
+    assert match is not None, f"workflow job not found: {job_name}"
+    return match.group(0)
 
 
 def _bash_path(path: Path) -> str:
@@ -206,7 +216,7 @@ def test_windows_job_runs_head_bound_safe_storage_fake_credential_gate() -> None
     assert "R3_7_WINDOWS_FAKE_CREDENTIAL_SCAN=PASS" in scanner
     assert "Scan Windows fake credential leakage" in workflow
     assert workflow.index("Scan Windows fake credential leakage") < workflow.index(
-        "Upload verified portable candidate"
+        "Upload verified Windows candidate"
     )
     assert "$finalExtract" in workflow
     assert "$zip" in workflow
@@ -216,6 +226,191 @@ def test_windows_job_runs_head_bound_safe_storage_fake_credential_gate() -> None
     assert "R3_7_WINDOWS_FAKE_CREDENTIAL_VALIDATION=PASS" in harness
     assert "console.log(fake" not in harness
     assert "console.error(fake" not in harness
+
+
+def test_windows_jobs_execute_the_shared_installer_verifier() -> None:
+    ci = _read_text(REPO_ROOT / ".github" / "workflows" / "ci.yml")
+    release = _read_text(
+        REPO_ROOT / ".github" / "workflows" / "desktop-release.yml"
+    )
+    verifier_call = "scripts/verify-windows-installer.ps1"
+
+    assert verifier_call in ci
+    assert "Validate Windows installer verifier contracts" in ci
+    assert "Validate installed Windows lifecycle" in ci
+    assert ci.index(verifier_call) < ci.index("Upload verified Windows candidate")
+    assert verifier_call in release
+    assert "Validate Windows installer verifier contracts" in release
+    assert "Validate installed Windows lifecycle" in release
+    assert release.index(verifier_call) < release.index(
+        "Prepare release artifact (Windows)"
+    )
+
+
+def test_windows_installer_verifier_is_scoped_and_fail_closed() -> None:
+    verifier_path = REPO_ROOT / "scripts" / "verify-windows-installer.ps1"
+    contract_path = (
+        REPO_ROOT / "scripts" / "tests" / "verify-windows-installer-contract.ps1"
+    )
+
+    assert verifier_path.exists()
+    assert contract_path.exists()
+
+    verifier = _read_text(verifier_path)
+    contract = _read_text(contract_path)
+    for parameter in (
+        "InstallerPath",
+        "ExpectedVersion",
+        "InstallRoot",
+        "ExpectedCommitSha",
+    ):
+        assert parameter in verifier
+
+    assert "$env:RUNNER_TEMP" in verifier
+    assert "pp02-installer-verify-" in verifier
+    assert "Main UI loaded in" in verifier
+    assert "RegistryView]::Registry64" in verifier
+    assert "RegistryView]::Registry32" in verifier
+    assert "UninstallString" in verifier
+    assert "QuietUninstallString" in verifier
+    assert "Test-UninstallCommandTargetsPath" in verifier
+    assert "$entriesByIdentity" in verifier
+    assert "RegistryViews" in verifier
+    assert "Write-StartupDiagnostics" in verifier
+    assert "WINDOWS_INSTALLED_APP_STARTUP_DIAGNOSTIC_BEGIN" in verifier
+    assert "WINDOWS_INSTALLED_APP_STARTUP_DIAGNOSTIC_END" in verifier
+    assert "Expected exactly one HKCU uninstall entry for the owned uninstaller" in verifier
+    assert "Expected exactly one HKCU uninstall entry for the owned root" not in verifier
+    assert "WINDOWS_INSTALLER_INSTALL_VALIDATION=PASS" in verifier
+    assert "WINDOWS_INSTALLED_APP_STARTUP_VALIDATION=PASS" in verifier
+    assert "WINDOWS_UNINSTALL_VALIDATION=PASS" in verifier
+    assert "WINDOWS_INSTALLER_VALIDATION=FAIL" in verifier
+
+    assert "created-by-fake-installer.txt" in contract
+    assert "return 17;" in contract
+    assert "Verifier accepted a failing installer." in contract
+    assert "Verifier did not clean its owned install root." in contract
+    assert "Verifier removed a parent sentinel." in contract
+    assert "WINDOWS_INSTALLER_CONTRACT_VALIDATION=PASS" in contract
+    assert "Start-Process" in contract
+    assert "-RedirectStandardOutput" in contract
+    assert "-RedirectStandardError" in contract
+    assert "$contractProcess.ExitCode" in contract
+    assert "& $powerShell" not in contract
+
+
+def test_windows_installer_failure_diagnostics_are_preserved_and_redacted() -> None:
+    verifier = _read_text(
+        REPO_ROOT / "scripts" / "verify-windows-installer.ps1"
+    )
+    contract = _read_text(
+        REPO_ROOT
+        / "scripts"
+        / "tests"
+        / "verify-windows-installer-contract.ps1"
+    )
+
+    assert "DiagnosticRoot" in verifier
+    assert "pp02-installer-diagnostics-" in verifier
+    assert "Save-InstallerDiagnostics" in verifier
+    assert "Protect-DiagnosticText" in verifier
+    assert "diagnostic-summary.txt" in verifier
+    assert "desktop-startup-sanitized.log" in verifier
+    assert "backend-probe-stderr-sanitized.log" in verifier
+    assert "backend-probe-summary.txt" in verifier
+    assert "port-process-state.txt" in verifier
+    assert "windows-application-events-sanitized.log" in verifier
+    assert "installed-files.txt" in verifier
+    assert "diagnostic-collector-status.txt" in verifier
+    assert "Get-NetTCPConnection" in verifier
+    assert "Get-WinEvent" in verifier
+    assert "-RedirectStandardError" in verifier
+    assert "-RedirectStandardOutput" in verifier
+    assert "Remove-Item -LiteralPath $rawBackendStderr" in verifier
+    assert "Remove-Item -LiteralPath $rawBackendStdout" in verifier
+    assert "Environment.GetEnvironmentVariables" not in verifier
+    assert "Get-ChildItem Env:" not in verifier
+    assert "-eq '.env'" in verifier
+    assert "WINDOWS_INSTALLER_DIAGNOSTIC=AVAILABLE" in verifier
+    assert "failure_stage=" in verifier
+    assert "stage_process_exit_code=" in verifier
+
+    assert "-DiagnosticRoot" in contract
+    assert "diagnostic-summary.txt" in contract
+    assert "WINDOWS_INSTALLER_DIAGNOSTIC=AVAILABLE" in contract
+    assert "Verifier did not preserve diagnostic evidence" in contract
+    assert "failure_stage=installer_process" in contract
+    assert "stage_process_exit_code=17" in contract
+    assert "installed_files=PASS" in contract
+
+
+def test_windows_jobs_upload_diagnostics_even_after_lifecycle_failure() -> None:
+    ci = _read_text(REPO_ROOT / ".github" / "workflows" / "ci.yml")
+    release = _read_text(
+        REPO_ROOT / ".github" / "workflows" / "desktop-release.yml"
+    )
+
+    for workflow, sha_expression in (
+        (ci, "env.DSA_EXPECTED_PR_HEAD_SHA"),
+        (release, "env.DSA_RELEASE_COMMIT_SHA"),
+    ):
+        assert "-DiagnosticRoot $diagnosticRoot" in workflow
+        assert "-ArtifactDiagnosticRoot $diagnosticRoot" in workflow
+        assert "Upload Windows installer diagnostics" in workflow
+        assert "if: always()" in workflow
+        assert "actions/upload-artifact@v6" in workflow
+        assert "github.run_id" in workflow
+        assert sha_expression in workflow
+        assert "pp02-windows-installer-diagnostics-" in workflow
+        assert "pp02-installer-diagnostics-" in workflow
+        assert workflow.index("Validate installed Windows lifecycle") < workflow.index(
+            "Upload Windows installer diagnostics"
+        )
+
+
+def test_windows_installer_validates_exit_restart_before_uninstall() -> None:
+    verifier = _read_text(
+        REPO_ROOT / "scripts" / "verify-windows-installer.ps1"
+    )
+
+    first_start = "WINDOWS_INSTALLED_APP_STARTUP_VALIDATION=PASS"
+    first_exit = "WINDOWS_INSTALLED_APP_EXIT_VALIDATION=PASS"
+    restart = "WINDOWS_INSTALLED_APP_RESTART_VALIDATION=PASS"
+    restart_exit = "WINDOWS_INSTALLED_APP_RESTART_EXIT_VALIDATION=PASS"
+    uninstall = "WINDOWS_UNINSTALL_VALIDATION=PASS"
+
+    for marker in (first_start, first_exit, restart, restart_exit, uninstall):
+        assert marker in verifier
+    assert "installed_app_restart" in verifier
+    assert "$restartReadyMarkerBaseline" in verifier
+    assert verifier.index(first_start) < verifier.index(first_exit)
+    assert verifier.index(first_exit) < verifier.index(restart)
+    assert verifier.index(restart) < verifier.index(restart_exit)
+    assert verifier.index(restart_exit) < verifier.index(uninstall)
+
+
+def test_desktop_build_jobs_use_supported_node_22_runtime() -> None:
+    ci = _read_text(REPO_ROOT / ".github" / "workflows" / "ci.yml")
+    release = _read_text(
+        REPO_ROOT / ".github" / "workflows" / "desktop-release.yml"
+    )
+
+    for job_name in (
+        "desktop-test",
+        "desktop-futu-package-windows",
+        "desktop-futu-package-macos",
+    ):
+        job = _workflow_job(ci, job_name)
+        assert "actions/setup-node@v6" in job
+        assert "node-version: '22'" in job
+
+    web_job = _workflow_job(ci, "web-gate")
+    assert "node-version: '20'" in web_job
+
+    for job_name in ("build-windows", "build-macos"):
+        job = _workflow_job(release, job_name)
+        assert "actions/setup-node@v6" in job
+        assert "node-version: '22'" in job
 
 
 def test_fake_credential_scanner_detects_utf8_and_never_prints_the_value(tmp_path: Path) -> None:

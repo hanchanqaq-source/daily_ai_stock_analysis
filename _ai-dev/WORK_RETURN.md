@@ -1,3 +1,160 @@
+# WORK-009｜PR #17 诊断证据链修复与 Windows 安装闭环（进行中）
+
+## 2026-08-02 固定 Head 完整闭环
+
+```text
+WORK8_CLOSEOUT=COMPLETED_WITH_BLOCKER
+WORK9_TAKEOVER=PASS
+CURRENT_HEAD=db02221b92e210925044c5af5a4aacd2f08fcb4f
+LATEST_CI_RUN=30745575186
+DIAGNOSTIC_CONTRACT_TEST=PASS_WINDOWS_POWERSHELL_5_1
+DIAGNOSTIC_ARTIFACT=PASS_FAILURE_ID_8832664000_AND_SUCCESS_ID_8833102391_REDACTED
+FINAL_ZIP_VALIDATION=PASS_FINAL_EXTRACT_MANIFEST_BROWSERS_JSONL_AND_BACKEND_START
+DIRECT_ERROR=NLTK_3_10_1_BLOCKED_BUNDLED_XML_FROM_INSTALL_ROOT_CWD
+ROOT_CAUSE=INSTALLED_BACKEND_CWD_WAS_ANCESTOR_OF_PYINSTALLER_BUNDLE
+REGRESSION_TEST=PASS_RED_THEN_GREEN_82_DESKTOP_AND_29_WINDOWS_TARGETS
+MINIMAL_FIX=PASS_PACKAGED_BACKEND_CWD_MOVED_TO_DATABASE_PARENT
+WINDOWS_INSTALLATION=PASS_INSTALLER_EXIT_0_AND_REGISTRATION_PASS
+INSTALLED_BACKEND_STARTUP=PASS_FIRST_START_AND_HEALTH
+EXIT_RESTART_UNINSTALL=PASS_EXIT_RESTART_HEALTH_SECOND_EXIT_UNINSTALL
+FULL_CI=PASS_8_OF_8_RUN_30745575186
+PROJECT_STATUS_SYNC=YES
+PR_BODY_SYNC=YES_EXTERNAL_PR_METADATA
+PR17_MERGE_STATUS=AWAITING_EXPLICIT_AUTHORIZATION
+V3_29_1_RELEASE_STATUS=BLOCKED_NOT_CREATED
+WINDOWS_REAL_MACHINE_ACCEPTANCE=NOT_RUN
+NEXT_APPROVAL_REQUIRED=MERGE_PR17
+```
+
+- Full-CI validated Head: `db02221b92e210925044c5af5a4aacd2f08fcb4f`.
+- Success diagnostic artifact `8833102391` is Head/Run-bound, has ZIP SHA-256
+  `5c0f19466e01c399dc20008d5589290d210e4f8e4b612ab4ea7319e50e6b90b8`, and records all
+  installed lifecycle stages as PASS without credentials, environment dump, database or user data.
+- Stop gate reached. Do not Ready, merge, tag, release, or claim Windows real-machine acceptance
+  without explicit authorization.
+
+## 2026-08-02 有效诊断与最小修复
+
+```text
+WORK8_CLOSEOUT=COMPLETED_WITH_BLOCKER
+WORK9_TAKEOVER=PASS
+CURRENT_HEAD=b4684f0be8a818b5b29688933e2a738663e1a638
+LATEST_CI_RUN=30744115030
+DIAGNOSTIC_CONTRACT_TEST=PASS_ON_WINDOWS_POWERSHELL_5_1
+DIAGNOSTIC_ARTIFACT=PASS_ID_8832664000_SHA256_6fa6366761d608572c04b401e69caa764483c7bab3c5bc61ecc96e958989ea65
+FINAL_ZIP_VALIDATION=PASS_BROWSERS_JSONL_PRESENT_MANAGED_AND_FROZEN_BACKEND_STARTED
+DIRECT_ERROR=NLTK_IMPORT_SECURITY_BLOCKED_BUNDLED_XML_FROM_INSTALL_ROOT_CWD
+ROOT_CAUSE=INSTALLED_BACKEND_CWD_IS_ANCESTOR_OF_PYINSTALLER_BUNDLE
+REGRESSION_TEST=PASS_RED_THEN_GREEN
+MINIMAL_FIX=LOCAL_PASS_PACKAGED_CWD_MOVED_TO_DATABASE_PARENT
+WINDOWS_INSTALLATION=PASS_ON_DIAGNOSTIC_HEAD
+INSTALLED_BACKEND_STARTUP=FAIL_ON_DIAGNOSTIC_HEAD_ROOT_CAUSE_CONFIRMED
+EXIT_RESTART_UNINSTALL=PENDING_FIXED_HEAD_CI
+FULL_CI=PENDING_MINIMAL_FIX_HEAD
+PR17_MERGE_STATUS=BLOCKED
+V3_29_1_RELEASE_STATUS=BLOCKED
+WINDOWS_REAL_MACHINE_ACCEPTANCE=NOT_RUN
+```
+
+- Artifact security check found no raw diagnostic files, token/key prefixes, credential files,
+  databases, complete environment dump or user-data payload.
+- Desktop `82/82` and Windows packaging/diagnostic/final-ZIP targets `29/29` pass locally.
+- The next authority gate is fixed-Head full CI; PR #17 remains Draft.
+
+## 2026-08-02 正式接管
+
+```text
+WORK8_CLOSEOUT=COMPLETED_WITH_BLOCKER
+WORK9_TAKEOVER=PASS
+CURRENT_HEAD=9cb9a70e9176711096adf12ba5674c56d6f314d2
+LATEST_CI_RUN=30742085965
+DIAGNOSTIC_CONTRACT_TEST=IN_PROGRESS
+DIAGNOSTIC_ARTIFACT=PREVIOUS_RUN_MISSING
+PR17_MERGE_STATUS=BLOCKED
+V3_29_1_RELEASE_STATUS=BLOCKED
+WINDOWS_REAL_MACHINE_ACCEPTANCE=NOT_RUN
+```
+
+- PR #17、远程分支和干净检出已重新核对；未发现晚于 `9cb9a70…` 的提交。
+- Work8 锁已释放，Work9 锁已取得。Work8 的失败快照不回退，也不冒充修复成功。
+- 当前仅进入诊断契约 RED/GREEN；有效 artifact 出现前不修改后端产品根因。
+
+---
+
+# 历史回传｜WORK-008 / Windows installer hotfix
+
+## 2026-08-02 纠偏诊断结果
+
+```text
+DIAGNOSTIC_HEAD=eae4b46501c9a183dda20d2975121987e676943b
+LATEST_CI_RUN=30742085965
+WINDOWS_INSTALLATION=NOT_RUN_ON_DIAGNOSTIC_HEAD
+DIAGNOSTIC_ARTIFACT=FAILED_NOT_PRESERVED
+INSTALLED_BACKEND_STARTUP=NOT_RUN_ON_DIAGNOSTIC_HEAD
+ROOT_CAUSE=ROOT_CAUSE_BLOCKED_EVIDENCE_INSUFFICIENT
+REGRESSION_TEST=LOCAL_PASS_82_DESKTOP_AND_15_DIAGNOSTIC_CONTRACTS;WINDOWS_CONTRACT_FAIL
+FULL_CI=FAIL_7_SUCCESS_1_WINDOWS_FAILURE
+PROJECT_STATUS_SYNC=YES
+PR_BODY_SYNC=YES_EXTERNAL_PR_METADATA
+PR17_MERGE_STATUS=BLOCKED
+V3_29_1_RELEASE_STATUS=BLOCKED
+WINDOWS_REAL_MACHINE_ACCEPTANCE=NOT_RUN
+```
+
+- The one diagnostics-only fixed-Head Run completed without a second attempt. Windows candidate
+  construction succeeded, then the verifier contract failed before installed lifecycle execution.
+- The artifact upload used `if: always()` and a Head/Run-bound name, but failed because the
+  diagnostic directory contained no files. No installed backend stderr or exception artifact is
+  available.
+- No backend or packaging-root-cause patch followed. Work8 stops at the evidence-insufficient
+  verdict and PR #17 remains Draft.
+
+## 已确认失败
+
+```text
+WINDOWS_NATIVE_ENVIRONMENT=PASS
+RELEASE_PROVENANCE_VALIDATION=PASS
+INSTALLER_HASH_VALIDATION=PASS
+WINDOWS_INSTALLATION_VALIDATION=FAIL
+FIRST_STARTUP_VALIDATION=NOT_EXECUTED_DUE_TO_INSTALLATION_FAILURE
+EMPTY_DATA_VALIDATION=NOT_EXECUTED_DUE_TO_INSTALLATION_FAILURE
+SAFE_DEFAULTS_VALIDATION=NOT_EXECUTED_DUE_TO_INSTALLATION_FAILURE
+RESTART_VALIDATION=NOT_EXECUTED_DUE_TO_INSTALLATION_FAILURE
+R7_WINDOWS_FIRST_USE_ACCEPTANCE=FAIL
+```
+
+- 验收环境：Windows 11 Home China `10.0.26200`，x64。
+- v3.29.0 安装器实际大小 `209712731` 字节，SHA-256
+  `a9a0b547ff9be2c9153a006d3471f350f712a5306a1267d19fd111aa0e54fbdb`，均匹配。
+- Authenticode 为 `NotSigned`；本 Work 不擅自扩大到代码签名。
+- 安装器两次均在显示可操作安装向导前崩溃；Windows Event 指向解包
+  `System.dll`，异常 `0xC0000005`。
+- 未读取或删除预先存在的用户目录；未制造空数据通过。
+
+## Work8 当前进度
+
+- 用户已授权 Work8 并选择 `A｜保留安装向导`。
+- 固定 Base：`main@66666352e953d90becce420da7d35b649516af76`。
+- 分支：`agent/pp02-work8-r7-installer-fix`。
+- Draft PR：[#17](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/17)。
+- 已提交设计：
+  `docs/superpowers/specs/2026-08-01-work8-windows-installer-hotfix-design.md`。
+- 设计锁定 `electron-builder 26.15.7`、保留 assisted/current-user 安装，并新增
+  PR 与 Release 共用的 Windows install/start/uninstall verifier。
+- 用户已批准设计勘误：Desktop 测试、Windows/macOS 打包和 Desktop Release 使用
+  Node 22，独立 Web 门继续使用 Node 20。
+- 已精确锁定 builder、显式补齐既有测试使用的 `archiver 5.3.2` 开发依赖，并新增
+  fail-closed verifier、失败进程 fixture、PR 与 Release 生命周期门。
+- TDD RED 分别证明旧 builder、缺失 verifier/工作流门、旧 Node 20 和未声明
+  `archiver` 会失败；GREEN 后 Desktop Node 22 测试 `81/81`、安装器与打包专项
+  `23/23` 通过，workflow YAML 与差异格式检查通过。
+- 当前 Judge：`ROOT_CAUSE_BLOCKED_EVIDENCE_INSUFFICIENT`。
+- Run `30742085965`：macOS 与其余六个非 Windows Job 成功；Windows 在 verifier
+  contract 失败，安装/启动/卸载生命周期被跳过，诊断 artifact 上传失败。
+- 未授权 Ready、Merge、main、`v3.29.1` Tag/Release 或真实数据。
+
+---
+
 # WORK-007｜R7 主线合并与正式发布最终回传
 
 > 当前 Work 已完成。以下只记录已取得的 GitHub、CI、Tag、Release 和产物证据。

@@ -31,6 +31,7 @@ let electronUpdateCheckInFlight = false;
 let portableRelease = null;
 let credentialVault = null;
 let activeBackendRuntime = null;
+let installerDiagnosticBytesWritten = 0;
 
 function resolveWindowBackgroundColor() {
   return nativeTheme.shouldUseDarkColors ? '#08080c' : '#f4f7fb';
@@ -47,6 +48,8 @@ const DEFAULT_REQUEST_TIMEOUT_MS = 5000;
 const DESKTOP_UPDATE_BACKUP_DIR = '.dsa-desktop-update-backup';
 const DESKTOP_UPDATE_BACKUP_MANIFEST_FILE = 'runtime-state.json';
 const DESKTOP_BACKEND_DEFAULT_HOST = '127.0.0.1';
+const INSTALLER_DIAGNOSTIC_ROOT_ENV = 'DSA_INSTALLER_DIAGNOSTIC_ROOT';
+const INSTALLER_DIAGNOSTIC_MAX_BYTES = 512 * 1024;
 const PUBLIC_BIND_HOSTS = Object.freeze(new Set(['0.0.0.0', '::', '[::]', '*']));
 const MAC_DESKTOP_CLI_PATH_ENTRIES = Object.freeze([
   '/opt/homebrew/bin',
@@ -1082,6 +1085,60 @@ function decodeBackendOutput(data, decoder) {
   return decoded.trim();
 }
 
+function protectInstallerDiagnosticText(value) {
+  return String(value || '')
+    .replace(
+      /((?:api[_-]?key|token|secret|password|passwd|webhook|authorization|cookie|credential)\s*[:=]\s*)([^\s,;]+)/gi,
+      '$1<redacted>'
+    )
+    .replace(/([?&](?:api[_-]?key|token|secret|password|webhook)=)[^&\s]+/gi, '$1<redacted>')
+    .replace(/(Bearer\s+)[A-Za-z0-9._~+/=-]+/gi, '$1<redacted>')
+    .replace(/\b(?:sk-[A-Za-z0-9_-]{8,}|gh[opsu]_[A-Za-z0-9_]{12,})\b/g, '<redacted>');
+}
+
+function resolveInstallerDiagnosticFile(sourceEnv = process.env) {
+  if (!isWindows) {
+    return null;
+  }
+  const runnerTemp = String(sourceEnv.RUNNER_TEMP || '').trim();
+  const diagnosticRoot = String(sourceEnv[INSTALLER_DIAGNOSTIC_ROOT_ENV] || '').trim();
+  if (!runnerTemp || !diagnosticRoot) {
+    return null;
+  }
+
+  const normalizedRunnerTemp = path.resolve(runnerTemp);
+  const normalizedDiagnosticRoot = path.resolve(diagnosticRoot);
+  const relative = path.relative(normalizedRunnerTemp, normalizedDiagnosticRoot);
+  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
+    return null;
+  }
+  if (!path.basename(normalizedDiagnosticRoot).toLowerCase().startsWith('pp02-installer-diagnostics-')) {
+    return null;
+  }
+  return path.join(normalizedDiagnosticRoot, 'backend-stderr-sanitized.log');
+}
+
+function writeInstallerBackendDiagnostic(message) {
+  const diagnosticFile = resolveInstallerDiagnosticFile();
+  if (!diagnosticFile || installerDiagnosticBytesWritten >= INSTALLER_DIAGNOSTIC_MAX_BYTES) {
+    return;
+  }
+
+  const protectedLine = `[${new Date().toISOString()}] ${protectInstallerDiagnosticText(message)}\n`;
+  const remainingBytes = INSTALLER_DIAGNOSTIC_MAX_BYTES - installerDiagnosticBytesWritten;
+  const lineBuffer = Buffer.from(protectedLine, 'utf8');
+  const output = lineBuffer.length <= remainingBytes
+    ? lineBuffer
+    : lineBuffer.subarray(0, remainingBytes);
+  try {
+    ensureDirectory(path.dirname(diagnosticFile));
+    fs.appendFileSync(diagnosticFile, output);
+    installerDiagnosticBytesWritten += output.length;
+  } catch (_error) {
+    // The verifier remains responsible for reporting an unavailable diagnostic artifact.
+  }
+}
+
 function formatCommand(command, args = []) {
   return [command, ...args]
     .map((part) => {
@@ -1332,7 +1389,8 @@ function startBackend({ port, envFile, dbPath, logDir, host = null, secureCreden
     }
     launchMode = 'packaged';
     launchCommand = formatCommand(backendPath, args);
-    launchCwd = path.dirname(envFile);
+    launchCwd = path.dirname(dbPath);
+    ensureDirectory(launchCwd);
     backendProcess = spawn(backendPath, args, {
       env,
       cwd: launchCwd,
@@ -1362,9 +1420,15 @@ function startBackend({ port, envFile, dbPath, logDir, host = null, secureCreden
 
     backendProcess.once('spawn', () => {
       logLine(`[backend] spawned pid=${backendProcess.pid} in ${Date.now() - launchStartedAt}ms`);
+      writeInstallerBackendDiagnostic(
+        `backend_spawned pid=${backendProcess.pid} elapsed_ms=${Date.now() - launchStartedAt}`
+      );
     });
     backendProcess.on('error', (error) => {
       backendStartError = error;
+      writeInstallerBackendDiagnostic(
+        `backend_start_error type=${error?.name || 'Error'} message=${error?.message || 'unknown'}`
+      );
       logLine(
         forwardBackendOutput
           ? `[backend] failed to start: ${error.message}`
@@ -1385,12 +1449,17 @@ function startBackend({ port, envFile, dbPath, logDir, host = null, secureCreden
         firstStderrLogged = true;
         logLine(`[backend] first stderr after ${Date.now() - launchStartedAt}ms`);
       }
+      const decodedStderr = decodeBackendOutput(data, stderrDecoder);
+      writeInstallerBackendDiagnostic(`backend_stderr ${decodedStderr}`);
       if (forwardBackendOutput) {
-        logLine(`[backend] ${decodeBackendOutput(data, stderrDecoder)}`);
+        logLine(`[backend] ${decodedStderr}`);
       }
     });
     backendProcess.on('exit', (code, signal) => {
       logLine(`[backend] exited with code ${code}, signal ${signal || 'none'}`);
+      writeInstallerBackendDiagnostic(
+        `backend_exit exit_code=${code} signal=${signal || 'none'}`
+      );
     });
   }
 

@@ -1,5 +1,14 @@
 # PP02 安全重建路线 R0–R7
 
+## 2026-08-02 Work9 fixed-Head closure
+
+- Draft PR #17 implementation Head `db02221b92e210925044c5af5a4aacd2f08fcb4f` passed all
+  eight jobs in Run `30745575186`.
+- The final Windows ZIP, managed browser-data file, installer, first startup/health, exit, restart,
+  second health/exit, uninstall and redacted diagnostic artifact all passed.
+- PR #17 remains Draft and unmerged. v3.29.1 Tag/Release and Windows real-machine acceptance have
+  not been performed. Next gate: explicit PR #17 merge authorization.
+
 唯一当前状态见 [`../../_ai-dev/PROJECT_STATUS.md`](../../_ai-dev/PROJECT_STATUS.md)。
 当前采用 `PP02-WORK-HANDOFF-002`：一个完整大段使用一个 Work 聊天；聊天不绑定
 永久角色，不改显示名称，交接依赖唯一状态和 GitHub 事实，用户无需搬运施工单。
@@ -14,6 +23,7 @@
 | R5｜Windows 本机验收 | 安装、启动、Web/Desktop 与安全默认值 | 完成 | Work2 / PR #9 真机启动与回滚模拟通过 |
 | R6｜正式数据迁移 | 迁移经确认的真实数据 | 完成（无数据，跳过迁移） | Work6 `NO_FORMAL_DATA_FOUND`；旧项目和数据库从未建立 |
 | R7｜替换 main 与 Release | Ready、合并、main、Tag、Release | 完成 | `v3.29.0` 已发布；PR #15 后续文档主线 Run `30697946093` 8/8 success |
+| R7-Hotfix｜Windows 安装器补丁 | 修复 v3.29.0 `System.dll / 0xC0000005` 引导崩溃 | 实施中 | Work9 / Draft PR #17；先修诊断证据链，再闭环安装生命周期 |
 
 ## 当前 R3 顺序
 
@@ -27,6 +37,28 @@
 
 详细文件边界、契约和验收见
 [`R2_MIGRATION_EXECUTION_PLAN.md`](R2_MIGRATION_EXECUTION_PLAN.md)。
+
+## Work9 / PR #17 diagnostic evidence and Windows closure（2026-08-02）
+
+- Work8 以 `COMPLETED_WITH_BLOCKER` 结束；固定诊断 Head `eae4b465…` 的 Run
+  `30742085965` 为 7 成功、1 Windows 失败，且没有保留诊断 artifact。
+- Work9 在当前分支 Head `9cb9a70e9176711096adf12ba5674c56d6f314d2` 正式接管，继续
+  Draft PR #17。顺序锁定为诊断契约、最终 ZIP、固定 Head Windows CI、证据化根因、
+  最小修复和完整 CI。
+- 范围内 Commit/Push/CI 已授权；Ready、Merge、main、Tag、Release、真实数据/凭据
+  和 Windows 真机动作仍受停止门约束。
+
+## Work8 / R7 Windows installer hotfix（2026-08-01）
+
+- v3.29.0 正式安装器来源、大小与 SHA-256 正确，但在 Windows 11 build 26200 上
+  连续 2/2 于安装向导前以 `System.dll / 0xC0000005` 崩溃；R7 首次使用验收为 FAIL。
+- 用户已授权 Work8、选择保留安装向导，并批准 Desktop 测试与 Windows/macOS
+  打包/发布任务升级至 Node 22；独立 Web 门保持 Node 20。
+- Draft PR #17 精确锁定 `electron-builder 26.15.7`，保留当前用户安装和目录选择，
+  并让 PR/Release 共用隔离 install/start/uninstall 验证器。
+- 本地 Desktop 与专项检查通过；固定 Head Run `30742085965` 的七个非 Windows
+  任务成功，但 Windows 契约在真实安装生命周期前失败，且没有诊断 artifact。
+- 未授权 Ready、Merge、main、`v3.29.1` Tag/Release 或最终 Windows 实机验收。
 
 ## Work7 / R7 最终完成（2026-08-01）
 

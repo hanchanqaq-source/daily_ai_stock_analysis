@@ -6,32 +6,172 @@
 PROJECT_ID=PP02
 PROJECT_NAME=AI 每日股票分析
 CHAT_ROLE=AUTO_TAKEOVER
-WORK_ID=WORK-007
+WORK_ID=WORK-009
 ROLE_LOCK=SUPERSEDED_BY_PP02-WORK-HANDOFF-002
 WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
-WORK_STATE=COMPLETED
-EXECUTION_LOCK=RELEASED
-APPLICATION_BASE_VERSION=3.28.0
-TARGET_RELEASE_VERSION=3.29.0
+WORK_STATE=WAITING_FOR_AUTHORIZATION
+EXECUTION_LOCK=HELD_BY_WORK_009
+APPLICATION_BASE_VERSION=3.29.0
+TARGET_RELEASE_VERSION=3.29.1
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-ACTIVE_BASE=b4a0ec11da19b5552ce87dde1ece716f61fd5174
-ACTIVE_BRANCH=NONE
-ACTIVE_PR=NONE
-CURRENT_STAGE=R7 / Released-and-Closed
-CURRENT_WORK=NONE — WORK-007 COMPLETED
-ACTIVE_GOAL=NONE
-CURRENT_STATUS=PASS — v3.29.0 RELEASED — R7 CLOSED
-ACTIVE_BLOCKER=NONE
-RELEASE_TAG=v3.29.0
-RELEASE_COMMIT=49759dbd032f577d32e8e0f6670298f700e0f272
-POST_RELEASE_MAIN=b4a0ec11da19b5552ce87dde1ece716f61fd5174
-LAST_MAIN_CI_RUN=30697946093
-NEXT_WORK=NONE_SCHEDULED
-NEXT_ACTION=等待用户提出并授权新的项目目标
-AUTHORIZATION_REQUIRED=TRUE_FOR_ANY_NEW_SCOPE/READY/MERGE/MAIN_WRITE/TAG/RELEASE/REAL_DATA
-LAST_UPDATED=2026-08-01
+ACTIVE_BASE=66666352e953d90becce420da7d35b649516af76
+ACTIVE_BRANCH=agent/pp02-work8-r7-installer-fix
+ACTIVE_PR=17
+CURRENT_STAGE=R7 Hotfix / Fixed-Head Full CI Pass
+CURRENT_WORK=WORK-009 — PR #17 diagnostic evidence chain repair and Windows install closure
+ACTIVE_GOAL=preserve cleanup-independent redacted diagnostics, prove the final deliverable, and close the installed Windows lifecycle
+WORK9_TAKEOVER_HEAD=9cb9a70e9176711096adf12ba5674c56d6f314d2
+LAST_DIAGNOSTIC_HEAD=b4684f0be8a818b5b29688933e2a738663e1a638
+LATEST_CI_RUN=30745575186
+DIAGNOSTIC_ARTIFACT_ID=8832664000
+DIAGNOSTIC_ARTIFACT_SHA256=6fa6366761d608572c04b401e69caa764483c7bab3c5bc61ecc96e958989ea65
+FULL_CI_VALIDATED_HEAD=db02221b92e210925044c5af5a4aacd2f08fcb4f
+FULL_CI_RUN=30745575186
+SUCCESS_DIAGNOSTIC_ARTIFACT_ID=8833102391
+SUCCESS_DIAGNOSTIC_ARTIFACT_SHA256=5c0f19466e01c399dc20008d5589290d210e4f8e4b612ab4ea7319e50e6b90b8
+WINDOWS_CANDIDATE_ARTIFACT_ID=8833107659
+CURRENT_STATUS=FULL_CI_PASS_AWAITING_PR17_MERGE_AUTHORIZATION
+ACTIVE_BLOCKER=PR17_MERGE_AUTHORIZATION_REQUIRED
+FAILED_RELEASE_TAG=v3.29.0
+FAILURE_CLASS=INSTALLER_BOOTSTRAP_CRASH
+FAILURE_REPRODUCIBILITY=2/2
+FAILURE_EXCEPTION=0xC0000005 / System.dll
+NEXT_WORK=NONE_WHILE_WORK_009_ACTIVE
+NEXT_ACTION=STOP_AND_WAIT_FOR_EXPLICIT_PR17_MERGE_AUTHORIZATION
+AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/MAIN_WRITE/TAG/RELEASE/REAL_DATA/WINDOWS_REAL_MACHINE_ACTION
+LAST_UPDATED=2026-08-02
 ```
+
+## 2026-08-02 Work9 / formal takeover
+
+- User formally authorized `WORK-009｜PR #17 诊断证据链修复与 Windows 安装闭环` to
+  continue the existing Draft PR #17 without restarting the route or changing the approved
+  assisted current-user installer design.
+- GitHub and a clean branch checkout were rechecked at takeover. PR #17 remains Open/Draft on
+  `agent/pp02-work8-r7-installer-fix`; the current full Head is
+  `9cb9a70e9176711096adf12ba5674c56d6f314d2`. No newer branch commit was found.
+- Work8 is closed as `COMPLETED_WITH_BLOCKER`. Its last evidence remains diagnostic Head
+  `eae4b46501c9a183dda20d2975121987e676943b` and Run `30742085965`: seven jobs passed,
+  the Windows verifier contract failed, and no Windows diagnostic artifact was retained.
+- The Work8 execution lock is released and transferred to `HELD_BY_WORK_009`. Work9 is authorized
+  for in-scope tests, commits, pushes and fixed-Head CI on the existing Draft PR. Ready, merge,
+  `main`, Tag, Release, real data/credentials and Windows real-machine actions remain hard gates.
+- Required order is evidence-chain RED/GREEN first, final ZIP verification second, one fixed-Head
+  diagnostic run third, and only then an evidence-backed backend root-cause fix. If the artifact is
+  still unavailable, stop at `ROOT_CAUSE_BLOCKED_EVIDENCE_INSUFFICIENT` without guessing.
+
+## 2026-08-02 Work9 / diagnostic evidence and minimal root-cause fix
+
+- The cleanup-independent diagnostic change was pushed at fixed Head
+  `b4684f0be8a818b5b29688933e2a738663e1a638`. Run `30744115030` finished with seven
+  successful non-Windows jobs and one failed Windows lifecycle job. The Windows PowerShell 5.1
+  diagnostic contract passed before the installed lifecycle ran.
+- Final candidate verification passed before installation: the final ZIP was extracted, its
+  `pp02-portable-release.json.managedFiles` contained exactly one
+  `resources/backend/stock_analysis/_internal/fake_useragent/data/browsers.jsonl`, the file was
+  present, and the frozen backend started from the final extracted ZIP.
+- The installer returned exit code 0 and its install/registration checks passed. The installed
+  desktop launched the bundled backend but never opened port 8000. The Head/Run-bound
+  `if: always()` upload succeeded as artifact `8832664000` (52,836 bytes, SHA-256
+  `6fa6366761d608572c04b401e69caa764483c7bab3c5bc61ecc96e958989ea65`).
+- The artifact contains stage/process timing, exit status, sanitized desktop/backend stderr,
+  executable and working-directory evidence, port/process state, Windows event status, installed
+  package inventory and collector status. It contains no raw stderr, credential/token prefix,
+  complete environment dump, database, or user-data file.
+- Direct error, reproduced by both the Electron child and an independent backend probe:
+  NLTK 3.10.1 `pyi_rth_nltk.py` imports `nltk.internals`, whose `xml` import is rejected with
+  `ImportError: Blocked import of xml from current working directory for security reasons`.
+- Confirmed boundary/root cause: installed Electron starts the packaged backend with the install
+  root as CWD while the PyInstaller bundle is inside that root under `resources/backend/...`.
+  NLTK's import-security finder therefore classifies bundled stdlib `xml` as CWD content. The
+  build/final-ZIP smoke uses an unrelated temporary CWD and does not reproduce this topology.
+- TDD RED reproduced the installed ancestry in the Desktop launcher test. The single product fix
+  changes packaged-backend CWD to the database parent directory (created before spawn), keeping it
+  outside bundle ancestry while retaining `PYTHONSAFEPATH=1`; no NLTK guard, dependency or
+  packaging file was disabled or upgraded. The verifier also has a RED/GREEN gate for first exit,
+  fresh restart readiness, second exit and uninstall ordering.
+- Local GREEN: Desktop `82/82`; Windows packaging/diagnostic/final-ZIP targets `29/29`; workflow
+  YAML, AI assets and `git diff --check` pass. Fixed-Head full CI remains required before any merge
+  request.
+
+## 2026-08-02 Work9 / fixed-Head Windows closure
+
+- Final implementation Head `db02221b92e210925044c5af5a4aacd2f08fcb4f` completed Run
+  `30745575186` with all eight jobs successful: Change Detection, AI governance, Web, Backend,
+  Desktop tests, Docker, macOS package and Windows package/lifecycle.
+- Windows logs prove the ordered lifecycle on that exact Head: installer exit 0; install and
+  registration pass; first installed startup pass; first process-tree exit pass; fresh restart
+  readiness pass; second exit pass; uninstaller exit 0; uninstall cleanup pass.
+- The final ZIP gate again passed before installation, including exact managed-file membership and
+  existence for `fake_useragent/data/browsers.jsonl` plus frozen-backend startup from the extracted
+  final ZIP.
+- Success-path diagnostics were uploaded with `if: always()` as artifact `8833102391`, bound to the
+  full Head and Run ID. Its ZIP SHA-256 is
+  `5c0f19466e01c399dc20008d5589290d210e4f8e4b612ab4ea7319e50e6b90b8`; its summary is
+  `WINDOWS_INSTALLER_DIAGNOSTIC=NOT_REQUIRED_VALIDATION_PASS`, and its stage report records every
+  lifecycle stage through uninstall cleanup as PASS. Security review found no credential file,
+  token prefix, unredacted sensitive assignment, complete environment dump, database or user data.
+- PR #17 remains Open/Draft and unmerged. No Tag or Release exists for v3.29.1, and Windows real
+  machine acceptance has not been run. Work9 is stopped at the explicit merge-authorization gate.
+
+## 2026-08-02 Work8 / corrective diagnostic run blocked on evidence preservation
+
+- The corrective audit rechecked GitHub before making changes: Draft PR #17 was at
+  `eec9a44ce707daf149b3f571761fc27385772e85`, and Run `30717606318` had seven
+  successful jobs plus one failed Windows lifecycle job. The installer completed, but the
+  installed application never opened backend port `127.0.0.1:8000`; no diagnostic artifact was
+  retained.
+- A diagnostics-only commit produced fixed Head
+  `eae4b46501c9a183dda20d2975121987e676943b`. It added redacted backend lifecycle capture,
+  process/port state, relevant Windows events, an installed-file manifest, cleanup-independent
+  evidence storage and an `if: always()` artifact upload whose name binds the full Head and Run ID.
+  It did not change backend logic, dependencies or packaging structure.
+- Local diagnostic checks passed: Desktop tests `82/82`, packaging diagnostic contracts `15/15`,
+  both workflow YAML files, AI asset checks and `git diff --check`.
+- The one fixed-Head diagnostic Run `30742085965` ended with seven successful jobs and one failed
+  Windows job. Windows backend freezing and installer/portable candidate construction passed.
+  The verifier contract then failed with `Verifier did not preserve diagnostic evidence before
+  cleanup`; the installed lifecycle step was skipped. The `if: always()` upload step did execute,
+  but failed because the bound diagnostic directory contained no files. The Run contains no
+  Windows diagnostic artifact.
+- Therefore the installed backend's direct error, component boundary and root cause remain
+  unproven. Mandatory verdict: `ROOT_CAUSE_BLOCKED_EVIDENCE_INSUFFICIENT`. No backend fix, further
+  diagnostic patch or additional CI run is authorized from this evidence.
+- PR #17 remains Draft. `PR17_MERGE_STATUS=BLOCKED`, `V3_29_1_RELEASE_STATUS=BLOCKED`, and
+  `WINDOWS_REAL_MACHINE_ACCEPTANCE=NOT_RUN` for the patch candidate.
+- Deferred follow-up remains out of this PR: concentrated Electron/npm security upgrades,
+  Dependabot/blocking `npm audit`, all 101 Web test files, blocking Playwright E2E, Windows signing,
+  macOS signing/notarization and the final desktop icon.
+
+## 2026-08-01 Work8 / v3.29.0 Windows installer failure and A-design
+
+- Windows native acceptance verified the official installer filename, byte size and SHA-256, then
+  reproduced an installer bootstrap crash twice before installation completed. Both Windows Event
+  records identified `System.dll` and `0xC0000005`; no install registration, install directory or
+  PP02 process remained.
+- Final acceptance Judge is `R7_WINDOWS_FIRST_USE_ACCEPTANCE=FAIL`. Startup, empty-data,
+  safe-default and restart checks were not executed because installation failed.
+- User authorized `Work8｜R7 安装器缺陷修复与 v3.29.1 补丁发布` and selected
+  `A｜保留安装向导`.
+- Root cause matches upstream electron-builder issue #8536 and merged fix #9564: the 24.x NSIS
+  current-user assisted-installer template can race in `System::Store()` on Windows 11.
+- Approved design is committed at
+  `docs/superpowers/specs/2026-08-01-work8-windows-installer-hotfix-design.md`.
+  It pins `electron-builder 26.15.7`, keeps the install-directory wizard and current-user mode,
+  and adds real Windows install/start/uninstall gates to PR and Release workflows.
+- User approved the design correction that Desktop test, Windows/macOS packaging and Desktop
+  Release jobs use Node 22 because `@electron/rebuild 4.x` requires Node `>=22.12`; the standalone
+  Web gate remains on Node 20.
+- Implementation commits pin the repaired builder, explicitly declare the existing test-only
+  `archiver 5.3.2` dependency, and add the shared fail-closed Windows verifier plus fixture.
+- Local evidence: Desktop Node 22 tests `81/81`; installer and packaging contracts `23/23`;
+  workflow YAML parsing and `git diff --check` pass. Windows lifecycle and macOS packaging remain
+  pending the PR fixed-Head Actions run.
+- Current authorization covers this branch, normal commits, a Draft PR, CI and in-scope fixes.
+  Ready, merge, main write, `v3.29.1` tag/Release and real data remain separate authorization
+  gates. `v3.29.0` is immutable and must not be moved or rebuilt.
+
 
 ## 2026-08-01 Work7 / R7 最终发布与台账收口
 

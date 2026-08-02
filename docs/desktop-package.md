@@ -42,7 +42,7 @@ npm run dev
 
 ### 前置条件
 
-- Node.js 18+
+- Node.js 22.12+（Desktop 构建链要求；独立 Web CI 仍使用 Node 20）
 - Python 3.10+
 - 开启 Windows 开发者模式（electron-builder 需要创建符号链接）
   - 设置 -> 隐私和安全性 -> 开发者选项 -> 开发者模式
@@ -109,11 +109,38 @@ spctl --assess --type execute --verbose=4 "/Applications/PP02 AI Daily Stock Ana
 
 ## 发版前可复现验证（桌面更新链路）
 
-桌面端自动更新链路依赖 Windows NSIS 安装产物、`latest.yml` 与 `*.blockmap` 元数据。当前桌面 CI 不覆盖 `desktop-release` 打包产物可发布链路，提交前建议补充如下本地验证：
+桌面端自动更新链路依赖 Windows NSIS 安装产物、`latest.yml` 与 `*.blockmap` 元数据。
+PR 的 `desktop-futu-package-windows` 与正式 `desktop-release` Windows Job 现在都会在
+Node 22 下调用同一个 `scripts/verify-windows-installer.ps1`：对本次 Job 自己创建的
+`RUNNER_TEMP/pp02-installer-verify-*` 目录执行静默安装，核对版本、资源、冻结后端和
+HKCU 卸载登记，启动到 `Main UI loaded in`，再静默卸载并确认程序文件及登记消失。
+任一步失败都会阻止候选上传或 Release 发布。
 
-说明：该清单专注于 Windows NSIS 安装版与 `electron-updater` 发布元数据。当前 Linux 环境无法直接产出 Windows 安装包和 updater 元数据（`latest.yml` / `*.blockmap`），此类链路需在 Windows 发布执行器或 Windows 本机环境复核。
+验证器只允许删除它已确认归属于本次运行且在执行前不存在的临时目录，不扫描或删除
+既有 PP02 安装目录和用户目录。CI 生命周期验证不替代正式 Release 的可见安装向导、
+空数据、安全默认和重启验收；后者仍须在授权后的 Windows 实机上单独执行。
 
-若在非 Windows 环境无法完成上述验证，请在 PR 验收说明中明确补齐 Windows 发布链路复核人、复核时间窗及 `desktop-release` 产物检查结果（release/tag 与 `pp02-ai-daily-stock-analysis-windows-installer-<tag>.exe`、`latest.yml`、`*.blockmap` 版本一致性与可下载性）。
+Windows 上可先运行验证器自身的失败进程与清理边界契约：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/tests/verify-windows-installer-contract.ps1
+```
+
+再对明确的候选安装器执行完整生命周期验证：
+
+```powershell
+$version = (Get-Content apps/dsa-desktop/package.json -Raw | ConvertFrom-Json).version
+$installer = Get-Item "apps/dsa-desktop/dist/pp02-ai-daily-stock-analysis-windows-installer-v$version.exe"
+$root = Join-Path $env:RUNNER_TEMP "pp02-installer-verify-$((git rev-parse HEAD).Trim())"
+powershell -ExecutionPolicy Bypass -File scripts/verify-windows-installer.ps1 `
+  -InstallerPath $installer.FullName `
+  -ExpectedVersion $version `
+  -InstallRoot $root `
+  -ExpectedCommitSha ((git rev-parse HEAD).Trim())
+```
+
+Linux 无法直接执行该 Windows 安装器门；以 PR 固定 Head 的 `windows-latest` Job
+输出为准，不得把 Linux 静态检查冒充安装验证。
 
 1. 先构建 Web 静态产物（桌面端主窗口与设置页入口依赖）
 
