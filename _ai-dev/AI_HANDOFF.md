@@ -1,43 +1,34 @@
 # PP02 新聊天交接
 
-## 当前接管入口｜WORK-009 / PR #17 diagnostic evidence and Windows closure
+## 当前接管入口｜WORK-010 / v3.29.1 release and Windows acceptance
 
 | 项目 | 当前值 |
 | --- | --- |
-| 当前状态 | `FULL_CI_PASS_AWAITING_PR17_MERGE_AUTHORIZATION` |
-| 当前 Work | `WORK-009｜PR #17 诊断证据链修复与 Windows 安装闭环` |
-| 固定 Base | `main@66666352e953d90becce420da7d35b649516af76` |
-| 分支 | `agent/pp02-work8-r7-installer-fix` |
-| Draft PR | [#17](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/17)，保持 Draft |
-| 失败证据 | v3.29.0 installer 2/2: `System.dll` / `0xC0000005` |
-| 用户决定 | `A｜保留安装向导` |
-| 设计 | `docs/superpowers/specs/2026-08-01-work8-windows-installer-hotfix-design.md` |
-| 诊断 Head / CI | `b4684f0be8a818b5b29688933e2a738663e1a638` / Run `30744115030` |
-| 诊断 artifact | `8832664000`；SHA-256 `6fa6366761d608572c04b401e69caa764483c7bab3c5bc61ecc96e958989ea65` |
-| 完整 CI | Head `db02221b92e210925044c5af5a4aacd2f08fcb4f` / Run `30745575186` / 8 of 8 success |
-| 成功诊断 artifact | `8833102391`；SHA-256 `5c0f19466e01c399dc20008d5589290d210e4f8e4b612ab4ea7319e50e6b90b8` |
-| 下一动作 | 停止并等待明确合并 PR #17 授权 |
-| 授权边界 | 允许范围内 Commit/Push/CI；禁止 Ready/Merge/main/Tag/Release/真实数据/真机动作 |
+| 当前状态 | `WORK10_A_PR_CI_PASS_AWAITING_READY_MERGE_RELEASE_AUTHORIZATION` |
+| 当前 Work | `WORK-010｜v3.29.1 发布与 Windows 真机验收` |
+| 固定产品 Commit | `3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65` |
+| 合并后 CI | Run `30747187504` / 8 of 8 success |
+| 分支 | `agent/pp02-work10-release-entry` |
+| Draft PR | [#18](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/18)，保持 Draft |
+| 当前子段 | `Work10-A｜云端发布入口修复` |
+| 本地验证 | Desktop Release 契约及关联打包回归 `24/24` |
+| PR CI | Head `e1a619c5867037bf569be5d741194ff792ce948b` / Run `30750806894` / 7 success + 1 path-skipped |
+| 下一动作 | 停止并请求 Ready＋合并＋v3.29.1 Tag/Release 授权 |
+| 授权边界 | 允许分支/Commit/Draft PR/CI；禁止 Ready/Merge/main/Tag/Release/真实数据/真机动作 |
 
-Work9 已在 `9cb9a70…` 完成正式接管。Work8 只修复
-Windows 安装器构建链和缺失的真实安装门：保留选择安装目录、当前用户安装、卸载、
-安装版自动更新和免安装 ZIP；不得改成一键固定目录或便携-only。
+PR #17 已合并，v3.29.1 的产品内容固定在 `3e1311ee…`；发布工作流修复合并后产生的
+新 `main` Head 只负责发布编排，不能替代该产品 Commit。
 
-用户已批准设计勘误：Desktop 测试、Windows/macOS 打包和 Desktop Release 使用
-Node 22；独立 Web 门保持 Node 20。诊断增强本地 Desktop `82/82`、专项 `15/15`
-通过。固定 Head Run `30742085965` 的七个非 Windows 作业成功，Windows 候选件也已
-构建；但验证器契约未能在清理前保存诊断摘要，真实安装生命周期被跳过，`always()`
-上传因目录无文件而失败。没有 Windows 诊断 artifact，后端根因仍未证实。
+Work10-A 只扩展现有 `.github/workflows/desktop-release.yml`：手动入口接收 Tag、完整
+Commit SHA 和 annotated Tag message；只读预检拒绝非 Commit 输入、lightweight/嵌套或
+错 Commit Tag、已有 Release 和不确定远端状态；Windows/macOS 显式 checkout 固定产品 Commit。全部构建成功
+后，唯一写权限 Job 在同一次 Run 内创建或安全复用 annotated Tag 并创建正式 Release。
 
-Work8 已固定为 `COMPLETED_WITH_BLOCKER`。Work9 的 Run `30744115030` 已恢复清理外、
-可脱敏上传的证据链：诊断 artifact `8832664000` 证明 NLTK 3.10.1 在安装根 CWD 下
-阻断 PyInstaller bundle 内的 `xml`。最小 CWD 修复后的固定 Head `db02221…` 已在
-Run `30745575186` 取得 8/8 success，Windows 安装、首次健康、退出、再次启动健康、
-再次退出、卸载与成功诊断 artifact 均通过。PR #17 仍为 Draft；等待明确合并授权。
+本地门已通过，Draft PR #18 已建立并保持 Draft；固定实现 Head `e1a619c58670…` 的
+Run `30750806894` 已全部通过（七个适用 Job success，Web Gate 按路径正常 skipped）。
 
-`v3.29.0` 的 Release、Tag 与失败证据保持不变，不得覆盖或重打。目标
-`v3.29.1` 尚未授权发布。正式 Windows 首次使用验收必须在补丁 Release 后重新
-执行，云端 CI 不得冒充最终实机验收。最后更新：2026-08-02。
+`v3.29.0` 保持不变；`v3.29.1` Tag/Release 尚不存在。Work10-A PR 的 Ready、合并，
+以及后续 Tag/Release 和 Windows 真机验收仍需明确授权。最后更新：2026-08-02。
 
 以下内容是旧 Work 的追加历史；与本节冲突时，以 `PROJECT_STATUS.md`、本节和
 GitHub 可验证事实为准。

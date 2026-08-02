@@ -1,4 +1,59 @@
-# WORK-009｜PR #17 诊断证据链修复与 Windows 安装闭环
+# WORK-010｜v3.29.1 发布与 Windows 真机验收
+
+## Work10-A｜云端发布入口修复
+
+```text
+WORK_ID=WORK-010
+WORK_STATE=ACTIVE
+BASE=3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65
+BRANCH=agent/pp02-work10-release-entry
+TARGET_RELEASE=v3.29.1
+PRODUCT_RELEASE_COMMIT=3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65
+CURRENT_GATE=READY_MERGE_TAG_RELEASE_AUTHORIZATION
+DRAFT_PR=18
+PR_CI_HEAD=e1a619c5867037bf569be5d741194ff792ce948b
+PR_CI_RUN=30750806894
+```
+
+## 授权范围
+
+- 在独立分支最小改造现有 `.github/workflows/desktop-release.yml`，保留 annotated Tag
+  push 兼容路径，并新增可从固定产品 Commit 完成发布的手动云端入口。
+- 允许契约测试、台账、Changelog、正常 Commit、远端分支、Draft PR、PR CI 与范围内
+  CI 修复。
+- 手动入口必须接收 SemVer Tag、完整 40 位 Commit SHA 和 annotated Tag message。
+- Windows/macOS 必须 checkout 固定产品 Commit；只有 publish Job 可使用
+  `contents: write`，并在同一次 Run 内完成 Tag 验证/创建与 Release。
+
+## 安全与恢复契约
+
+- 目标 SHA 必须直接标识 Commit object 且可从 `origin/main` 到达；工作流修复后的新
+  main Head 不得替代固定产品 Commit。
+- Tag 不存在时只能创建 annotated Tag；已有正确 annotated Tag 可恢复，其 Tag object
+  必须直接指向目标 Commit 且内部 Tag 名匹配；lightweight、嵌套或错 Commit Tag、已有
+  Release 或无法确认 Release 状态必须失败。
+- 禁止 force、移动、删除或覆盖 Tag；任一构建失败时不得创建 Tag。
+- Tag 创建与 Release 必须在同一次手动 Run 内闭环，不依赖默认令牌推送 Tag 后再次
+  触发另一条工作流。
+
+## 非目标与停止门
+
+- 不修改产品业务代码，不新建平行发布系统，不增加 main push/定时自动发布，不使用
+  PAT、真实 Token 或用户凭据。
+- 当前不授权 Ready、Merge、main 写入、v3.29.1 Tag/Release、Windows 真机操作、
+  真实数据或其他版本。
+- Draft PR 固定 Head CI 全部通过后，必须停止并请求一次“Ready＋合并＋发布”授权。
+
+## 验收
+
+1. 四组确定性契约覆盖输入、固定 Commit、并发、Tag/Release 安全、Job 顺序与权限。
+2. Workflow YAML、相关打包回归、AI 资产、格式和敏感内容检查通过。
+3. Draft PR 保持 Draft，真实 CI 绑定固定 PR Head。
+4. Judge 上限为 `LOCAL_GATES_PASS — DRAFT_PR_AND_CI_PENDING`，直到远端证据取得。
+
+---
+
+# 历史任务合同｜WORK-009 / PR #17 诊断证据链修复与 Windows 安装闭环
 
 ## 当前任务身份
 

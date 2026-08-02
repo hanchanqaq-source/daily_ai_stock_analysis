@@ -1,4 +1,36 @@
-# WORK-009｜PR #17 诊断证据链修复与 Windows 安装闭环（进行中）
+# WORK-010｜v3.29.1 发布与 Windows 真机验收（进行中）
+
+## Work10-A｜云端发布入口修复
+
+```text
+PRODUCT_RELEASE_COMMIT=3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65
+BRANCH=agent/pp02-work10-release-entry
+LOCAL_CONTRACTS=PASS_24_OF_24
+WORKFLOW_YAML_PARSE=PASS
+AI_ASSETS=PASS
+DRAFT_PR=18_DRAFT
+PR_CI=PASS_RUN_30750806894_HEAD_e1a619c5867037bf569be5d741194ff792ce948b_7_SUCCESS_1_PATH_SKIPPED
+READY_MERGE_TAG_RELEASE=NOT_AUTHORIZED
+WINDOWS_REAL_MACHINE_ACCEPTANCE=NOT_RUN
+JUDGE=WORK10_A_PASS_AWAITING_READY_MERGE_TAG_RELEASE_AUTHORIZATION
+```
+
+- Work10-A preserves the existing annotated-Tag push trigger and adds a recoverable manual entry
+  that accepts the Release Tag, fixed product Commit and annotated Tag message.
+- Read-only preflight validates stable SemVer, exact Commit object type, `origin/main` ancestry,
+  direct Tag object type/target/name, and exact Release absence. It fails closed when the Release
+  state cannot be confirmed.
+- Windows and macOS check out the fixed product Commit. The publish job runs only after preflight
+  and every build succeeds, is the only job with write permission, and performs remote direct Tag
+  object plus peeled-commit verification before `gh release create --verify-tag`.
+- Local deterministic gates pass. Remote branch and Draft PR #18 are published; fixed implementation
+  Head `e1a619c58670…` completed Run `30750806894` with seven applicable jobs successful and Web
+  Gate correctly path-skipped. No Tag, Release, main write or Windows real-machine action has
+  occurred.
+
+---
+
+# 历史回传｜WORK-009 / PR #17 诊断证据链修复与 Windows 安装闭环
 
 ## 2026-08-02 固定 Head 完整闭环
 

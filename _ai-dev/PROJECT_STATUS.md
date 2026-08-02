@@ -6,42 +6,59 @@
 PROJECT_ID=PP02
 PROJECT_NAME=AI 每日股票分析
 CHAT_ROLE=AUTO_TAKEOVER
-WORK_ID=WORK-009
+WORK_ID=WORK-010
 ROLE_LOCK=SUPERSEDED_BY_PP02-WORK-HANDOFF-002
 WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
-WORK_STATE=WAITING_FOR_AUTHORIZATION
-EXECUTION_LOCK=HELD_BY_WORK_009
+WORK_STATE=ACTIVE
+EXECUTION_LOCK=HELD_BY_WORK_010
 APPLICATION_BASE_VERSION=3.29.0
 TARGET_RELEASE_VERSION=3.29.1
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-ACTIVE_BASE=66666352e953d90becce420da7d35b649516af76
-ACTIVE_BRANCH=agent/pp02-work8-r7-installer-fix
-ACTIVE_PR=17
-CURRENT_STAGE=R7 Hotfix / Fixed-Head Full CI Pass
-CURRENT_WORK=WORK-009 — PR #17 diagnostic evidence chain repair and Windows install closure
-ACTIVE_GOAL=preserve cleanup-independent redacted diagnostics, prove the final deliverable, and close the installed Windows lifecycle
-WORK9_TAKEOVER_HEAD=9cb9a70e9176711096adf12ba5674c56d6f314d2
-LAST_DIAGNOSTIC_HEAD=b4684f0be8a818b5b29688933e2a738663e1a638
-LATEST_CI_RUN=30745575186
-DIAGNOSTIC_ARTIFACT_ID=8832664000
-DIAGNOSTIC_ARTIFACT_SHA256=6fa6366761d608572c04b401e69caa764483c7bab3c5bc61ecc96e958989ea65
-FULL_CI_VALIDATED_HEAD=db02221b92e210925044c5af5a4aacd2f08fcb4f
-FULL_CI_RUN=30745575186
-SUCCESS_DIAGNOSTIC_ARTIFACT_ID=8833102391
-SUCCESS_DIAGNOSTIC_ARTIFACT_SHA256=5c0f19466e01c399dc20008d5589290d210e4f8e4b612ab4ea7319e50e6b90b8
-WINDOWS_CANDIDATE_ARTIFACT_ID=8833107659
-CURRENT_STATUS=FULL_CI_PASS_AWAITING_PR17_MERGE_AUTHORIZATION
-ACTIVE_BLOCKER=PR17_MERGE_AUTHORIZATION_REQUIRED
+ACTIVE_BASE=3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65
+ACTIVE_BRANCH=agent/pp02-work10-release-entry
+ACTIVE_PR=18
+CURRENT_STAGE=R7 Hotfix / Work10-A Cloud Release Entry
+CURRENT_WORK=WORK-010 — v3.29.1 release and Windows real-machine acceptance
+ACTIVE_GOAL=add a recoverable fixed-commit cloud release entry before publishing v3.29.1
+PRODUCT_RELEASE_COMMIT=3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65
+MERGED_PR=17
+MAIN_CI_RUN=30747187504
+MAIN_CI_RESULT=PASS_8_OF_8
+PR_CI_HEAD=e1a619c5867037bf569be5d741194ff792ce948b
+PR_CI_RUN=30750806894
+PR_CI_RESULT=PASS_7_SUCCESS_1_PATH_SKIPPED
+CURRENT_STATUS=WORK10_A_PR_CI_PASS_AWAITING_READY_MERGE_RELEASE_AUTHORIZATION
+ACTIVE_BLOCKER=READY_MERGE_RELEASE_AUTHORIZATION_REQUIRED
 FAILED_RELEASE_TAG=v3.29.0
-FAILURE_CLASS=INSTALLER_BOOTSTRAP_CRASH
-FAILURE_REPRODUCIBILITY=2/2
-FAILURE_EXCEPTION=0xC0000005 / System.dll
-NEXT_WORK=NONE_WHILE_WORK_009_ACTIVE
-NEXT_ACTION=STOP_AND_WAIT_FOR_EXPLICIT_PR17_MERGE_AUTHORIZATION
+TARGET_RELEASE_TAG=v3.29.1
+TARGET_TAG_TYPE=ANNOTATED
+TARGET_TAG_MESSAGE=Release v3.29.1: Windows installer bootstrap fix
+NEXT_WORK=NONE_WHILE_WORK_010_ACTIVE
+NEXT_ACTION=STOP_AND_REQUEST_READY_MERGE_TAG_RELEASE_AUTHORIZATION
 AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/MAIN_WRITE/TAG/RELEASE/REAL_DATA/WINDOWS_REAL_MACHINE_ACTION
 LAST_UPDATED=2026-08-02
 ```
+
+## 2026-08-02 Work10 / cloud release entry
+
+- PR #17 has been merged as `main@3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65`; post-merge
+  Run `30747187504` completed all eight jobs successfully. This merge commit is the fixed product
+  commit for v3.29.1 even though the release-workflow repair will later move `main`.
+- v3.29.1 Tag and Release do not exist. v3.29.0 remains immutable at its original annotated Tag,
+  commit and Release.
+- Work10-A modifies only the existing Desktop Release workflow, deterministic contracts and
+  ledgers. Manual dispatch now accepts a SemVer tag, full 40-character product commit and annotated
+  tag message; a read-only preflight validates exact Commit object type, main ancestry, direct Tag
+  object type/target/name and Release absence.
+- Windows and macOS build the preflight's fixed product commit. Only the final publish job has
+  `contents: write`; after every build succeeds it creates or safely reuses the same annotated Tag,
+  verifies both the remote Tag object's direct target and peeled commit, and creates the Release in
+  the same Workflow Run.
+- Local contracts pass and Draft PR #18 remains Draft. Fixed implementation Head `e1a619c58670…`
+  completed Run `30750806894`: all seven applicable jobs succeeded and Web Gate was correctly
+  path-skipped. Ready, merge, v3.29.1 Tag/Release and Windows real-machine acceptance remain
+  separate hard authorization gates.
 
 ## 2026-08-02 Work9 / formal takeover
 
