@@ -17,9 +17,11 @@ WORKFLOW_YAML_PARSE=PASS
 AI_ASSETS=PASS
 DRAFT_PR=19_DRAFT
 IMPLEMENTATION_HEAD=84bcbb060aaa78ebe5d5413cd8a16a7a1eac5512
-FULL_CI=PENDING_FINAL_HEAD
+FULL_CI=PASS_RUN_30765409298_HEAD_05e7a5dac1064b644cb5a01fa9300a4af109ecdb_7_SUCCESS_1_PATH_SKIPPED
+WINDOWS_CANDIDATE_ARTIFACT=8839171754_SHA256_18b96a582eaf17faa405f09870ca36f6e3797663919b921842075075fb06e041
+WINDOWS_DIAGNOSTIC_ARTIFACT=8839165862_SHA256_e7735f3b0df0bd061ea496f89eccbf7a1fd4b1b19258ca8f4985387822ca282c
 TAG_RELEASE=NOT_CREATED
-JUDGE=LOCAL_PASS_REMOTE_CI_PENDING
+JUDGE=WORK10_B_PASS_AWAITING_PR19_MERGE_AUTHORIZATION
 ```
 
 - Run `30763628302` failed only after the final Windows ZIP frozen-backend smoke passed. The
@@ -29,7 +31,10 @@ JUDGE=LOCAL_PASS_REMOTE_CI_PENDING
   times with one-second waits, and still throws after exhaustion. Both pre-extraction and `finally`
   cleanup use this contract.
 - No product code, installer logic, dependency, fixed product Commit, Tag or Release was changed.
-  Draft PR #19 remains at the final-Head full-CI gate.
+  Draft PR #19 fixed Head `05e7a5da…` completed Run `30765409298` with all seven applicable Jobs
+  successful and Web Gate path-skipped. The Windows Job passed final ZIP, installer contracts,
+  installed lifecycle, diagnostics, credential scan and candidate upload. The Work stops at the
+  explicit PR #19 merge authorization gate.
 
 ---
 

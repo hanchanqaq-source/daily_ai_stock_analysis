@@ -11,7 +11,7 @@ TARGET_RELEASE=v3.29.1
 PRODUCT_RELEASE_COMMIT=3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65
 FAILED_RELEASE_RUN=30763628302
 DRAFT_PR=19
-CURRENT_GATE=FINAL_HEAD_FULL_CI
+CURRENT_GATE=PR19_MERGE_AUTHORIZATION
 ```
 
 ## 授权范围
@@ -38,6 +38,14 @@ CURRENT_GATE=FINAL_HEAD_FULL_CI
 1. TDD RED/GREEN 证明重试次数、等待、两处调用、安全路径先决条件和 fail-closed。
 2. 相关合同、Workflow YAML、AI 资产、格式和敏感内容检查通过。
 3. Draft PR #19 保持 Draft，完整 CI 绑定最终 Head 且全部适用 Job 成功。
+
+## 固定 Head Judge
+
+- Head `05e7a5dac1064b644cb5a01fa9300a4af109ecdb` 的 Run `30765409298` 已完成：七个
+  适用 Job success，Web Gate 因未改 Web 路径正常 skipped。
+- Windows 最终 ZIP、安装器合同、安装、首次启动、退出、重启、卸载、诊断上传、
+  假凭据泄漏扫描和候选上传全部成功。
+- 当前必须停止在 PR #19 合并授权门；Ready、合并、main、Tag、Release 和真机仍未授权。
 
 ---
 

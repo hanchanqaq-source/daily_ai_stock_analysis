@@ -7,7 +7,9 @@
   after the final ZIP smoke when one-shot cleanup raced a transient `.pyd` file handle.
 - Draft PR #19 applies bounded deletion retry only after the existing runner-owned path validation.
   Product code and fixed release Commit `3e1311ee…` are unchanged; Tag/Release operations remain
-  forbidden. Local related contracts pass `25/25`; final-Head full CI is pending.
+  forbidden. Local related contracts pass `25/25`; fixed Head `05e7a5da…` passed Run
+  `30765409298` with seven applicable Jobs success and Web path-skipped, including the complete
+  Windows package and installed lifecycle. PR #19 now waits for explicit merge authorization.
 
 ## 2026-08-02 Work10-A cloud release entry
 
@@ -42,7 +44,7 @@
 | R5｜Windows 本机验收 | 安装、启动、Web/Desktop 与安全默认值 | 完成 | Work2 / PR #9 真机启动与回滚模拟通过 |
 | R6｜正式数据迁移 | 迁移经确认的真实数据 | 完成（无数据，跳过迁移） | Work6 `NO_FORMAL_DATA_FOUND`；旧项目和数据库从未建立 |
 | R7｜替换 main 与 Release | Ready、合并、main、Tag、Release | 完成 | `v3.29.0` 已发布；PR #15 后续文档主线 Run `30697946093` 8/8 success |
-| R7-Hotfix｜Windows 安装器补丁 | 修复 v3.29.0 `System.dll / 0xC0000005` 引导崩溃 | PR #19 CI 中 | 安装闭环已通过；发布 Run `30763628302` 暴露最终临时目录清理竞态，Draft PR #19 最小修复中 |
+| R7-Hotfix｜Windows 安装器补丁 | 修复 v3.29.0 `System.dll / 0xC0000005` 引导崩溃 | 等待 PR #19 合并授权 | Head `05e7a5da…` / Run `30765409298` 全部适用 Job 成功；未创建 v3.29.1 Tag/Release |
 
 ## 当前 R3 顺序
 

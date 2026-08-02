@@ -4,7 +4,7 @@
 
 | 项目 | 当前值 |
 | --- | --- |
-| 当前状态 | `WORK10_B_DRAFT_PR19_FULL_CI_PENDING` |
+| 当前状态 | `WORK10_B_FULL_CI_PASS_AWAITING_PR19_MERGE_AUTHORIZATION` |
 | 当前 Work | `WORK-010｜v3.29.1 发布与 Windows 真机验收` |
 | 固定产品 Commit | `3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65` |
 | 当前 main | `91e174d30b3d0f2533b0db5df0245bf49778234f`（PR #18 已合并） |
@@ -13,8 +13,8 @@
 | Draft PR | [#19](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/19)，保持 Draft |
 | 当前子段 | `Work10-B｜Windows 发布临时目录清理竞态` |
 | 本地验证 | Desktop Release 契约及关联打包回归 `25/25` |
-| PR CI | 最终 Head 完整 CI 待运行 |
-| 下一动作 | 验证 Draft PR #19 最终 Head 的完整 CI，失败则只做范围内修复 |
+| PR CI | Head `05e7a5dac1064b644cb5a01fa9300a4af109ecdb` / Run `30765409298` / 7 success + 1 path-skipped |
+| 下一动作 | 停止并等待明确的 PR #19 合并授权 |
 | 授权边界 | 允许分支/Commit/Draft PR/CI；禁止 Ready/Merge/main/Tag/Release/真实数据/真机动作 |
 
 PR #18 已合并，但发布 Run `30763628302` 在 Windows 最终 ZIP 冒烟成功后的临时目录
@@ -25,11 +25,12 @@ Work10-B 只在已有 runner-owned 路径校验后，对最终 ZIP 临时解压�
 每次 1 秒的删除重试；超过上限仍失败关闭。产品 Commit 继续固定为 `3e1311ee…`，
 不修改产品代码、发布权限、Tag/Release 状态机或固定 Commit checkout。
 
-TDD RED/GREEN 和本地相关门已通过 `25/25`。Draft PR #19 已建立并保持 Draft；当前
-只等待最终 Head 完整 CI，不能把本地合同或旧发布 Run 冒充本轮远端通过。
+TDD RED/GREEN 和本地相关门已通过 `25/25`。Draft PR #19 固定 Head `05e7a5da…` 的
+Run `30765409298` 已全部通过：七个适用 Job success，Web Gate 按路径正常 skipped；
+Windows 最终 ZIP、安装生命周期、诊断、敏感信息扫描和候选上传均成功。
 
 `v3.29.0` 保持不变；`v3.29.1` Tag/Release 尚不存在。PR #19 的 Ready、合并，后续
-Tag/Release 和 Windows 真机验收均未授权。最后更新：2026-08-02。
+Tag/Release 和 Windows 真机验收均未授权。当前停止在 PR #19 合并授权门。最后更新：2026-08-02。
 
 以下内容是旧 Work 的追加历史；与本节冲突时，以 `PROJECT_STATUS.md`、本节和
 GitHub 可验证事实为准。
