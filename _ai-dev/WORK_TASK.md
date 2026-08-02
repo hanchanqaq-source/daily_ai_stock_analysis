@@ -15,7 +15,7 @@ FAILED_RELEASE=v3.29.0
 SCOPE_DRIFT=FALSE
 PREVIOUS_DIAGNOSTIC_HEAD=eae4b46501c9a183dda20d2975121987e676943b
 PREVIOUS_CI_RUN=30742085965
-CURRENT_GATE=MINIMAL_ROOT_CAUSE_FIX_LOCAL_GREEN_FULL_CI_PENDING
+CURRENT_GATE=FULL_CI_PASS_AWAITING_PR17_MERGE_AUTHORIZATION
 ```
 
 ## 授权结果
@@ -54,6 +54,14 @@ CURRENT_GATE=MINIMAL_ROOT_CAUSE_FIX_LOCAL_GREEN_FULL_CI_PENDING
   A separate verifier gate now requires exit, restart readiness, second exit and uninstall order.
 - Local gates pass; the current gate is a new fixed-Head full CI. Merge/Release/real-machine gates
   remain closed.
+
+## 固定 Head Judge
+
+- Head `db02221b92e210925044c5af5a4aacd2f08fcb4f`, Run `30745575186`: all eight CI jobs
+  passed. Windows proved the final ZIP, installation, first startup/health, exit, fresh restart and
+  health, second exit, uninstall and the always-uploaded diagnostic artifact.
+- The current Work gate is explicit authorization to merge Draft PR #17. Ready, merge, Tag,
+  Release and Windows real-machine acceptance remain unauthorized.
 
 ## Plan Challenge Result
 

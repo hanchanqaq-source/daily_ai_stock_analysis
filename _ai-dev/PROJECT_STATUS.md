@@ -9,7 +9,7 @@ CHAT_ROLE=AUTO_TAKEOVER
 WORK_ID=WORK-009
 ROLE_LOCK=SUPERSEDED_BY_PP02-WORK-HANDOFF-002
 WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
-WORK_STATE=ACTIVE
+WORK_STATE=WAITING_FOR_AUTHORIZATION
 EXECUTION_LOCK=HELD_BY_WORK_009
 APPLICATION_BASE_VERSION=3.29.0
 TARGET_RELEASE_VERSION=3.29.1
@@ -18,22 +18,27 @@ PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
 ACTIVE_BASE=66666352e953d90becce420da7d35b649516af76
 ACTIVE_BRANCH=agent/pp02-work8-r7-installer-fix
 ACTIVE_PR=17
-CURRENT_STAGE=R7 Hotfix / Root Cause Minimal Fix Local Green
+CURRENT_STAGE=R7 Hotfix / Fixed-Head Full CI Pass
 CURRENT_WORK=WORK-009 — PR #17 diagnostic evidence chain repair and Windows install closure
 ACTIVE_GOAL=preserve cleanup-independent redacted diagnostics, prove the final deliverable, and close the installed Windows lifecycle
 WORK9_TAKEOVER_HEAD=9cb9a70e9176711096adf12ba5674c56d6f314d2
 LAST_DIAGNOSTIC_HEAD=b4684f0be8a818b5b29688933e2a738663e1a638
-LATEST_CI_RUN=30744115030
+LATEST_CI_RUN=30745575186
 DIAGNOSTIC_ARTIFACT_ID=8832664000
 DIAGNOSTIC_ARTIFACT_SHA256=6fa6366761d608572c04b401e69caa764483c7bab3c5bc61ecc96e958989ea65
-CURRENT_STATUS=ROOT_CAUSE_CONFIRMED_MINIMAL_FIX_LOCAL_PASS_FULL_CI_PENDING
-ACTIVE_BLOCKER=WINDOWS_FIXED_HEAD_FULL_LIFECYCLE_CI_PENDING
+FULL_CI_VALIDATED_HEAD=db02221b92e210925044c5af5a4aacd2f08fcb4f
+FULL_CI_RUN=30745575186
+SUCCESS_DIAGNOSTIC_ARTIFACT_ID=8833102391
+SUCCESS_DIAGNOSTIC_ARTIFACT_SHA256=5c0f19466e01c399dc20008d5589290d210e4f8e4b612ab4ea7319e50e6b90b8
+WINDOWS_CANDIDATE_ARTIFACT_ID=8833107659
+CURRENT_STATUS=FULL_CI_PASS_AWAITING_PR17_MERGE_AUTHORIZATION
+ACTIVE_BLOCKER=PR17_MERGE_AUTHORIZATION_REQUIRED
 FAILED_RELEASE_TAG=v3.29.0
 FAILURE_CLASS=INSTALLER_BOOTSTRAP_CRASH
 FAILURE_REPRODUCIBILITY=2/2
 FAILURE_EXCEPTION=0xC0000005 / System.dll
 NEXT_WORK=NONE_WHILE_WORK_009_ACTIVE
-NEXT_ACTION=PUSH_MINIMAL_CWD_FIX_AND_RESTART_GATE_THEN_REQUIRE_FIXED_HEAD_FULL_CI
+NEXT_ACTION=STOP_AND_WAIT_FOR_EXPLICIT_PR17_MERGE_AUTHORIZATION
 AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/MAIN_WRITE/TAG/RELEASE/REAL_DATA/WINDOWS_REAL_MACHINE_ACTION
 LAST_UPDATED=2026-08-02
 ```
@@ -89,6 +94,26 @@ LAST_UPDATED=2026-08-02
 - Local GREEN: Desktop `82/82`; Windows packaging/diagnostic/final-ZIP targets `29/29`; workflow
   YAML, AI assets and `git diff --check` pass. Fixed-Head full CI remains required before any merge
   request.
+
+## 2026-08-02 Work9 / fixed-Head Windows closure
+
+- Final implementation Head `db02221b92e210925044c5af5a4aacd2f08fcb4f` completed Run
+  `30745575186` with all eight jobs successful: Change Detection, AI governance, Web, Backend,
+  Desktop tests, Docker, macOS package and Windows package/lifecycle.
+- Windows logs prove the ordered lifecycle on that exact Head: installer exit 0; install and
+  registration pass; first installed startup pass; first process-tree exit pass; fresh restart
+  readiness pass; second exit pass; uninstaller exit 0; uninstall cleanup pass.
+- The final ZIP gate again passed before installation, including exact managed-file membership and
+  existence for `fake_useragent/data/browsers.jsonl` plus frozen-backend startup from the extracted
+  final ZIP.
+- Success-path diagnostics were uploaded with `if: always()` as artifact `8833102391`, bound to the
+  full Head and Run ID. Its ZIP SHA-256 is
+  `5c0f19466e01c399dc20008d5589290d210e4f8e4b612ab4ea7319e50e6b90b8`; its summary is
+  `WINDOWS_INSTALLER_DIAGNOSTIC=NOT_REQUIRED_VALIDATION_PASS`, and its stage report records every
+  lifecycle stage through uninstall cleanup as PASS. Security review found no credential file,
+  token prefix, unredacted sensitive assignment, complete environment dump, database or user data.
+- PR #17 remains Open/Draft and unmerged. No Tag or Release exists for v3.29.1, and Windows real
+  machine acceptance has not been run. Work9 is stopped at the explicit merge-authorization gate.
 
 ## 2026-08-02 Work8 / corrective diagnostic run blocked on evidence preservation
 

@@ -1,5 +1,14 @@
 # PP02 安全重建路线 R0–R7
 
+## 2026-08-02 Work9 fixed-Head closure
+
+- Draft PR #17 implementation Head `db02221b92e210925044c5af5a4aacd2f08fcb4f` passed all
+  eight jobs in Run `30745575186`.
+- The final Windows ZIP, managed browser-data file, installer, first startup/health, exit, restart,
+  second health/exit, uninstall and redacted diagnostic artifact all passed.
+- PR #17 remains Draft and unmerged. v3.29.1 Tag/Release and Windows real-machine acceptance have
+  not been performed. Next gate: explicit PR #17 merge authorization.
+
 唯一当前状态见 [`../../_ai-dev/PROJECT_STATUS.md`](../../_ai-dev/PROJECT_STATUS.md)。
 当前采用 `PP02-WORK-HANDOFF-002`：一个完整大段使用一个 Work 聊天；聊天不绑定
 永久角色，不改显示名称，交接依赖唯一状态和 GitHub 事实，用户无需搬运施工单。
