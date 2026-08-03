@@ -4,7 +4,7 @@
 
 | 项目 | 当前值 |
 | --- | --- |
-| 当前状态 | `WORK16_TDD_GREEN_RELATED_VALIDATION_PASS_IMPLEMENTATION_COMMIT_PENDING` |
+| 当前状态 | `WORK16_IMPLEMENTATION_PUBLISHED_FIXED_HEAD_CI_PENDING` |
 | 当前 Work | `WORK-016｜Windows 冻结筹码依赖收口` |
 | 固定 Base | `main@568e26adf0e6393a7a0da1be57369535735cd05a` |
 | Work15 结果 | PR #20/#21 均已合并；最终裁决 `PASS — MAINLINE_CLOSED` |
