@@ -66,6 +66,11 @@ if (-not (Test-PythonCode -Python $pythonBin -Code "import orjson")) {
   throw 'orjson is not importable after installing requirements.'
 }
 
+Write-Host 'Checking MiniRacer availability...'
+if (-not (Test-PythonCode -Python $pythonBin -Code "import py_mini_racer; from py_mini_racer import MiniRacer; chip_probe = MiniRacer(); result = chip_probe.eval('6 * 7'); chip_probe.close(); assert result == 42")) {
+  throw 'py_mini_racer cannot load its native runtime after installing requirements.'
+}
+
 if (Test-Path 'dist\backend') {
   Remove-Item -Recurse -Force 'dist\backend'
 }
@@ -138,7 +143,8 @@ $pyInstallerArgs = @(
   '--collect-data', 'akshare',
   '--collect-all', 'alphasift',
   '--collect-all', 'futu',
-  '--collect-all', 'fake_useragent'
+  '--collect-all', 'fake_useragent',
+  '--collect-all', 'py_mini_racer'
 )
 $pyInstallerArgs += $hiddenImportArgs
 $pyInstallerArgs += 'main.py'
@@ -154,6 +160,18 @@ if (!(Test-Path 'dist\stock_analysis')) {
 }
 
 Copy-Item -Path 'dist\stock_analysis' -Destination 'dist\backend\stock_analysis' -Recurse -Force
+
+Write-Host 'Verifying packaged MiniRacer assets...'
+$packagedMiniRacer = Join-Path 'dist\backend\stock_analysis' '_internal\py_mini_racer'
+if (-not (Test-Path -LiteralPath $packagedMiniRacer -PathType Container)) {
+  $packagedMiniRacer = Join-Path 'dist\backend\stock_analysis' 'py_mini_racer'
+}
+foreach ($asset in @('mini_racer.dll', 'icudtl.dat')) {
+  $assetPath = Join-Path $packagedMiniRacer $asset
+  if (-not (Test-Path -LiteralPath $assetPath -PathType Leaf)) {
+    throw "Packaged MiniRacer asset not found: $assetPath"
+  }
+}
 
 Write-Host 'Verifying packaged runtime imports...'
 $packagedEntry = [IO.Path]::GetFullPath((Join-Path 'dist\backend\stock_analysis' 'stock_analysis.exe'))
