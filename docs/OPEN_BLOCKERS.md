@@ -7,15 +7,15 @@
 | 活动产品阻塞 | 无；固定 Base 为 `main@568e26adf0e6393a7a0da1be57369535735cd05a` |
 | Work14 最终裁决 | `PASS_WITH_DEGRADATIONS — DRAFT_HOLD`；证据 Run `30821021196` success |
 | Work15 结果 | PR #20/#21 已合并；最终 Run `30825436318` success，裁决 `PASS — MAINLINE_CLOSED` |
-| 当前验收门 | Draft PR #22 实现提交后的固定 Head 完整 CI，Windows 构建目录和最终 ZIP 均须通过离线筹码运行时探针 |
+| 当前验收门 | 已完成：Head `016e3408…` / Run `30831393819` 为 7 success、1 path-skipped；Windows 直接冻结与最终 ZIP 探针通过 |
 | 根因与本地证据 | 已安装 MiniRacer wheel 含 DLL/ICU，但 PyInstaller 未收集且健康门未加载 V8；3 个新合同先 RED，最小实现后 5/5 GREEN |
 | 依赖门 | `requirements.txt` 与依赖版本声明不变；如无法复用现有运行时，必须停止并另行授权 |
 | Work12 保护 | 原应用已恢复健康，数据库/日志存在；现场配置没有被旧候选副本覆盖 |
 | 授权外 | Ready、合并、Tag、Release、依赖变更、新闻、签名、真实凭据/数据和新增真机动作 |
 
-Work16 已建立独立 Draft PR #22，本地相关门通过但 Windows 实际冻结行为还没有由
-固定 Head CI 证明，因此当前不是最终 PASS。新闻与签名降级不属于本 Work；通过 CI
-后也必须保持 Draft，不得 Ready、合并、Tag 或 Release。
+Work16 当前无活动代码阻塞，最终裁决为 `PASS — DRAFT_HOLD`。新闻与签名降级不属于
+本 Work；PR #22 仍须保持 Draft，不得 Ready、合并、Tag 或 Release。任何后续动作
+都需要新的单独授权。
 
 当前状态和当前 Active Blocker 以
 [`../_ai-dev/PROJECT_STATUS.md`](../_ai-dev/PROJECT_STATUS.md) 为唯一真源。下列
