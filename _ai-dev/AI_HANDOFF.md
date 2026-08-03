@@ -4,7 +4,7 @@
 
 | 项目 | 当前值 |
 | --- | --- |
-| 当前状态 | `WORK16_IMPLEMENTATION_PUBLISHED_FIXED_HEAD_CI_PENDING` |
+| 当前状态 | `WORK16_PASS_DRAFT_HOLD` |
 | 当前 Work | `WORK-016｜Windows 冻结筹码依赖收口` |
 | 固定 Base | `main@568e26adf0e6393a7a0da1be57369535735cd05a` |
 | Work15 结果 | PR #20/#21 均已合并；最终裁决 `PASS — MAINLINE_CLOSED` |
@@ -12,11 +12,11 @@
 | 当前 PR | [Draft PR #22](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/22) |
 | 未发布候选 | `3.29.1` / `217,003,814` bytes / SHA-256 `DAD0CE0CCF8FC34F7318CD4E4F0CC37347C68A1A03E98D0CA7B048E393B18B33` / `NotSigned` |
 | 正式历史闭环 | `600519` history ID `2`；task/query/trace `1c4ae649232d40eaae7dcb6bb1b6981f` |
-| 相关回归 | Python `130 passed`；Desktop `82/82`；冻结后端动态端口健康通过 |
+| Work16 证据 | Head `016e3408…` / Run `30831393819`：7 success、1 path-skipped；Windows 双层冻结筹码门通过 |
 | Work14 最终裁决 | `PASS_WITH_DEGRADATIONS — DRAFT_HOLD`；证据 Run `30821021196` success |
 | Work12 现场 | 原安装已恢复，端口 8000 `health=ok`；数据库和日志仍在 |
 | 根因 | `mini-racer 0.14.1` 已安装且 wheel 含 DLL/ICU，但 PyInstaller 未收集、健康探针未加载 V8 |
-| 下一动作 | 提交并推送最小实现，验证固定 Head 完整 CI 与 Windows 双层筹码探针 |
+| 下一动作 | 无；保持 PR #22 Draft，等待新的单独授权 |
 | 授权边界 | 禁止 Ready/合并/Tag/Release、依赖变更、新闻、签名及新增 Windows 真机动作 |
 
 Work14 只从 PR #20 固定 Head 构建未发布验收候选，没有安装、Tag 或发布该候选。
@@ -38,8 +38,10 @@ Work16 只处理 Work14 已证实的 Windows 冻结筹码运行时缺口。Windo
 PyInstaller 收集其现有 `py_mini_racer` DLL/ICU，并在构建目录与最终解压便携 ZIP
 中执行无网络 V8/筹码模块探针。新闻、签名、版本发布和真机验收均不在范围内。
 Draft PR #22 已建立并保持 Draft；3 个新合同先 RED，最小实现后包装合同 5/5 GREEN，
-Python 编译、AI 资产与 diff 格式检查通过。依赖声明未改，当前只待提交后的固定 Head
-完整 CI，不得把本地 Linux 静态合同误写成 Windows 冻结行为证据。
+Python 编译、AI 资产与 diff 格式检查通过。依赖声明未改。固定证据 Head
+`016e3408…` 的 Run `30831393819` 已 7 success、1 路径跳过；Windows Job 在直接构建、
+重建和最终解压 ZIP 共记录 3 次真实 MiniRacer/V8 探针成功，独立复审无重要问题。
+Work16 裁决 `PASS — DRAFT_HOLD`，不得据此自行 Ready、合并、Tag 或 Release。
 
 以下内容是旧 Work 的追加历史；与本节冲突时，以 `PROJECT_STATUS.md`、本节和
 GitHub 可验证事实为准。
