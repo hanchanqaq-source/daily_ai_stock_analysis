@@ -1,36 +1,38 @@
 # PP02 新聊天交接
 
-## 当前接管入口｜WORK-010 / v3.29.1 release and Windows acceptance
+## 当前接管入口｜WORK-015 / PR #20/#21 mainline closure
 
 | 项目 | 当前值 |
 | --- | --- |
-| 当前状态 | `WORK10_B_FULL_CI_PASS_AWAITING_PR19_MERGE_AUTHORIZATION` |
-| 当前 Work | `WORK-010｜v3.29.1 发布与 Windows 真机验收` |
-| 固定产品 Commit | `3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65` |
-| 当前 main | `91e174d30b3d0f2533b0db5df0245bf49778234f`（PR #18 已合并） |
-| 失败发布 | Run `30763628302` / Windows Job `91538466726` / 最终临时目录清理竞态 |
-| 分支 | `agent/pp02-work10-release-cleanup` |
-| Draft PR | [#19](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/19)，保持 Draft |
-| 当前子段 | `Work10-B｜Windows 发布临时目录清理竞态` |
-| 本地验证 | Desktop Release 契约及关联打包回归 `25/25` |
-| PR CI | Head `05e7a5dac1064b644cb5a01fa9300a4af109ecdb` / Run `30765409298` / 7 success + 1 path-skipped |
-| 下一动作 | 停止并等待明确的 PR #19 合并授权 |
-| 授权边界 | 允许分支/Commit/Draft PR/CI；禁止 Ready/Merge/main/Tag/Release/真实数据/真机动作 |
+| 当前状态 | `WORK15_PR20_MERGED_MAIN_CI_PASS_PR21_FINAL_HEAD_CI_PENDING` |
+| 当前 Work | `WORK-015｜PR #20/#21 主线收口` |
+| 新 main | `25de369f8e12438a1ec1f3511c68256c471243e4`（PR #20 merge commit） |
+| main CI | Run `30822458701`，8/8 success；Auto Tag `30822458692` skipped |
+| 当前 PR | [#21](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/21)，保持 Draft 到最终 Head CI 通过 |
+| 非破坏同步 | 双父 merge commit `25313cf0f23f0f4ab4922ea983bcd05b3577e23e` |
+| 未发布候选 | `3.29.1` / `217,003,814` bytes / SHA-256 `DAD0CE0CCF8FC34F7318CD4E4F0CC37347C68A1A03E98D0CA7B048E393B18B33` / `NotSigned` |
+| 正式历史闭环 | `600519` history ID `2`；task/query/trace `1c4ae649232d40eaae7dcb6bb1b6981f` |
+| 相关回归 | Python `130 passed`；Desktop `82/82`；冻结后端动态端口健康通过 |
+| Work14 最终裁决 | `PASS_WITH_DEGRADATIONS — DRAFT_HOLD`；证据 Run `30821021196` success |
+| Work12 现场 | 原安装已恢复，端口 8000 `health=ok`；数据库和日志仍在 |
+| 下一动作 | 核验 PR #21 最终固定 Head CI，通过后转 Ready 并合并 |
+| 授权边界 | 禁止 Tag/Release、依赖/新闻/签名修复及新增 Windows 真机动作 |
 
-PR #18 已合并，但发布 Run `30763628302` 在 Windows 最终 ZIP 冒烟成功后的临时目录
-清理阶段失败；Windows 安装生命周期与两个 macOS 构建均已成功，`publish-release`
-被跳过，因此 `v3.29.1` Tag/Release 仍不存在。
+Work14 只从 PR #20 固定 Head 构建未发布验收候选，没有安装、Tag 或发布该候选。
+正式 `600519` API 任务完成并生成可重读历史；候选后端停机重启、再由 Work12 原安装
+重读后，history ID、query ID、LLM 与运行流保存状态仍一致。同期大盘历史和周内周期
+聚合也可重读。证据 Head `da229059…` 的 Run `30821021196` 已通过，Work14 正式以
+`PASS_WITH_DEGRADATIONS — DRAFT_HOLD` 结束。
 
-Work10-B 只在已有 runner-owned 路径校验后，对最终 ZIP 临时解压目录使用最多 15 次、
-每次 1 秒的删除重试；超过上限仍失败关闭。产品 Commit 继续固定为 `3e1311ee…`，
-不修改产品代码、发布权限、Tag/Release 状态机或固定 Commit checkout。
+候选整体不是无条件 PASS：诊断状态为 `degraded`，新闻搜索无结果，筹码链因冻结产物
+缺少 `py_mini_racer/mini_racer.dll` 失败；安装器未签名且本 Work 未执行候选安装生命周期。
+Work12 的 `.env` 在受控单股重跑前已发生外部变更，元数据变为 50,268 bytes（来源未判定）；
+Work14 未用旧副本覆盖它，临时副本与目录联接均已精确删除。最后更新：2026-08-03。
 
-TDD RED/GREEN 和本地相关门已通过 `25/25`。Draft PR #19 固定 Head `05e7a5da…` 的
-Run `30765409298` 已全部通过：七个适用 Job success，Web Gate 按路径正常 skipped；
-Windows 最终 ZIP、安装生命周期、诊断、敏感信息扫描和候选上传均成功。
-
-`v3.29.0` 保持不变；`v3.29.1` Tag/Release 尚不存在。PR #19 的 Ready、合并，后续
-Tag/Release 和 Windows 真机验收均未授权。当前停止在 PR #19 合并授权门。最后更新：2026-08-02。
+Work15 已将 PR #20 合入 `main@25de369f…`，随后核验主线全套 CI 8/8 success。
+PR #21 与产品改动无路径重叠，已用普通双父 merge commit 同步新 main；下一步只处理
+PR #21 最终固定 Head CI、Ready 与合并。Tag、Release 和 Work14 已知降级均不在本 Work
+处理范围内。
 
 以下内容是旧 Work 的追加历史；与本节冲突时，以 `PROJECT_STATUS.md`、本节和
 GitHub 可验证事实为准。

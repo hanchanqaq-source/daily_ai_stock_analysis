@@ -1,4 +1,108 @@
-# WORK-010｜v3.29.1 发布与 Windows 真机验收
+# WORK-015｜PR #20/#21 主线收口
+
+## Work15｜授权与执行合同
+
+```text
+WORK_ID=WORK-015
+WORK_STATE=ACTIVE_MAINLINE_CLOSURE
+PR20_FIXED_HEAD=e11946f528c9cb64beeec8b626ada457c02b0034
+PR20_MERGE_COMMIT=25de369f8e12438a1ec1f3511c68256c471243e4
+PR20_MAIN_CI_RUN=30822458701
+PR21=21
+PR21_BRANCH=agent/pp02-work13-status-reconciliation
+PR21_SYNC_MERGE_HEAD=25313cf0f23f0f4ab4922ea983bcd05b3577e23e
+CURRENT_GATE=PR21_FIXED_HEAD_CI_THEN_READY_MERGE
+```
+
+## 授权范围
+
+- 先将 PR #20 转为 Ready，并锁定固定 Head 合并至 `main`；核验新 main 的完整 Push CI。
+- 只有新 main CI 通过后，才以普通双父 merge commit 将 main 同步到 PR #21 分支；
+  禁止 rebase、force-push、丢弃或重写 Work14 证据历史。
+- 只在 PR #21 原有 7 个台账/路线文件中，将 Work14 的 CI 待定状态更新为最终裁决，
+  并记录 PR #20 合并及主线 CI 事实。
+- PR #21 最终固定 Head CI 通过后，将其转为 Ready 并合并；最终 Run ID 只写入 PR
+  元数据和 Work15 回传，不为记录 Run ID 再制造新 Head。
+
+## 顺序门
+
+1. PR #20 Head 必须仍为 `e11946f…`，原固定 Head CI 必须成功且范围不扩大。
+2. PR #20 合并后的 main CI 必须完整成功；Auto Tag 必须保持 skipped。
+3. PR #21 必须保留原 7 文件证据，使用非破坏 merge 同步新 main，不得强推。
+4. PR #21 最终变更范围只允许原 7 个台账/路线文件叠加已合入 main 的 PR #20 内容。
+5. PR #21 最终固定 Head CI 通过后才可 Ready 和合并。
+
+## 非目标与停止门
+
+- 不创建、移动或删除 Tag/Release，不触发发布工作流。
+- 不处理 `mini_racer`、新闻、签名或新增 Windows 真机动作。
+- 不扩大 PR #20 产品范围，不读取真实凭据、配置、数据库、日志或报告正文。
+
+## 当前结果
+
+- PR #20 已合并为 `main@25de369f…`；Run `30822458701` 已 8/8 success，Auto Tag
+  Run `30822458692` skipped。
+- 新 main 已通过双父 merge commit `25313cf0…` 非破坏同步到 PR #21；当前只待
+  本 7 文件状态收口后的最终固定 Head CI。
+
+
+---
+
+# 历史任务合同｜WORK-014 / PR #20 固定 Head Windows 未发布候选验收
+
+## Work14｜授权与验收合同
+
+```text
+WORK_ID=WORK-014
+WORK_STATE=COMPLETED_DRAFT_HOLD
+PRODUCT_PR=20
+PRODUCT_FIXED_HEAD=e11946f528c9cb64beeec8b626ada457c02b0034
+STATUS_PR=21
+TARGET=UNPUBLISHED_WINDOWS_ACCEPTANCE_CANDIDATE
+EVIDENCE_HEAD=da2290597e880c4c4a4c1c04e5cc548aa5542ea9
+EVIDENCE_CI_RUN=30821021196
+CURRENT_GATE=COMPLETED_PASS_WITH_DEGRADATIONS_DRAFT_HOLD
+```
+
+## 授权范围
+
+- 先核对 Windows 环境及 Work12 安装、配置、数据库和日志现场。
+- 从 PR #20 固定 Head 构建未发布 Windows 候选，不替换 Work12 原安装。
+- 重跑 `600519` 正式历史闭环及相关 Python/Desktop、冻结健康、大盘历史和周期报告
+  回归；取得真实证据后只补入现有 Draft PR #21 并运行 CI。
+- 允许本 Work 所需的精确进程停启、临时候选配置副本/Junction 建立与移除，以及
+  恢复 Work12 原应用；不得清理或覆盖 Work12 配置、数据库和日志。
+
+## 验收门
+
+1. 候选源码、build revision 与 PR #20 固定 Head 精确一致；记录版本、大小、SHA 和签名。
+2. `600519` 不能只凭任务完成：必须有正式历史、history 诊断成功、运行流保存成功，
+   且候选重启和 Work12 恢复后仍可重读。
+3. 相关回归必须记录真实通过数；数据源/冻结依赖降级必须保留，不能升级为全量 PASS。
+4. Work12 原安装恢复健康；配置、数据库、日志不被候选清理或旧副本覆盖。
+5. PR #21 只改 7 个状态/路线文件并完成固定 Head CI；Work14 结束时 PR #20/#21 均保持 Draft。
+
+## 非目标与停止门
+
+- 不 Ready、不合并、不写 `main`，不创建或修改 Tag/Release。
+- 不安装或发布 Work14 候选，不读取或输出凭据，不上传配置、数据库、日志或报告正文。
+- CI 完成后停止；任何产品修复、依赖补包、签名、候选安装生命周期或新增真机动作
+  都需要新的明确授权。
+
+## 当前结果
+
+- 真实 `600519` 历史闭环与重启持久化通过；相关测试与聚合通过。
+- 当前 Judge 上限为 `PASS_WITH_DEGRADATIONS`：新闻 0 条、筹码冻结 DLL 缺失、
+  安装器未签名且候选安装生命周期未执行。
+- Work12 原应用已恢复 `health=ok`，数据库和日志存在；PR #21 证据 Head
+  `da229059…` 的 Run `30821021196` 已 success。
+- Work14 最终 Judge 为 `PASS_WITH_DEGRADATIONS — DRAFT_HOLD`；其后 Ready/合并授权
+  属于 Work15，不回写改变 Work14 当时的授权边界。
+
+
+---
+
+# 历史任务合同｜WORK-010 / v3.29.1 发布与 Windows 真机验收
 
 ## Work10-B｜Windows 发布临时目录清理竞态
 

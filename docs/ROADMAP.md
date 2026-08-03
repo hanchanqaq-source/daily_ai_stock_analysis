@@ -7,6 +7,13 @@
 
 ## 当前路线入口
 
+Work10 已完成 `v3.29.1` 发布；Work11 真机安装闭环裁决 `PASSED_WITH_RESIDUALS`。
+Work12 的个股正式历史缺失由 Work13 PR #20 修复。Work14 已在其固定 Head 上完成
+未发布 Windows 候选的 `600519` 正式历史与重启持久化验收，最终裁决为
+`PASS_WITH_DEGRADATIONS — DRAFT_HOLD`；证据 Run `30821021196` 已 success。
+Work15 已将 PR #20 合入 `main@25de369f…`，主线 Run `30822458701` 8/8 success；
+当前只待 PR #21 非破坏同步后的最终固定 Head CI、Ready 与合并。
+
 | 路线 | 状态 | 边界 |
 | --- | --- | --- |
 | R0｜云端安全重建基线 | 完成 | 官方 v3.28.0 + V1.5.6 候选、Draft PR 和两轮 CI 已通过 |
@@ -16,7 +23,8 @@
 | R4｜数据库兼容与脱敏迁移演练 | 完成 | Work4 方案 A；PR #12 固定 Head CI 通过；Draft Hold |
 | R5｜Windows 本机验收 | 完成 | Work2 / PR #9 真机启动与回滚模拟通过并进入 `main` |
 | R6｜正式数据迁移 | 完成（无数据，跳过迁移） | Work6 `NO_FORMAL_DATA_FOUND`；旧项目和数据库从未建立 |
-| R7｜主线与正式发布 | 进行中 | 已选 A / `v3.29.0`；按 PR 固定 Head、`main` CI、Tag 和产物门执行 |
+| R7｜主线与正式发布 | 完成 | `v3.29.1` annotated Tag/正式 Release；Run `30786838156` 5/5 success、7 assets |
+| R7-Hotfix 验收 | Work15 主线收口中 | Work14 最终 `PASS_WITH_DEGRADATIONS — DRAFT_HOLD`；PR #20 已合并且 main CI 8/8；PR #21 最终 CI 待核验 |
 
 ## Work 1｜官方稳定版干净底座建立（历史）
 

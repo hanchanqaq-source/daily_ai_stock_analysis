@@ -6,50 +6,131 @@
 PROJECT_ID=PP02
 PROJECT_NAME=AI 每日股票分析
 CHAT_ROLE=AUTO_TAKEOVER
-WORK_ID=WORK-010
+WORK_ID=WORK-015
 ROLE_LOCK=SUPERSEDED_BY_PP02-WORK-HANDOFF-002
 WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
-WORK_STATE=WAITING_FOR_AUTHORIZATION
-EXECUTION_LOCK=HELD_BY_WORK_010
-APPLICATION_BASE_VERSION=3.29.0
-TARGET_RELEASE_VERSION=3.29.1
+WORK_STATE=ACTIVE_MAINLINE_CLOSURE
+EXECUTION_LOCK=HELD_BY_WORK_015
+APPLICATION_BASE_VERSION=3.29.1
+CURRENT_RELEASE_VERSION=3.29.1
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-ACTIVE_BASE=91e174d30b3d0f2533b0db5df0245bf49778234f
-ACTIVE_BRANCH=agent/pp02-work10-release-cleanup
-ACTIVE_PR=19
-CURRENT_STAGE=R7 Hotfix / Work10-B Windows Release Artifact Cleanup Race
-CURRENT_WORK=WORK-010 — v3.29.1 release and Windows real-machine acceptance
-ACTIVE_GOAL=repair the Windows release temporary-directory cleanup race without changing product code
-PRODUCT_RELEASE_COMMIT=3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65
-MERGED_PR=18
-MERGED_MAIN_HEAD=91e174d30b3d0f2533b0db5df0245bf49778234f
-FAILED_RELEASE_RUN=30763628302
-FAILED_RELEASE_WINDOWS_JOB=91538466726
-FAILED_RELEASE_STEP=PREPARE_RELEASE_ARTIFACT_WINDOWS
-FAILURE_CLASS=WINDOWS_TEMP_DIRECTORY_CLEANUP_RACE
-FAILURE_PATH=aiohttp/_websocket/mask.cp312-win_amd64.pyd
-IMPLEMENTATION_HEAD=84bcbb060aaa78ebe5d5413cd8a16a7a1eac5512
-LOCAL_CONTRACTS=PASS_25_OF_25
-FULL_CI_VALIDATED_HEAD=05e7a5dac1064b644cb5a01fa9300a4af109ecdb
-FULL_CI_RUN=30765409298
-FULL_CI_RESULT=PASS_7_SUCCESS_1_PATH_SKIPPED
-WINDOWS_CANDIDATE_ARTIFACT_ID=8839171754
-WINDOWS_CANDIDATE_ARTIFACT_SHA256=18b96a582eaf17faa405f09870ca36f6e3797663919b921842075075fb06e041
-WINDOWS_DIAGNOSTIC_ARTIFACT_ID=8839165862
-WINDOWS_DIAGNOSTIC_ARTIFACT_SHA256=e7735f3b0df0bd061ea496f89eccbf7a1fd4b1b19258ca8f4985387822ca282c
-CURRENT_STATUS=WORK10_B_FULL_CI_PASS_AWAITING_PR19_MERGE_AUTHORIZATION
-ACTIVE_BLOCKER=PR19_MERGE_AUTHORIZATION_REQUIRED
-TARGET_RELEASE_TAG=v3.29.1
-TARGET_TAG_TYPE=ANNOTATED
-TARGET_TAG_MESSAGE=Release v3.29.1: Windows installer bootstrap fix
-NEXT_WORK=NONE_WHILE_WORK_010_ACTIVE
-NEXT_ACTION=STOP_AND_WAIT_FOR_EXPLICIT_PR19_MERGE_AUTHORIZATION
-AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/MAIN_WRITE/TAG/RELEASE/REAL_DATA/WINDOWS_REAL_MACHINE_ACTION
-LAST_UPDATED=2026-08-02
+ACTIVE_BASE=25de369f8e12438a1ec1f3511c68256c471243e4
+ACTIVE_BRANCH=agent/pp02-work13-status-reconciliation
+ACTIVE_PR=21_DRAFT
+CURRENT_STAGE=R7 Hotfix / Work15 PR20-PR21 Mainline Closure
+CURRENT_WORK=WORK-015 — merge PR20, synchronize PR21, then merge PR21 after fixed-Head CI
+ACTIVE_GOAL=land the validated history contract and Work14 evidence without Tag, Release, or scope expansion
+PRODUCT_PR=20_MERGED
+PRODUCT_FIXED_HEAD=e11946f528c9cb64beeec8b626ada457c02b0034
+PRODUCT_MERGE_COMMIT=25de369f8e12438a1ec1f3511c68256c471243e4
+PRODUCT_MAIN_CI_RUN=30822458701
+PRODUCT_MAIN_CI_RESULT=PASS_8_OF_8
+STATUS_PR=21_DRAFT
+STATUS_SYNC_MERGE_HEAD=25313cf0f23f0f4ab4922ea983bcd05b3577e23e
+UNPUBLISHED_CANDIDATE_VERSION=3.29.1
+UNPUBLISHED_INSTALLER_BYTES=217003814
+UNPUBLISHED_INSTALLER_SHA256=DAD0CE0CCF8FC34F7318CD4E4F0CC37347C68A1A03E98D0CA7B048E393B18B33
+UNPUBLISHED_INSTALLER_SIGNATURE=NotSigned
+WINDOWS_RELATED_TESTS=PASS_130_PYTHON_82_DESKTOP_PLUS_FROZEN_HEALTH
+FORMAL_HISTORY_QUERY_ID=1c4ae649232d40eaae7dcb6bb1b6981f
+FORMAL_HISTORY_ID=2
+FORMAL_HISTORY_STATUS=PASS_PERSISTED_AFTER_CANDIDATE_RESTART_AND_WORK12_RESTORE
+RUN_DIAGNOSTIC=DEGRADED_NEWS_EMPTY_AND_CHIP_DLL_MISSING
+WORK12_RESTORED=PASS_HEALTH_OK_DATABASE_AND_LOGS_PRESENT
+WORK14_EVIDENCE_HEAD=da2290597e880c4c4a4c1c04e5cc548aa5542ea9
+WORK14_EVIDENCE_CI_RUN=30821021196
+WORK14_EVIDENCE_CI_RESULT=PASS_4_SUCCESS_4_PATH_SKIPPED
+WORK14_JUDGE=PASS_WITH_DEGRADATIONS_DRAFT_HOLD
+CURRENT_STATUS=WORK15_PR20_MERGED_MAIN_CI_PASS_PR21_FINAL_HEAD_CI_PENDING
+ACTIVE_BLOCKER=NONE
+NEXT_WORK=NONE_WHILE_WORK_015_ACTIVE
+NEXT_ACTION=VERIFY_PR21_FIXED_HEAD_CI_THEN_READY_AND_MERGE_PR21
+AUTHORIZATION_REQUIRED=TRUE_FOR_TAG/RELEASE/DEPENDENCY_FIX/SIGNING/ADDITIONAL_WINDOWS_ACTION
+LAST_UPDATED=2026-08-03
 ```
 
-## 2026-08-02 Work10-B / Windows release artifact cleanup race
+## 2026-08-03 Work15 / PR #20/#21 主线收口
+
+- PR #20 固定 Head `e11946f528c9cb64beeec8b626ada457c02b0034` 已按授权转为
+  Ready，并通过 merge commit `25de369f8e12438a1ec1f3511c68256c471243e4` 合入 `main`。
+- 新 `main` 的 CI Run
+  [`30822458701`](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/actions/runs/30822458701)
+  已 `8/8` success：治理、后端、Docker、Web、Desktop、Windows 与 macOS 均通过；
+  Auto Tag Run `30822458692` 按规则 skipped，没有创建或移动 Tag。
+- PR #21 的 Work14 7 文件证据与 PR #20 的 5 文件产品改动没有路径重叠。新 `main`
+  已通过双父 merge commit `25313cf0f23f0f4ab4922ea983bcd05b3577e23e` 非破坏同步到
+  `agent/pp02-work13-status-reconciliation`；没有 rebase、force-push 或历史丢失。
+- 本次只把 Work14 最终裁决、证据 CI 与 PR #20 合并事实写回原 7 个台账/路线文件。
+  PR #21 最终 Head 的 Run ID 只写入 PR 元数据，避免为记录 CI 再制造新 Head。
+- Work15 已授权 PR #21 在最终固定 Head CI 通过后转 Ready 并合并。Tag、Release、
+  `mini_racer`、新闻、签名和新增 Windows 真机动作仍明确禁止。
+
+## 2026-08-03 Work14 / PR #20 固定 Head Windows 未发布候选验收
+
+- 验收源码当时精确固定为 Draft PR #20 Head
+  `e11946f528c9cb64beeec8b626ada457c02b0034`，Base 为
+  `main@f5c7f43359ec81e27395d9bb236ec1cab0f6dcc2`。构建信息内 revision 与该 Head
+  一致；候选仅用于本机验收，没有安装、Tag 或 Release。
+- Windows 未发布安装器版本 `3.29.1`，大小 `217,003,814` bytes，SHA-256
+  `DAD0CE0CCF8FC34F7318CD4E4F0CC37347C68A1A03E98D0CA7B048E393B18B33`，Authenticode 为 `NotSigned`。冻结后端动态端口健康探针通过；
+  相关 Python 回归 `130 passed`，Desktop Node 22 回归 `82/82`。
+- 受控 API 单独提交 `600519`，task/query/trace 均为 `1c4ae649232d40eaae7dcb6bb1b6981f`。
+  任务 `completed/100`，正式历史 ID `2`，`model_used=codex_cli`，评分 `59`，
+  操作建议“观望”。诊断 `history=ok`，运行流 `llm_analysis=success` 与
+  `history_save=success`。
+- 候选后端停机重启后，任务状态从数据库恢复，history ID/query ID 和运行流仍可读；
+  恢复 Work12 原安装后，其端口 8000 健康接口也能读取同一条历史。同期大盘历史
+  1 条；`week_to_date` 周期聚合读取 2 条来源（1 个股、1 个大盘）。
+- 裁决为 `PASS_WITH_DEGRADATIONS`，不是全量 PASS：新闻搜索为 0 条，筹码数据因冻结
+  产物缺少 `py_mini_racer/mini_racer.dll` 而失败，整体诊断为 `degraded`；
+  安装器未签名，本 Work 也未执行候选安装生命周期。
+- Work12 配置、数据库和日志均未被清理或用候选覆盖。现场 `.env` 在受控单股重跑前
+  已发生外部变更，元数据变为 50,268 bytes（来源未判定）；Work14 保留该现场版本，没有用 50,288
+  bytes 的旧临时副本回写。临时副本和两个精确 Junction 已删除，Work12 原应用已恢复
+  且 `health=ok`。
+- Work14 证据 Head `da2290597e880c4c4a4c1c04e5cc548aa5542ea9` 的 CI Run
+  [`30821021196`](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/actions/runs/30821021196)
+  已 success：4 个适用 Job 成功，4 个路径无关 Job正常 skipped。最终裁决为
+  `PASS_WITH_DEGRADATIONS — DRAFT_HOLD`。
+- Work14 结束时 Ready、合并、`main`、Tag 与 Release 均未授权；该历史边界已由
+  Work15 的精确收口授权替代。PR #20 后续合并事实见上方 Work15 记录。
+
+
+## 2026-08-03 Work13 / 方案 A 双 Draft PR 修复
+
+- 用户授权 Work13 采用方案 A：先只读核验证据，再从同一
+  `main@f5c7f43359ec81e27395d9bb236ec1cab0f6dcc2` 建立两个相互独立的 Draft PR。
+- 产品 Draft PR [#20](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/20)
+  修复个股分析完成契约。两个流水线原本都记录正式历史落库结果，但共享的
+  `AnalysisService` 即使看到 `history.status=failed` 仍返回成功响应，使异步任务发布
+  完成而历史列表无记录。
+- 最小修复只在共享服务返回边界拦截明确的历史失败，保留诊断消息为 `last_error`；
+  历史成功、缺少旧诊断、CLI-only 流程、行情复盘和周期报告不变。TDD 先复现
+  `1 failed, 1 passed`，修复后专项 `2/2`、Python compile、flake8 fatal selectors、
+  AI asset check 与 `git diff --check` 通过。
+- 本状态 Draft PR 只校正 Work10–Work13 台账与路线事实，不含产品代码。Work13 当时
+  要求两份 PR 保持 Draft；该历史边界后由 Work15 的精确 Ready/合并授权替代。
+
+## 2026-08-03 Work10–Work12 / 发布与真机证据收口
+
+- PR #19 已合并为 `main@f5c7f43359ec81e27395d9bb236ec1cab0f6dcc2`。手动 Desktop
+  Release Run [`30786838156`](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/actions/runs/30786838156)
+  的 preflight、Windows、两项 macOS 和 publish-release 共 `5/5` 成功。
+- Annotated Tag `v3.29.1` 的 Tag object 为 `cf6e34b6…`，剥离后仍精确指向固定产品
+  Commit `3e1311ee…`。正式 Release 非 Draft、非 Prerelease，共 7 个资产。
+- Work11 从正式 Release 下载 Windows 安装器，大小 `218,044,195` bytes、SHA-256
+  `4efc4bb2b7e3f54c6c649617eac2b301d5bb481ae8e20a77540e3746e6c56060` 与 Release
+  元数据一致；签名状态为 `NotSigned`。安装版本 `3.29.1.0`、内置后端健康和清洁卸载
+  通过；仅验收临时目录保留安装器证据副本，裁决 `PASSED_WITH_RESIDUALS`。
+- Work12 的安装、后端健康、Codex CLI 配置及重启后持久化、行情复盘正式历史和周期
+  报告通过；手动 `600519` 个股分析虽提交任务，却没有形成正式个股历史。因此总体
+  裁决为 `FAILED_STOCK_ANALYSIS_HISTORY_MISSING`，直接进入 Work13 修复而不回退已通过项。
+
+## 2026-08-02 Work10-B / Windows release artifact cleanup race（historical pre-merge snapshot）
+
+> 本节保留 PR #19 合并前快照；其后合并、发布与真机结果以本文件顶部 Work10–Work13
+> 收口记录为准。
 
 - PR #18 is merged as `main@91e174d30b3d0f2533b0db5df0245bf49778234f`. Manual Desktop
   Release Run `30763628302` used fixed product Commit
