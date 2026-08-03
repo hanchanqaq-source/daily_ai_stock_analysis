@@ -13,8 +13,9 @@ Work12 的个股正式历史缺失由 Work13 PR #20 修复。Work14 已在其固
 `PASS_WITH_DEGRADATIONS — DRAFT_HOLD`；证据 Run `30821021196` 已 success。
 Work15 已将 PR #20/#21 依序合入主线；PR #21 最终 Run `30825436318` success，
 当前 `main@568e26ad…`，裁决 `PASS — MAINLINE_CLOSED`。Work16 Draft PR #22
-正以测试先行收口 Windows 冻结筹码运行时：本地合同已 GREEN，依赖不变，固定 Head
-完整 CI 尚待验证。
+已以测试先行收口 Windows 冻结筹码运行时；固定 Head `016e3408…` 的 Run
+`30831393819` 为 7 success、1 path-skipped，直接冻结与最终 ZIP 探针通过，依赖不变，
+裁决 `PASS — DRAFT_HOLD`。
 
 | 路线 | 状态 | 边界 |
 | --- | --- | --- |
@@ -26,7 +27,7 @@ Work15 已将 PR #20/#21 依序合入主线；PR #21 最终 Run `30825436318` su
 | R5｜Windows 本机验收 | 完成 | Work2 / PR #9 真机启动与回滚模拟通过并进入 `main` |
 | R6｜正式数据迁移 | 完成（无数据，跳过迁移） | Work6 `NO_FORMAL_DATA_FOUND`；旧项目和数据库从未建立 |
 | R7｜主线与正式发布 | 完成 | `v3.29.1` annotated Tag/正式 Release；Run `30786838156` 5/5 success、7 assets |
-| R7-Hotfix 验收 | Work16 冻结筹码收口中 | Work15 已 `PASS — MAINLINE_CLOSED`；Draft PR #22 本地 TDD GREEN，固定 Head 完整 CI 待核验 |
+| R7-Hotfix 验收 | Work16 完成 / Draft Hold | PR #22 固定 Head CI 与 Windows 双层筹码探针通过；禁止自行 Ready、合并或发布 |
 
 ## Work 1｜官方稳定版干净底座建立（历史）
 
