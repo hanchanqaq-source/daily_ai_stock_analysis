@@ -1,6 +1,18 @@
 # PP02 安全重建路线 R0–R7
 
-## 2026-08-02 Work10-B Windows release cleanup race
+## 2026-08-03 Work10–Work13 evidence reconciliation and history contract
+
+- PR #19 已合并为 `main@f5c7f43359ec81e27395d9bb236ec1cab0f6dcc2`；annotated
+  `v3.29.1` 剥离后指向固定产品 Commit `3e1311ee…`。正式发布 Run `30786838156`
+  为 `5/5` success，Release 非 Draft/非 Prerelease，共 7 个资产。
+- Work11 正式 Windows 安装、内置后端健康和清洁卸载通过，仅在验收临时目录保留安装器
+  副本，裁决 `PASSED_WITH_RESIDUALS`。Work12 的 Codex CLI、行情复盘正式历史和周期
+  报告通过，但 `600519` 没有正式个股历史，裁决 `FAILED_STOCK_ANALYSIS_HISTORY_MISSING`。
+- Work13 采用方案 A。产品 Draft PR #20 仅在明确历史落库失败时阻止 API 个股任务假
+  完成；本状态 Draft PR 仅同步 Work10–Work13 台账。两者从同一 main 建立，保持 Draft，
+  未授权 Ready、合并、main、Tag、Release、真实数据/凭据或新增真机动作。
+
+## 2026-08-02 Work10-B Windows release cleanup race（historical pre-merge snapshot）
 
 - PR #18 is merged as `main@91e174d30b3d0f2533b0db5df0245bf49778234f`. Desktop Release
   Run `30763628302` passed both macOS builds and the full installed Windows lifecycle, then failed
@@ -44,7 +56,7 @@
 | R5｜Windows 本机验收 | 安装、启动、Web/Desktop 与安全默认值 | 完成 | Work2 / PR #9 真机启动与回滚模拟通过 |
 | R6｜正式数据迁移 | 迁移经确认的真实数据 | 完成（无数据，跳过迁移） | Work6 `NO_FORMAL_DATA_FOUND`；旧项目和数据库从未建立 |
 | R7｜替换 main 与 Release | Ready、合并、main、Tag、Release | 完成 | `v3.29.0` 已发布；PR #15 后续文档主线 Run `30697946093` 8/8 success |
-| R7-Hotfix｜Windows 安装器补丁 | 修复 v3.29.0 `System.dll / 0xC0000005` 引导崩溃 | 等待 PR #19 合并授权 | Head `05e7a5da…` / Run `30765409298` 全部适用 Job 成功；未创建 v3.29.1 Tag/Release |
+| R7-Hotfix｜Windows 安装器补丁 | 修复 v3.29.0 `System.dll / 0xC0000005` 引导崩溃 | 已发布；Work13 Draft 修复中 | `v3.29.1` Run `30786838156` 5/5；Work12 个股历史失败由 PR #20 修复 |
 
 ## 当前 R3 顺序
 
