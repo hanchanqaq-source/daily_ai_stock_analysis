@@ -1,4 +1,30 @@
-# WORK-015｜PR #20/#21 主线收口（PR #21 最终 CI 待收口）
+# WORK-016｜Windows 冻结筹码依赖收口（执行中）
+
+## Work16｜阶段回传
+
+```text
+BASE=568e26adf0e6393a7a0da1be57369535735cd05a
+BRANCH=agent/pp02-work16-windows-chip-runtime
+DRAFT_PR=PENDING
+ROOT_CAUSE=CONFIRMED_EXISTING_MINI_RACER_RUNTIME_NOT_COLLECTED
+DEPENDENCY_CHANGE=NONE
+TDD=PENDING_RED
+FULL_CI=NOT_RUN
+JUDGE=IN_PROGRESS_DRAFT_ONLY
+```
+
+- 只读证据确认 Windows CI 安装 `akshare 1.18.81` 时已安装 `mini-racer 0.14.1`；
+  wheel 内已有 `py_mini_racer/mini_racer.dll` 和 `icudtl.dat`。
+- `scripts/build-backend.ps1` 没有收集该包，现有探针只验证导入、静态资源与 HTTP
+  健康，不创建 MiniRacer/V8；这解释了冻结健康成功但 Work14 筹码链因 DLL 缺失退化。
+- 已批准最小方案不改 `requirements.txt`：收集现有运行资产，检查 DLL/ICU，并在
+  构建输出与最终解压 ZIP 上执行离线 V8/筹码模块探针。
+- 当前未 Ready、合并、Tag、Release，未处理新闻/签名，未使用真实凭据/数据，也未
+  执行新增 Windows 真机动作。
+
+---
+
+# 历史回传｜WORK-015 / PR #20/#21 主线收口
 
 ## Work15｜阶段回传
 
