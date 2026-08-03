@@ -232,3 +232,14 @@ python scripts/pp02_database_migration_rehearsal.py \
 未完成的目标及 WAL/SHM 会清理，报告采用同目录临时文件加原子替换；证明缺失、哈希
 不符、真实数据声明、部分股票事件 Schema、损坏 SQLite、已有目标或过期恢复令牌异常
 均不得输出 PASS。遇到失败应保留原合成输入和证明用于排查，不得改用真实库重试。
+
+## Windows 冻结筹码运行时排障
+
+冻结后端健康通过但筹码数据失败时，先检查最终 onedir/ZIP 解包根目录下的
+`_internal\py_mini_racer\mini_racer.dll` 与 `icudtl.dat`；兼容布局也可能直接位于
+`py_mini_racer\`。不要只用 `import py_mini_racer` 或 HTTP 健康代替原生加载证据。
+
+Windows 构建与最终 ZIP 都应通过 `scripts/verify-frozen-backend.ps1`。成功日志必须
+包含 `OK: packaged chip runtime probe succeeded`，该探针会导入 AkShare 筹码模块、
+创建 MiniRacer 并离线求值。若构建环境根本没有 MiniRacer 或需要改变依赖声明，停止
+在依赖方案门，不得自行安装、固定或升级依赖。
