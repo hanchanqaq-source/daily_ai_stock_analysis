@@ -6,50 +6,78 @@
 PROJECT_ID=PP02
 PROJECT_NAME=AI 每日股票分析
 CHAT_ROLE=AUTO_TAKEOVER
-WORK_ID=WORK-010
+WORK_ID=WORK-013
 ROLE_LOCK=SUPERSEDED_BY_PP02-WORK-HANDOFF-002
 WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
-WORK_STATE=WAITING_FOR_AUTHORIZATION
-EXECUTION_LOCK=HELD_BY_WORK_010
-APPLICATION_BASE_VERSION=3.29.0
-TARGET_RELEASE_VERSION=3.29.1
+WORK_STATE=ACTIVE_DRAFT_HOLD
+EXECUTION_LOCK=HELD_BY_WORK_013
+APPLICATION_BASE_VERSION=3.29.1
+CURRENT_RELEASE_VERSION=3.29.1
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-ACTIVE_BASE=91e174d30b3d0f2533b0db5df0245bf49778234f
-ACTIVE_BRANCH=agent/pp02-work10-release-cleanup
-ACTIVE_PR=19
-CURRENT_STAGE=R7 Hotfix / Work10-B Windows Release Artifact Cleanup Race
-CURRENT_WORK=WORK-010 — v3.29.1 release and Windows real-machine acceptance
-ACTIVE_GOAL=repair the Windows release temporary-directory cleanup race without changing product code
+ACTIVE_BASE=f5c7f43359ec81e27395d9bb236ec1cab0f6dcc2
+ACTIVE_BRANCHES=agent/pp02-work13-analysis-history-contract,agent/pp02-work13-status-reconciliation
+ACTIVE_PRS=20_AND_THIS_STATUS_DRAFT
+CURRENT_STAGE=R7 Hotfix / Work13 Stock History Completion Contract
+CURRENT_WORK=WORK-013 — reconcile Work10-Work12 evidence and repair false stock-analysis completion
+ACTIVE_GOAL=keep stock analysis incomplete when formal history persistence explicitly fails
 PRODUCT_RELEASE_COMMIT=3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65
-MERGED_PR=18
-MERGED_MAIN_HEAD=91e174d30b3d0f2533b0db5df0245bf49778234f
-FAILED_RELEASE_RUN=30763628302
-FAILED_RELEASE_WINDOWS_JOB=91538466726
-FAILED_RELEASE_STEP=PREPARE_RELEASE_ARTIFACT_WINDOWS
-FAILURE_CLASS=WINDOWS_TEMP_DIRECTORY_CLEANUP_RACE
-FAILURE_PATH=aiohttp/_websocket/mask.cp312-win_amd64.pyd
-IMPLEMENTATION_HEAD=84bcbb060aaa78ebe5d5413cd8a16a7a1eac5512
-LOCAL_CONTRACTS=PASS_25_OF_25
-FULL_CI_VALIDATED_HEAD=05e7a5dac1064b644cb5a01fa9300a4af109ecdb
-FULL_CI_RUN=30765409298
-FULL_CI_RESULT=PASS_7_SUCCESS_1_PATH_SKIPPED
-WINDOWS_CANDIDATE_ARTIFACT_ID=8839171754
-WINDOWS_CANDIDATE_ARTIFACT_SHA256=18b96a582eaf17faa405f09870ca36f6e3797663919b921842075075fb06e041
-WINDOWS_DIAGNOSTIC_ARTIFACT_ID=8839165862
-WINDOWS_DIAGNOSTIC_ARTIFACT_SHA256=e7735f3b0df0bd061ea496f89eccbf7a1fd4b1b19258ca8f4985387822ca282c
-CURRENT_STATUS=WORK10_B_FULL_CI_PASS_AWAITING_PR19_MERGE_AUTHORIZATION
-ACTIVE_BLOCKER=PR19_MERGE_AUTHORIZATION_REQUIRED
-TARGET_RELEASE_TAG=v3.29.1
-TARGET_TAG_TYPE=ANNOTATED
-TARGET_TAG_MESSAGE=Release v3.29.1: Windows installer bootstrap fix
-NEXT_WORK=NONE_WHILE_WORK_010_ACTIVE
-NEXT_ACTION=STOP_AND_WAIT_FOR_EXPLICIT_PR19_MERGE_AUTHORIZATION
+MERGED_PR=19
+MERGED_MAIN_HEAD=f5c7f43359ec81e27395d9bb236ec1cab0f6dcc2
+RELEASE_TAG=v3.29.1
+RELEASE_TAG_TYPE=ANNOTATED
+RELEASE_TAG_OBJECT=cf6e34b60de5ac74cd358a958e53c11f94a206ff
+RELEASE_RUN=30786838156
+RELEASE_RESULT=PASS_5_OF_5
+RELEASE_STATUS=PUBLISHED_NON_DRAFT_NON_PRERELEASE_7_ASSETS
+WORK11_JUDGE=PASSED_WITH_RESIDUALS
+WORK12_JUDGE=FAILED_STOCK_ANALYSIS_HISTORY_MISSING
+ROOT_CAUSE=EXPLICIT_HISTORY_FAILURE_DID_NOT_BLOCK_API_TASK_COMPLETION
+PRODUCT_DRAFT_PR=20
+STATUS_DRAFT_PR=THIS_DRAFT_PR
+LOCAL_CONTRACTS=PASS_2_OF_2_PLUS_STATIC_GATES
+CURRENT_STATUS=WORK13_TWO_DRAFT_PRS_OPEN
+ACTIVE_BLOCKER=NONE
+NEXT_WORK=NONE_WHILE_WORK_013_ACTIVE
+NEXT_ACTION=VERIFY_FINAL_HEAD_CI_THEN_HOLD_BOTH_PRS_AS_DRAFT
 AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/MAIN_WRITE/TAG/RELEASE/REAL_DATA/WINDOWS_REAL_MACHINE_ACTION
-LAST_UPDATED=2026-08-02
+LAST_UPDATED=2026-08-03
 ```
 
-## 2026-08-02 Work10-B / Windows release artifact cleanup race
+## 2026-08-03 Work13 / 方案 A 双 Draft PR 修复
+
+- 用户授权 Work13 采用方案 A：先只读核验证据，再从同一
+  `main@f5c7f43359ec81e27395d9bb236ec1cab0f6dcc2` 建立两个相互独立的 Draft PR。
+- 产品 Draft PR [#20](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/20)
+  修复个股分析完成契约。两个流水线原本都记录正式历史落库结果，但共享的
+  `AnalysisService` 即使看到 `history.status=failed` 仍返回成功响应，使异步任务发布
+  完成而历史列表无记录。
+- 最小修复只在共享服务返回边界拦截明确的历史失败，保留诊断消息为 `last_error`；
+  历史成功、缺少旧诊断、CLI-only 流程、行情复盘和周期报告不变。TDD 先复现
+  `1 failed, 1 passed`，修复后专项 `2/2`、Python compile、flake8 fatal selectors、
+  AI asset check 与 `git diff --check` 通过。
+- 本状态 Draft PR 只校正 Work10–Work13 台账与路线事实，不含产品代码。两份 PR 都必须
+  保持 Draft；Ready、合并、`main`、Tag、Release、真实数据/凭据和新增真机动作均未授权。
+
+## 2026-08-03 Work10–Work12 / 发布与真机证据收口
+
+- PR #19 已合并为 `main@f5c7f43359ec81e27395d9bb236ec1cab0f6dcc2`。手动 Desktop
+  Release Run [`30786838156`](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/actions/runs/30786838156)
+  的 preflight、Windows、两项 macOS 和 publish-release 共 `5/5` 成功。
+- Annotated Tag `v3.29.1` 的 Tag object 为 `cf6e34b6…`，剥离后仍精确指向固定产品
+  Commit `3e1311ee…`。正式 Release 非 Draft、非 Prerelease，共 7 个资产。
+- Work11 从正式 Release 下载 Windows 安装器，大小 `218,044,195` bytes、SHA-256
+  `4efc4bb2b7e3f54c6c649617eac2b301d5bb481ae8e20a77540e3746e6c56060` 与 Release
+  元数据一致；签名状态为 `NotSigned`。安装版本 `3.29.1.0`、内置后端健康和清洁卸载
+  通过；仅验收临时目录保留安装器证据副本，裁决 `PASSED_WITH_RESIDUALS`。
+- Work12 的安装、后端健康、Codex CLI 配置及重启后持久化、行情复盘正式历史和周期
+  报告通过；手动 `600519` 个股分析虽提交任务，却没有形成正式个股历史。因此总体
+  裁决为 `FAILED_STOCK_ANALYSIS_HISTORY_MISSING`，直接进入 Work13 修复而不回退已通过项。
+
+## 2026-08-02 Work10-B / Windows release artifact cleanup race（historical pre-merge snapshot）
+
+> 本节保留 PR #19 合并前快照；其后合并、发布与真机结果以本文件顶部 Work10–Work13
+> 收口记录为准。
 
 - PR #18 is merged as `main@91e174d30b3d0f2533b0db5df0245bf49778234f`. Manual Desktop
   Release Run `30763628302` used fixed product Commit
