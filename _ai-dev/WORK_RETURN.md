@@ -1,4 +1,35 @@
-# WORK-010｜v3.29.1 发布与 Windows 真机验收（进行中）
+# WORK-013｜状态证据校正与个股正式历史完成契约（进行中）
+
+## Work13｜方案 A 双 Draft PR
+
+```text
+BASE=f5c7f43359ec81e27395d9bb236ec1cab0f6dcc2
+PR19_MERGED=YES_MAIN_f5c7f43359ec81e27395d9bb236ec1cab0f6dcc2
+V3_29_1_RELEASE=PASS_RUN_30786838156_5_OF_5_7_ASSETS
+WORK11_JUDGE=PASSED_WITH_RESIDUALS
+WORK12_JUDGE=FAILED_STOCK_ANALYSIS_HISTORY_MISSING
+ROOT_CAUSE=EXPLICIT_HISTORY_FAILURE_DID_NOT_BLOCK_API_TASK_COMPLETION
+TDD=RED_1_FAILED_1_PASSED_THEN_GREEN_2_PASSED
+STATIC_GATES=PASS_COMPILE_FATAL_LINT_AI_ASSETS_DIFF_CHECK
+PRODUCT_DRAFT_PR=20_DRAFT
+STATUS_DRAFT_PR=THIS_DRAFT_PR
+READY_MERGE_MAIN_TAG_RELEASE=NOT_AUTHORIZED
+JUDGE=WORK13_IMPLEMENTED_AWAITING_FINAL_HEAD_CI_DRAFT_HOLD
+```
+
+- 只读证据证明旧台账停在 PR #19 合并前：实际 PR #19 已进入当前 main，固定产品
+  Commit 已发布为 annotated `v3.29.1`，正式 Release 与发布 Run 均成功。
+- Work11 的正式安装器来源、大小、SHA、安装版本、后端健康和卸载闭环通过，仅保留
+  验收安装器副本；Work12 的 Codex CLI、行情复盘与周期报告通过，但 `600519` 没有
+  正式个股历史，所以 Work12 总体失败。
+- 产品 Draft PR #20 在共享 `AnalysisService` 返回边界增加最小完成门禁。专项测试先
+  证明旧行为假完成，再证明明确历史失败转为失败且历史成功保持响应。
+- 本状态 Draft PR 与产品 PR 基于同一 main 且互不依赖。没有 Ready、合并、main、
+  Tag、Release、真实凭据/数据或新增真机动作。
+
+---
+
+# 历史回传｜WORK-010 / v3.29.1 发布与 Windows 真机验收
 
 ## Work10-B｜Windows 发布临时目录清理竞态
 
