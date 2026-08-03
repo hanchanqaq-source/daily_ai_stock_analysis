@@ -1,4 +1,48 @@
-# WORK-010｜v3.29.1 发布与 Windows 真机验收
+# WORK-013｜状态证据校正与个股正式历史完成契约
+
+## Work13｜方案 A 双 Draft PR
+
+```text
+WORK_ID=WORK-013
+WORK_STATE=ACTIVE_DRAFT_HOLD
+BASE=f5c7f43359ec81e27395d9bb236ec1cab0f6dcc2
+PRODUCT_BRANCH=agent/pp02-work13-analysis-history-contract
+STATUS_BRANCH=agent/pp02-work13-status-reconciliation
+PRODUCT_DRAFT_PR=20
+STATUS_DRAFT_PR=THIS_DRAFT_PR
+ROOT_CAUSE=EXPLICIT_HISTORY_FAILURE_DID_NOT_BLOCK_API_TASK_COMPLETION
+CURRENT_GATE=FINAL_HEAD_CI_THEN_DRAFT_HOLD
+```
+
+## 授权范围
+
+- 先只读核对 `main`、PR #19、`v3.29.1` Tag/Release/发布 Run 和 Work11/12 真机证据。
+- 从同一固定 Base 建立两个独立 Draft PR：一个只校正 Work10–Work13 状态证据，一个
+  只修复个股分析历史完成契约及直接测试、设计/计划和 Changelog。
+- 允许正常 Commit、远端分支、Draft PR、完整 GitHub Actions CI 和范围内失败修复。
+
+## 产品修复合同
+
+- 复用现有 `diagnostic_summary.components.history`，不增加数据库查询或第二次落库。
+- 只有明确的 `history.status=failed` 才使 `AnalysisService` 返回失败并保留诊断消息。
+- 历史成功、缺少旧诊断、CLI-only 流程、行情复盘和周期报告行为保持不变。
+- 不修改数据库结构、配置、模型、提示词、通知、安装器或发布流程。
+
+## 非目标与停止门
+
+- 不 Ready、不合并、不写 `main`、不创建或修改 Tag/Release。
+- 不读取或使用真实凭据、真实用户数据，不新增 Windows 真机操作。
+- 两份 Draft PR 最终 Head CI 核验后停止；后续任何状态转换需要单独明确授权。
+
+## 验收
+
+1. 状态 PR 的 GitHub、Release 与 Work11/12 事实可追溯且不改写已完成历史。
+2. 产品 PR 有 RED→GREEN 回归，明确失败历史不能得到成功响应，成功历史保持原响应。
+3. 静态门、AI 资产和远端 CI 通过；两份 PR 始终为 Draft，Base 均为固定 `main`。
+
+---
+
+# 历史任务合同｜WORK-010 / v3.29.1 发布与 Windows 真机验收
 
 ## Work10-B｜Windows 发布临时目录清理竞态
 
