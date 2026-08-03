@@ -139,8 +139,34 @@ class AnalysisService:
                 logger.warning(f"分析股票 {stock_code} 未成功完成: {self.last_error}")
                 return None
             
-            # 构建响应
-            return self._build_analysis_response(result, query_id, report_type=rt.value)
+            # 构建响应，并确保 API 的“完成”语义包含正式历史落库。
+            response = self._build_analysis_response(result, query_id, report_type=rt.value)
+            diagnostic_summary = response.get("diagnostic_summary")
+            diagnostic_components = (
+                diagnostic_summary.get("components")
+                if isinstance(diagnostic_summary, dict)
+                else None
+            )
+            history_component = (
+                diagnostic_components.get("history")
+                if isinstance(diagnostic_components, dict)
+                else None
+            )
+            if isinstance(history_component, dict) and history_component.get("status") == "failed":
+                history_message = history_component.get("message")
+                self.last_error = (
+                    history_message.strip()
+                    if isinstance(history_message, str) and history_message.strip()
+                    else "分析报告历史保存失败"
+                )
+                logger.error(
+                    "分析股票 %s 未形成正式历史: %s",
+                    stock_code,
+                    self.last_error,
+                )
+                return None
+
+            return response
             
         except Exception as e:
             self.last_error = str(e)
