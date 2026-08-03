@@ -102,12 +102,12 @@ Run the packaging contract suite, `python scripts/check_ai_assets.py`, Python co
 Stage only Work16 files, commit with an English message, push the dedicated branch and
 keep the PR Draft.
 
-- [ ] **Step 3: Verify fixed-Head full CI**
+- [x] **Step 3: Verify fixed-Head full CI**
 
 Require all applicable jobs to complete successfully. In the Windows job, confirm the
 direct package and final extracted ZIP both print the chip runtime success marker.
 
-- [ ] **Step 4: Record the truthful final state**
+- [x] **Step 4: Record the truthful final state**
 
 Update the PR body and ledgers with the full Head SHA, Run ID, job counts, unverified
 items, rollback and the final `DRAFT_HOLD` Judge. Do not Ready or merge.
