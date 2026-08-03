@@ -1,13 +1,25 @@
 # PP02 安全重建路线 R0–R7
 
+## 2026-08-02 Work10-B Windows release cleanup race
+
+- PR #18 is merged as `main@91e174d30b3d0f2533b0db5df0245bf49778234f`. Desktop Release
+  Run `30763628302` passed both macOS builds and the full installed Windows lifecycle, then failed
+  after the final ZIP smoke when one-shot cleanup raced a transient `.pyd` file handle.
+- Draft PR #19 applies bounded deletion retry only after the existing runner-owned path validation.
+  Product code and fixed release Commit `3e1311ee…` are unchanged; Tag/Release operations remain
+  forbidden. Local related contracts pass `25/25`; fixed Head `05e7a5da…` passed Run
+  `30765409298` with seven applicable Jobs success and Web path-skipped, including the complete
+  Windows package and installed lifecycle. PR #19 now waits for explicit merge authorization.
+
 ## 2026-08-02 Work10-A cloud release entry
 
 - PR #17 is merged as `main@3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65`; post-merge Run
   `30747187504` passed all eight jobs. This fixed product commit remains the v3.29.1 target.
 - Work10-A adds a recoverable manual cloud release entry to the existing Desktop Release workflow.
-  The implementation is locally green and Draft PR #18 is open; fixed implementation Head
-  `e1a619c58670…` passed Run `30750806894` (seven applicable jobs success, Web path-skipped).
-- v3.29.1 Tag/Release, workflow-PR merge and Windows real-machine acceptance remain unauthorized.
+  Fixed implementation Head `e1a619c58670…` passed Run `30750806894` (seven applicable jobs
+  success, Web path-skipped), and PR #18 was later merged as `main@91e174d…`.
+- The first release attempt after that merge is recorded in Work10-B; v3.29.1 Tag/Release and
+  Windows real-machine acceptance remain incomplete.
 
 ## 2026-08-02 Work9 fixed-Head closure
 
@@ -32,7 +44,7 @@
 | R5｜Windows 本机验收 | 安装、启动、Web/Desktop 与安全默认值 | 完成 | Work2 / PR #9 真机启动与回滚模拟通过 |
 | R6｜正式数据迁移 | 迁移经确认的真实数据 | 完成（无数据，跳过迁移） | Work6 `NO_FORMAL_DATA_FOUND`；旧项目和数据库从未建立 |
 | R7｜替换 main 与 Release | Ready、合并、main、Tag、Release | 完成 | `v3.29.0` 已发布；PR #15 后续文档主线 Run `30697946093` 8/8 success |
-| R7-Hotfix｜Windows 安装器补丁 | 修复 v3.29.0 `System.dll / 0xC0000005` 引导崩溃 | 等待发布授权 | PR #17 已合并；Work10-A PR #18 固定实现 Head Run `30750806894` 通过 |
+| R7-Hotfix｜Windows 安装器补丁 | 修复 v3.29.0 `System.dll / 0xC0000005` 引导崩溃 | 等待 PR #19 合并授权 | Head `05e7a5da…` / Run `30765409298` 全部适用 Job 成功；未创建 v3.29.1 Tag/Release |
 
 ## 当前 R3 顺序
 

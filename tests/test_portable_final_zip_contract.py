@@ -85,4 +85,7 @@ def test_windows_release_smokes_the_final_extracted_portable_zip() -> None:
     assert "$requiredBrowserRelativePath" in workflow
     assert "Final Release portable manifest does not manage exactly one" in workflow
     assert "-PackagedEntry $releaseFinalPackagedEntry" in workflow
-    assert "Remove-Item -LiteralPath $releaseFinalExtract" in workflow
+    assert (
+        "Remove-OwnedReleaseDirectoryWithRetry "
+        "-OwnedRoot $releaseFinalExtract"
+    ) in workflow

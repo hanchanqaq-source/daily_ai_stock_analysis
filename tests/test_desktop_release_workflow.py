@@ -145,3 +145,38 @@ def test_publish_is_single_run_after_all_builds_with_minimal_permissions() -> No
     assert workflow_text.index("git tag -a") < workflow_text.index(
         "gh release create"
     )
+
+
+def test_windows_final_zip_cleanup_retries_locked_files_and_fails_closed() -> None:
+    workflow = _workflow()
+    windows_steps = workflow["jobs"]["build-windows"]["steps"]
+    prepare_step = next(
+        step
+        for step in windows_steps
+        if step.get("name") == "Prepare release artifact (Windows)"
+    )
+    script = prepare_step["run"]
+
+    assert "function Remove-OwnedReleaseDirectoryWithRetry" in script
+    assert "for ($attempt = 1; $attempt -le 15; $attempt++)" in script
+    assert (
+        "Remove-Item -LiteralPath $OwnedRoot -Recurse -Force "
+        "-ErrorAction Stop"
+    ) in script
+    assert "if ($attempt -eq 15)" in script
+    assert "Start-Sleep -Seconds 1" in script
+    assert (
+        "Failed to remove release-owned extraction directory after "
+        "$attempt attempts."
+    ) in script
+
+    cleanup_call = (
+        "Remove-OwnedReleaseDirectoryWithRetry "
+        "-OwnedRoot $releaseFinalExtract"
+    )
+    assert script.count(cleanup_call) == 2
+    assert script.index("outside the owned runner root") < script.index(cleanup_call)
+    assert (
+        "Remove-Item -LiteralPath $releaseFinalExtract -Recurse -Force"
+        not in script
+    )

@@ -1,6 +1,44 @@
 # WORK-010｜v3.29.1 发布与 Windows 真机验收（进行中）
 
-## Work10-A｜云端发布入口修复
+## Work10-B｜Windows 发布临时目录清理竞态
+
+```text
+MAIN_HEAD=91e174d30b3d0f2533b0db5df0245bf49778234f
+FAILED_RELEASE_RUN=30763628302
+FAILED_WINDOWS_JOB=91538466726
+WINDOWS_INSTALLED_LIFECYCLE=PASS_IN_FAILED_RELEASE_RUN
+MACOS_BUILDS=PASS_BOTH_IN_FAILED_RELEASE_RUN
+FINAL_ZIP_SMOKE=PASS_BEFORE_CLEANUP_FAILURE
+ROOT_CAUSE=ONE_SHOT_REMOVE_ITEM_RACED_TRANSIENT_PYD_FILE_HANDLE
+MINIMAL_FIX=BOUNDED_15_ATTEMPT_1_SECOND_RETRY_AFTER_OWNED_PATH_VALIDATION
+TDD=RED_THEN_GREEN
+LOCAL_CONTRACTS=PASS_25_OF_25
+WORKFLOW_YAML_PARSE=PASS
+AI_ASSETS=PASS
+DRAFT_PR=19_DRAFT
+IMPLEMENTATION_HEAD=84bcbb060aaa78ebe5d5413cd8a16a7a1eac5512
+FULL_CI=PASS_RUN_30765409298_HEAD_05e7a5dac1064b644cb5a01fa9300a4af109ecdb_7_SUCCESS_1_PATH_SKIPPED
+WINDOWS_CANDIDATE_ARTIFACT=8839171754_SHA256_18b96a582eaf17faa405f09870ca36f6e3797663919b921842075075fb06e041
+WINDOWS_DIAGNOSTIC_ARTIFACT=8839165862_SHA256_e7735f3b0df0bd061ea496f89eccbf7a1fd4b1b19258ca8f4985387822ca282c
+TAG_RELEASE=NOT_CREATED
+JUDGE=WORK10_B_PASS_AWAITING_PR19_MERGE_AUTHORIZATION
+```
+
+- Run `30763628302` failed only after the final Windows ZIP frozen-backend smoke passed. The
+  immediate cleanup hit `Access denied` on `aiohttp/_websocket/mask.cp312-win_amd64.pyd`; the final
+  publish job was skipped, so no v3.29.1 Tag or Release exists.
+- The minimal workflow change preserves runner-owned path validation, retries deletion at most 15
+  times with one-second waits, and still throws after exhaustion. Both pre-extraction and `finally`
+  cleanup use this contract.
+- No product code, installer logic, dependency, fixed product Commit, Tag or Release was changed.
+  Draft PR #19 fixed Head `05e7a5da…` completed Run `30765409298` with all seven applicable Jobs
+  successful and Web Gate path-skipped. The Windows Job passed final ZIP, installer contracts,
+  installed lifecycle, diagnostics, credential scan and candidate upload. The Work stops at the
+  explicit PR #19 merge authorization gate.
+
+---
+
+## 历史回传｜Work10-A 云端发布入口修复
 
 ```text
 PRODUCT_RELEASE_COMMIT=3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65
