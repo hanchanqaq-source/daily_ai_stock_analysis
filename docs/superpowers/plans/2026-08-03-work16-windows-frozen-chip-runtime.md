@@ -97,7 +97,7 @@ Expected: all tests pass.
 Run the packaging contract suite, `python scripts/check_ai_assets.py`, Python compile for
 `main.py`, and `git diff --check`.
 
-- [ ] **Step 2: Commit and update the Draft PR**
+- [x] **Step 2: Commit and update the Draft PR**
 
 Stage only Work16 files, commit with an English message, push the dedicated branch and
 keep the PR Draft.
