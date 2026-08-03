@@ -27,13 +27,13 @@
 - Consumes: existing Windows PyInstaller and frozen-verifier text contracts.
 - Produces: regression assertions for collection, asset checks, packaged runtime probe and final verifier invocation.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add `unittest` assertions requiring `--collect-all` for `py_mini_racer`, checks for
 `mini_racer.dll` and `icudtl.dat`, a `DSA_PACKAGED_CHIP_PROBE` branch in `main.py`, and
 use of that probe by `scripts/verify-frozen-backend.ps1`.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: `python -m unittest tests.test_desktop_packaging_assets -v`
 
@@ -51,28 +51,28 @@ Expected: the new tests fail because the fixed Base contains none of those contr
 - Consumes: installed `py_mini_racer.MiniRacer` and `akshare.stock_feature.stock_cyq_em`.
 - Produces: `DSA_PACKAGED_CHIP_PROBE=1`, which exits zero only after the chip module imports and `MiniRacer().eval('6 * 7')` returns `42`.
 
-- [ ] **Step 1: Collect the existing runtime**
+- [x] **Step 1: Collect the existing runtime**
 
 Append `--collect-all py_mini_racer` through the existing PowerShell argument array; do not modify dependency files.
 
-- [ ] **Step 2: Check packaged assets**
+- [x] **Step 2: Check packaged assets**
 
 After PyInstaller output exists, require `_internal\py_mini_racer\mini_racer.dll` and
 `_internal\py_mini_racer\icudtl.dat`, with the existing non-`_internal` fallback pattern
 for compatible onedir layouts.
 
-- [ ] **Step 3: Add the offline runtime probe**
+- [x] **Step 3: Add the offline runtime probe**
 
 In the early `main.py` probe section, import `akshare.stock_feature.stock_cyq_em`, create
 `MiniRacer` as a context manager, evaluate `6 * 7`, require `42`, print a success marker
 and exit. On exception, print a bounded error and exit one.
 
-- [ ] **Step 4: Invoke the probe from the shared verifier**
+- [x] **Step 4: Invoke the probe from the shared verifier**
 
 Save and restore `DSA_PACKAGED_CHIP_PROBE` with the verifier's other process variables,
 run the packaged executable from the temporary working directory and reject non-zero exit.
 
-- [ ] **Step 5: Run GREEN**
+- [x] **Step 5: Run GREEN**
 
 Run: `python -m unittest tests.test_desktop_packaging_assets -v`
 
@@ -92,7 +92,7 @@ Expected: all tests pass.
 - Consumes: final local diff and GitHub Actions results.
 - Produces: fixed-Head evidence and a Draft-only Work16 Judge.
 
-- [ ] **Step 1: Run related regression and static validation**
+- [x] **Step 1: Run related regression and static validation**
 
 Run the packaging contract suite, `python scripts/check_ai_assets.py`, Python compile for
 `main.py`, and `git diff --check`.
