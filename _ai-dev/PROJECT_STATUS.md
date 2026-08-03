@@ -6,27 +6,27 @@
 PROJECT_ID=PP02
 PROJECT_NAME=AI 每日股票分析
 CHAT_ROLE=AUTO_TAKEOVER
-WORK_ID=WORK-015
+WORK_ID=WORK-016
 ROLE_LOCK=SUPERSEDED_BY_PP02-WORK-HANDOFF-002
 WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
-WORK_STATE=ACTIVE_MAINLINE_CLOSURE
-EXECUTION_LOCK=HELD_BY_WORK_015
+WORK_STATE=ACTIVE_WINDOWS_FROZEN_CHIP_CLOSURE
+EXECUTION_LOCK=HELD_BY_WORK_016
 APPLICATION_BASE_VERSION=3.29.1
 CURRENT_RELEASE_VERSION=3.29.1
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-ACTIVE_BASE=25de369f8e12438a1ec1f3511c68256c471243e4
-ACTIVE_BRANCH=agent/pp02-work13-status-reconciliation
-ACTIVE_PR=21_DRAFT
-CURRENT_STAGE=R7 Hotfix / Work15 PR20-PR21 Mainline Closure
-CURRENT_WORK=WORK-015 — merge PR20, synchronize PR21, then merge PR21 after fixed-Head CI
-ACTIVE_GOAL=land the validated history contract and Work14 evidence without Tag, Release, or scope expansion
+ACTIVE_BASE=568e26adf0e6393a7a0da1be57369535735cd05a
+ACTIVE_BRANCH=agent/pp02-work16-windows-chip-runtime
+ACTIVE_PR=PENDING_DRAFT
+CURRENT_STAGE=R7 Hotfix / Work16 Windows Frozen Chip Dependency Closure
+CURRENT_WORK=WORK-016 — package and prove the existing Windows mini-racer runtime in frozen and final portable artifacts
+ACTIVE_GOAL=close the frozen chip runtime gap without dependency, news, signing, release, or Windows real-machine scope
 PRODUCT_PR=20_MERGED
 PRODUCT_FIXED_HEAD=e11946f528c9cb64beeec8b626ada457c02b0034
 PRODUCT_MERGE_COMMIT=25de369f8e12438a1ec1f3511c68256c471243e4
 PRODUCT_MAIN_CI_RUN=30822458701
 PRODUCT_MAIN_CI_RESULT=PASS_8_OF_8
-STATUS_PR=21_DRAFT
+STATUS_PR=21_MERGED
 STATUS_SYNC_MERGE_HEAD=25313cf0f23f0f4ab4922ea983bcd05b3577e23e
 UNPUBLISHED_CANDIDATE_VERSION=3.29.1
 UNPUBLISHED_INSTALLER_BYTES=217003814
@@ -42,13 +42,29 @@ WORK14_EVIDENCE_HEAD=da2290597e880c4c4a4c1c04e5cc548aa5542ea9
 WORK14_EVIDENCE_CI_RUN=30821021196
 WORK14_EVIDENCE_CI_RESULT=PASS_4_SUCCESS_4_PATH_SKIPPED
 WORK14_JUDGE=PASS_WITH_DEGRADATIONS_DRAFT_HOLD
-CURRENT_STATUS=WORK15_PR20_MERGED_MAIN_CI_PASS_PR21_FINAL_HEAD_CI_PENDING
+CURRENT_STATUS=WORK16_ROOT_CAUSE_CONFIRMED_DRAFT_PR_BOOTSTRAP
 ACTIVE_BLOCKER=NONE
-NEXT_WORK=NONE_WHILE_WORK_015_ACTIVE
-NEXT_ACTION=VERIFY_PR21_FIXED_HEAD_CI_THEN_READY_AND_MERGE_PR21
-AUTHORIZATION_REQUIRED=TRUE_FOR_TAG/RELEASE/DEPENDENCY_FIX/SIGNING/ADDITIONAL_WINDOWS_ACTION
+NEXT_WORK=NONE_WHILE_WORK_016_ACTIVE
+NEXT_ACTION=CREATE_DRAFT_PR_THEN_TDD_PACKAGE_AND_PROBE_EXISTING_MINI_RACER_RUNTIME
+AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/TAG/RELEASE/DEPENDENCY_CHANGE/NEWS/SIGNING/ADDITIONAL_WINDOWS_ACTION
 LAST_UPDATED=2026-08-03
 ```
+
+## 2026-08-03 Work16 / Windows 冻结筹码依赖收口
+
+- 用户授权以 `main@568e26adf0e6393a7a0da1be57369535735cd05a` 为固定 Base，先只读
+  定位冻结候选缺少 `py_mini_racer/mini_racer.dll` 的根因，再建立独立 Draft PR。
+- 根因证据已确认：Windows 固定主线 CI 安装 `akshare 1.18.81` 时已解析并安装
+  `mini-racer 0.14.1`，其 wheel 已包含 `py_mini_racer/mini_racer.dll` 与
+  `icudtl.dat`；现有 PyInstaller 命令没有收集该包的二进制/数据，现有 import 与
+  HTTP 健康探针也没有实例化 V8，因此冻结健康通过但真实筹码链仍会缺 DLL。
+- 最小设计只收集已安装的 `py_mini_racer` 运行资产，构建后检查 DLL/ICU 存在，
+  通过离线 JavaScript 求值证明可加载，并在最终解压便携 ZIP 上重复同一探针。
+  `requirements.txt` 不变，不新增或升级任何依赖。
+- Work15 已在本 Work 启动前完成：PR #21 最终固定 Head CI Run `30825436318`
+  成功并已合并，当前 `main` 为 `568e26ad…`。本 Work 不回退其历史。
+- 当前只允许独立分支、正常 Commit、Draft PR、相关回归与固定 Head 完整 CI；禁止
+  Ready、合并、Tag、Release、新闻、签名、真实凭据/数据及新增 Windows 真机动作。
 
 ## 2026-08-03 Work15 / PR #20/#21 主线收口
 
@@ -65,6 +81,9 @@ LAST_UPDATED=2026-08-03
   PR #21 最终 Head 的 Run ID 只写入 PR 元数据，避免为记录 CI 再制造新 Head。
 - Work15 已授权 PR #21 在最终固定 Head CI 通过后转 Ready 并合并。Tag、Release、
   `mini_racer`、新闻、签名和新增 Windows 真机动作仍明确禁止。
+- PR #21 后续最终固定 Head CI Run `30825436318` 成功，并已合并为
+  `main@568e26adf0e6393a7a0da1be57369535735cd05a`；Work15 最终裁决为
+  `PASS — MAINLINE_CLOSED`。其余已知降级项由后续独立 Work 处理。
 
 ## 2026-08-03 Work14 / PR #20 固定 Head Windows 未发布候选验收
 
