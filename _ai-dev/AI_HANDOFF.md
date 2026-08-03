@@ -1,22 +1,23 @@
 # PP02 新聊天交接
 
-## 当前接管入口｜WORK-015 / PR #20/#21 mainline closure
+## 当前接管入口｜WORK-016 / Windows frozen chip dependency closure
 
 | 项目 | 当前值 |
 | --- | --- |
-| 当前状态 | `WORK15_PR20_MERGED_MAIN_CI_PASS_PR21_FINAL_HEAD_CI_PENDING` |
-| 当前 Work | `WORK-015｜PR #20/#21 主线收口` |
-| 新 main | `25de369f8e12438a1ec1f3511c68256c471243e4`（PR #20 merge commit） |
-| main CI | Run `30822458701`，8/8 success；Auto Tag `30822458692` skipped |
-| 当前 PR | [#21](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/21)，保持 Draft 到最终 Head CI 通过 |
-| 非破坏同步 | 双父 merge commit `25313cf0f23f0f4ab4922ea983bcd05b3577e23e` |
+| 当前状态 | `WORK16_ROOT_CAUSE_CONFIRMED_DRAFT_PR_BOOTSTRAP` |
+| 当前 Work | `WORK-016｜Windows 冻结筹码依赖收口` |
+| 固定 Base | `main@568e26adf0e6393a7a0da1be57369535735cd05a` |
+| Work15 结果 | PR #20/#21 均已合并；最终裁决 `PASS — MAINLINE_CLOSED` |
+| 当前分支 | `agent/pp02-work16-windows-chip-runtime` |
+| 当前 PR | 待首个文档提交后建立独立 Draft PR |
 | 未发布候选 | `3.29.1` / `217,003,814` bytes / SHA-256 `DAD0CE0CCF8FC34F7318CD4E4F0CC37347C68A1A03E98D0CA7B048E393B18B33` / `NotSigned` |
 | 正式历史闭环 | `600519` history ID `2`；task/query/trace `1c4ae649232d40eaae7dcb6bb1b6981f` |
 | 相关回归 | Python `130 passed`；Desktop `82/82`；冻结后端动态端口健康通过 |
 | Work14 最终裁决 | `PASS_WITH_DEGRADATIONS — DRAFT_HOLD`；证据 Run `30821021196` success |
 | Work12 现场 | 原安装已恢复，端口 8000 `health=ok`；数据库和日志仍在 |
-| 下一动作 | 核验 PR #21 最终固定 Head CI，通过后转 Ready 并合并 |
-| 授权边界 | 禁止 Tag/Release、依赖/新闻/签名修复及新增 Windows 真机动作 |
+| 根因 | `mini-racer 0.14.1` 已安装且 wheel 含 DLL/ICU，但 PyInstaller 未收集、健康探针未加载 V8 |
+| 下一动作 | 建 Draft PR，按 RED/GREEN 补 DLL/ICU、可加载和最终 ZIP 筹码运行时契约 |
+| 授权边界 | 禁止 Ready/合并/Tag/Release、依赖变更、新闻、签名及新增 Windows 真机动作 |
 
 Work14 只从 PR #20 固定 Head 构建未发布验收候选，没有安装、Tag 或发布该候选。
 正式 `600519` API 任务完成并生成可重读历史；候选后端停机重启、再由 Work12 原安装
@@ -29,10 +30,13 @@ Work14 只从 PR #20 固定 Head 构建未发布验收候选，没有安装、Ta
 Work12 的 `.env` 在受控单股重跑前已发生外部变更，元数据变为 50,268 bytes（来源未判定）；
 Work14 未用旧副本覆盖它，临时副本与目录联接均已精确删除。最后更新：2026-08-03。
 
-Work15 已将 PR #20 合入 `main@25de369f…`，随后核验主线全套 CI 8/8 success。
-PR #21 与产品改动无路径重叠，已用普通双父 merge commit 同步新 main；下一步只处理
-PR #21 最终固定 Head CI、Ready 与合并。Tag、Release 和 Work14 已知降级均不在本 Work
-处理范围内。
+Work15 已将 PR #20 与 PR #21 依序合入主线；PR #21 最终固定 Head CI Run
+`30825436318` 成功，最终 `main` 为 `568e26ad…`，裁决 `PASS — MAINLINE_CLOSED`。
+
+Work16 只处理 Work14 已证实的 Windows 冻结筹码运行时缺口。Windows CI 已证明
+`akshare 1.18.81` 自动安装 `mini-racer 0.14.1`；因此本 Work 不改依赖，只让
+PyInstaller 收集其现有 `py_mini_racer` DLL/ICU，并在构建目录与最终解压便携 ZIP
+中执行无网络 V8/筹码模块探针。新闻、签名、版本发布和真机验收均不在范围内。
 
 以下内容是旧 Work 的追加历史；与本节冲突时，以 `PROJECT_STATUS.md`、本节和
 GitHub 可验证事实为准。
