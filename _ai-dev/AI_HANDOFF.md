@@ -1,36 +1,30 @@
 # PP02 新聊天交接
 
-## 当前接管入口｜WORK-010 / v3.29.1 release and Windows acceptance
+## 当前接管入口｜WORK-013 / stock analysis history completion
 
 | 项目 | 当前值 |
 | --- | --- |
-| 当前状态 | `WORK10_B_FULL_CI_PASS_AWAITING_PR19_MERGE_AUTHORIZATION` |
-| 当前 Work | `WORK-010｜v3.29.1 发布与 Windows 真机验收` |
+| 当前状态 | `WORK13_TWO_DRAFT_PRS_OPEN` |
+| 当前 Work | `WORK-013｜状态证据校正＋个股正式历史完成契约` |
 | 固定产品 Commit | `3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65` |
-| 当前 main | `91e174d30b3d0f2533b0db5df0245bf49778234f`（PR #18 已合并） |
-| 失败发布 | Run `30763628302` / Windows Job `91538466726` / 最终临时目录清理竞态 |
-| 分支 | `agent/pp02-work10-release-cleanup` |
-| Draft PR | [#19](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/19)，保持 Draft |
-| 当前子段 | `Work10-B｜Windows 发布临时目录清理竞态` |
-| 本地验证 | Desktop Release 契约及关联打包回归 `25/25` |
-| PR CI | Head `05e7a5dac1064b644cb5a01fa9300a4af109ecdb` / Run `30765409298` / 7 success + 1 path-skipped |
-| 下一动作 | 停止并等待明确的 PR #19 合并授权 |
+| 当前 main | `f5c7f43359ec81e27395d9bb236ec1cab0f6dcc2`（PR #19 已合并） |
+| 正式发布 | `v3.29.1` / Release Run `30786838156` / 5 of 5 success / 7 assets |
+| Work11 | `PASSED_WITH_RESIDUALS`；正式安装、后端健康、清洁卸载通过 |
+| Work12 | `FAILED_STOCK_ANALYSIS_HISTORY_MISSING`；`600519` 无正式历史 |
+| 产品 Draft PR | [#20](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/20) |
+| 状态 Draft PR | 本 PR；分支 `agent/pp02-work13-status-reconciliation` |
+| 当前子段 | `Work13｜方案 A 双 Draft PR` |
+| 本地验证 | 产品专项 `2/2`、compile、fatal lint、AI assets、diff check 通过 |
+| 下一动作 | 核验两份最终 Head CI 后保持 Draft 并停止 |
 | 授权边界 | 允许分支/Commit/Draft PR/CI；禁止 Ready/Merge/main/Tag/Release/真实数据/真机动作 |
 
-PR #18 已合并，但发布 Run `30763628302` 在 Windows 最终 ZIP 冒烟成功后的临时目录
-清理阶段失败；Windows 安装生命周期与两个 macOS 构建均已成功，`publish-release`
-被跳过，因此 `v3.29.1` Tag/Release 仍不存在。
+Work10 已完成 PR #19 合并和 `v3.29.1` 正式发布。Work11 证明正式 Windows 安装器
+可安装、启动内置后端并清洁卸载。Work12 继续验证 Codex CLI 配置、行情复盘和周期
+报告，但手动 `600519` 个股分析没有形成正式历史，因此总体失败。
 
-Work10-B 只在已有 runner-owned 路径校验后，对最终 ZIP 临时解压目录使用最多 15 次、
-每次 1 秒的删除重试；超过上限仍失败关闭。产品 Commit 继续固定为 `3e1311ee…`，
-不修改产品代码、发布权限、Tag/Release 状态机或固定 Commit checkout。
-
-TDD RED/GREEN 和本地相关门已通过 `25/25`。Draft PR #19 固定 Head `05e7a5da…` 的
-Run `30765409298` 已全部通过：七个适用 Job success，Web Gate 按路径正常 skipped；
-Windows 最终 ZIP、安装生命周期、诊断、敏感信息扫描和候选上传均成功。
-
-`v3.29.0` 保持不变；`v3.29.1` Tag/Release 尚不存在。PR #19 的 Ready、合并，后续
-Tag/Release 和 Windows 真机验收均未授权。当前停止在 PR #19 合并授权门。最后更新：2026-08-02。
+Work13 采用方案 A：产品 PR #20 只修复“正式历史明确落库失败却仍报告完成”的服务
+门禁；本状态 PR 只同步证据与路线。两个 PR 都基于相同 main、互不依赖且保持 Draft。
+最后更新：2026-08-03。
 
 以下内容是旧 Work 的追加历史；与本节冲突时，以 `PROJECT_STATUS.md`、本节和
 GitHub 可验证事实为准。
