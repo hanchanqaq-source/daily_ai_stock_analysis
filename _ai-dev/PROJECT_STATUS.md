@@ -6,24 +6,28 @@
 PROJECT_ID=PP02
 PROJECT_NAME=AI 每日股票分析
 CHAT_ROLE=AUTO_TAKEOVER
-WORK_ID=WORK-014
+WORK_ID=WORK-015
 ROLE_LOCK=SUPERSEDED_BY_PP02-WORK-HANDOFF-002
 WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
-WORK_STATE=ACTIVE_DRAFT_HOLD
-EXECUTION_LOCK=HELD_BY_WORK_014
+WORK_STATE=ACTIVE_MAINLINE_CLOSURE
+EXECUTION_LOCK=HELD_BY_WORK_015
 APPLICATION_BASE_VERSION=3.29.1
 CURRENT_RELEASE_VERSION=3.29.1
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-ACTIVE_BASE=f5c7f43359ec81e27395d9bb236ec1cab0f6dcc2
-ACTIVE_BRANCHES=agent/pp02-work13-analysis-history-contract,agent/pp02-work13-status-reconciliation
-ACTIVE_PRS=20_AND_21_BOTH_DRAFT
-CURRENT_STAGE=R7 Hotfix / Work14 Windows Fixed-Head Acceptance
-CURRENT_WORK=WORK-014 — validate PR20 fixed Head and record real Windows evidence in PR21
-ACTIVE_GOAL=prove 600519 formal history completion and persistence without replacing Work12 state
-PRODUCT_DRAFT_PR=20
-PRODUCT_DRAFT_HEAD=e11946f528c9cb64beeec8b626ada457c02b0034
-STATUS_DRAFT_PR=21
+ACTIVE_BASE=25de369f8e12438a1ec1f3511c68256c471243e4
+ACTIVE_BRANCH=agent/pp02-work13-status-reconciliation
+ACTIVE_PR=21_DRAFT
+CURRENT_STAGE=R7 Hotfix / Work15 PR20-PR21 Mainline Closure
+CURRENT_WORK=WORK-015 — merge PR20, synchronize PR21, then merge PR21 after fixed-Head CI
+ACTIVE_GOAL=land the validated history contract and Work14 evidence without Tag, Release, or scope expansion
+PRODUCT_PR=20_MERGED
+PRODUCT_FIXED_HEAD=e11946f528c9cb64beeec8b626ada457c02b0034
+PRODUCT_MERGE_COMMIT=25de369f8e12438a1ec1f3511c68256c471243e4
+PRODUCT_MAIN_CI_RUN=30822458701
+PRODUCT_MAIN_CI_RESULT=PASS_8_OF_8
+STATUS_PR=21_DRAFT
+STATUS_SYNC_MERGE_HEAD=25313cf0f23f0f4ab4922ea983bcd05b3577e23e
 UNPUBLISHED_CANDIDATE_VERSION=3.29.1
 UNPUBLISHED_INSTALLER_BYTES=217003814
 UNPUBLISHED_INSTALLER_SHA256=DAD0CE0CCF8FC34F7318CD4E4F0CC37347C68A1A03E98D0CA7B048E393B18B33
@@ -34,18 +38,37 @@ FORMAL_HISTORY_ID=2
 FORMAL_HISTORY_STATUS=PASS_PERSISTED_AFTER_CANDIDATE_RESTART_AND_WORK12_RESTORE
 RUN_DIAGNOSTIC=DEGRADED_NEWS_EMPTY_AND_CHIP_DLL_MISSING
 WORK12_RESTORED=PASS_HEALTH_OK_DATABASE_AND_LOGS_PRESENT
-WORK14_JUDGE=PASS_WITH_DEGRADATIONS_EVIDENCE_HEAD_CI_PENDING
-CURRENT_STATUS=WORK14_ACCEPTANCE_PASS_WITH_DEGRADATIONS_EVIDENCE_CI_PENDING
+WORK14_EVIDENCE_HEAD=da2290597e880c4c4a4c1c04e5cc548aa5542ea9
+WORK14_EVIDENCE_CI_RUN=30821021196
+WORK14_EVIDENCE_CI_RESULT=PASS_4_SUCCESS_4_PATH_SKIPPED
+WORK14_JUDGE=PASS_WITH_DEGRADATIONS_DRAFT_HOLD
+CURRENT_STATUS=WORK15_PR20_MERGED_MAIN_CI_PASS_PR21_FINAL_HEAD_CI_PENDING
 ACTIVE_BLOCKER=NONE
-NEXT_WORK=NONE_WHILE_WORK_014_ACTIVE
-NEXT_ACTION=VERIFY_PR21_EVIDENCE_HEAD_CI_THEN_HOLD_BOTH_PRS_AS_DRAFT
-AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/MAIN_WRITE/TAG/RELEASE/ADDITIONAL_WINDOWS_ACTION
+NEXT_WORK=NONE_WHILE_WORK_015_ACTIVE
+NEXT_ACTION=VERIFY_PR21_FIXED_HEAD_CI_THEN_READY_AND_MERGE_PR21
+AUTHORIZATION_REQUIRED=TRUE_FOR_TAG/RELEASE/DEPENDENCY_FIX/SIGNING/ADDITIONAL_WINDOWS_ACTION
 LAST_UPDATED=2026-08-03
 ```
 
+## 2026-08-03 Work15 / PR #20/#21 主线收口
+
+- PR #20 固定 Head `e11946f528c9cb64beeec8b626ada457c02b0034` 已按授权转为
+  Ready，并通过 merge commit `25de369f8e12438a1ec1f3511c68256c471243e4` 合入 `main`。
+- 新 `main` 的 CI Run
+  [`30822458701`](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/actions/runs/30822458701)
+  已 `8/8` success：治理、后端、Docker、Web、Desktop、Windows 与 macOS 均通过；
+  Auto Tag Run `30822458692` 按规则 skipped，没有创建或移动 Tag。
+- PR #21 的 Work14 7 文件证据与 PR #20 的 5 文件产品改动没有路径重叠。新 `main`
+  已通过双父 merge commit `25313cf0f23f0f4ab4922ea983bcd05b3577e23e` 非破坏同步到
+  `agent/pp02-work13-status-reconciliation`；没有 rebase、force-push 或历史丢失。
+- 本次只把 Work14 最终裁决、证据 CI 与 PR #20 合并事实写回原 7 个台账/路线文件。
+  PR #21 最终 Head 的 Run ID 只写入 PR 元数据，避免为记录 CI 再制造新 Head。
+- Work15 已授权 PR #21 在最终固定 Head CI 通过后转 Ready 并合并。Tag、Release、
+  `mini_racer`、新闻、签名和新增 Windows 真机动作仍明确禁止。
+
 ## 2026-08-03 Work14 / PR #20 固定 Head Windows 未发布候选验收
 
-- 验收源码精确固定为 Draft PR #20 Head
+- 验收源码当时精确固定为 Draft PR #20 Head
   `e11946f528c9cb64beeec8b626ada457c02b0034`，Base 为
   `main@f5c7f43359ec81e27395d9bb236ec1cab0f6dcc2`。构建信息内 revision 与该 Head
   一致；候选仅用于本机验收，没有安装、Tag 或 Release。
@@ -66,8 +89,12 @@ LAST_UPDATED=2026-08-03
   已发生外部变更，元数据变为 50,268 bytes（来源未判定）；Work14 保留该现场版本，没有用 50,288
   bytes 的旧临时副本回写。临时副本和两个精确 Junction 已删除，Work12 原应用已恢复
   且 `health=ok`。
-- Ready、合并、`main`、Tag、Release 均未授权；PR #20/#21 必须继续保持 Draft。 本证据 Commit 完成后只核验 PR #21 CI；Run ID 写入 PR 正文，
-  不再为记录 Run ID 制造新的 Head。
+- Work14 证据 Head `da2290597e880c4c4a4c1c04e5cc548aa5542ea9` 的 CI Run
+  [`30821021196`](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/actions/runs/30821021196)
+  已 success：4 个适用 Job 成功，4 个路径无关 Job正常 skipped。最终裁决为
+  `PASS_WITH_DEGRADATIONS — DRAFT_HOLD`。
+- Work14 结束时 Ready、合并、`main`、Tag 与 Release 均未授权；该历史边界已由
+  Work15 的精确收口授权替代。PR #20 后续合并事实见上方 Work15 记录。
 
 
 ## 2026-08-03 Work13 / 方案 A 双 Draft PR 修复
@@ -82,8 +109,8 @@ LAST_UPDATED=2026-08-03
   历史成功、缺少旧诊断、CLI-only 流程、行情复盘和周期报告不变。TDD 先复现
   `1 failed, 1 passed`，修复后专项 `2/2`、Python compile、flake8 fatal selectors、
   AI asset check 与 `git diff --check` 通过。
-- 本状态 Draft PR 只校正 Work10–Work13 台账与路线事实，不含产品代码。两份 PR 都必须
-  保持 Draft；Ready、合并、`main`、Tag、Release、真实数据/凭据和新增真机动作均未授权。
+- 本状态 Draft PR 只校正 Work10–Work13 台账与路线事实，不含产品代码。Work13 当时
+  要求两份 PR 保持 Draft；该历史边界后由 Work15 的精确 Ready/合并授权替代。
 
 ## 2026-08-03 Work10–Work12 / 发布与真机证据收口
 

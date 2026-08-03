@@ -1,5 +1,17 @@
 # PP02 安全重建路线 R0–R7
 
+## 2026-08-03 Work15 PR #20/#21 mainline closure
+
+- PR #20 固定 Head `e11946f528c9cb64beeec8b626ada457c02b0034` 已转 Ready，并以
+  merge commit `25de369f8e12438a1ec1f3511c68256c471243e4` 合入 `main`。
+- 新 main 的 CI Run `30822458701` 已 8/8 success，覆盖治理、后端、Docker、Web、
+  Desktop、Windows 与 macOS；Auto Tag Run `30822458692` skipped，没有创建或移动 Tag。
+- PR #21 的 7 文件 Work14 证据与 PR #20 的 5 文件产品改动无路径重叠。新 main 已
+  通过双父 merge commit `25313cf0f23f0f4ab4922ea983bcd05b3577e23e` 非破坏同步；
+  未 rebase、force-push 或丢弃历史。
+- 当前只待 PR #21 最终固定 Head CI；通过后按 Work15 授权转 Ready 并合并。Tag、
+  Release、`mini_racer`、新闻、签名和新增 Windows 真机动作不在本 Work 范围。
+
 
 ## 2026-08-03 Work14 fixed-Head Windows acceptance
 
@@ -12,7 +24,10 @@
 - 大盘历史与周内周期聚合可重读。整体为 `PASS_WITH_DEGRADATIONS`：新闻 0 条，
   筹码链因冻结 `mini_racer.dll` 缺失失败；未签名和未执行候选安装生命周期保持未验收。
 - Work12 原配置、数据库和日志没有被候选覆盖或清理，原应用已恢复 `health=ok`。
-  证据只写入 Draft PR #21；PR #20/#21 必须保持 Draft，不得 Ready、合并、Tag 或 Release。
+  证据 Head `da2290597e880c4c4a4c1c04e5cc548aa5542ea9` 的 Run `30821021196`
+  已 success；最终裁决为 `PASS_WITH_DEGRADATIONS — DRAFT_HOLD`。
+- Work14 结束时 PR #20/#21 均保持 Draft；其后 Ready/合并由 Work15 独立授权，不改变
+  Work14 的历史裁决。候选本身仍未安装、Tag 或 Release。
 
 ## 2026-08-03 Work10–Work13 evidence reconciliation and history contract
 
@@ -23,8 +38,8 @@
   副本，裁决 `PASSED_WITH_RESIDUALS`。Work12 的 Codex CLI、行情复盘正式历史和周期
   报告通过，但 `600519` 没有正式个股历史，裁决 `FAILED_STOCK_ANALYSIS_HISTORY_MISSING`。
 - Work13 采用方案 A。产品 Draft PR #20 仅在明确历史落库失败时阻止 API 个股任务假
-  完成；本状态 Draft PR 仅同步 Work10–Work13 台账。两者从同一 main 建立，保持 Draft，
-  未授权 Ready、合并、main、Tag、Release、真实数据/凭据或新增真机动作。
+  完成；本状态 Draft PR 仅同步 Work10–Work13 台账。两者从同一 main 建立；Work13
+  结束时保持 Draft，后续主线收口事实见上方 Work15 记录。
 
 ## 2026-08-02 Work10-B Windows release cleanup race（historical pre-merge snapshot）
 
@@ -70,7 +85,7 @@
 | R5｜Windows 本机验收 | 安装、启动、Web/Desktop 与安全默认值 | 完成 | Work2 / PR #9 真机启动与回滚模拟通过 |
 | R6｜正式数据迁移 | 迁移经确认的真实数据 | 完成（无数据，跳过迁移） | Work6 `NO_FORMAL_DATA_FOUND`；旧项目和数据库从未建立 |
 | R7｜替换 main 与 Release | Ready、合并、main、Tag、Release | 完成 | `v3.29.0` 已发布；PR #15 后续文档主线 Run `30697946093` 8/8 success |
-| R7-Hotfix｜Windows 安装器补丁 | 修复 v3.29.0 引导崩溃并验收历史契约 | Work14 证据 CI 待收口 | PR #20 固定 Head 正式历史/重启通过，降级项显式；PR #20/#21 保持 Draft |
+| R7-Hotfix｜Windows 安装器补丁 | 修复 v3.29.0 引导崩溃并验收历史契约 | Work15 主线收口中 | Work14 最终裁决已固定；PR #20/main CI 通过，PR #21 最终 CI 待核验 |
 
 ## 当前 R3 顺序
 

@@ -1,18 +1,20 @@
 # PP02 当前阻塞
 
-## WORK-014 当前门
+## WORK-015 当前门
 
 | 项目 | 当前事实 |
 | --- | --- |
-| 活动产品阻塞 | 无；PR #20 固定 Head 的 `600519` 正式历史与重启持久化已通过 |
-| 当前验收门 | Draft PR #21 证据 Commit 的 GitHub Actions CI |
+| 活动产品阻塞 | 无；PR #20 已合并，`main@25de369f…` 的 Run `30822458701` 已 8/8 success |
+| Work14 最终裁决 | `PASS_WITH_DEGRADATIONS — DRAFT_HOLD`；证据 Run `30821021196` success |
+| 当前验收门 | PR #21 最终固定 Head GitHub Actions CI，通过后 Ready 并合并 |
+| 同步方式 | 新 main 已用双父 merge commit `25313cf0…` 非破坏同步；无 rebase/force-push |
 | 已知降级 | 新闻搜索 0 条；冻结候选缺少 `mini_racer.dll`，筹码链失败；安装器未签名 |
 | Work12 保护 | 原应用已恢复健康，数据库/日志存在；现场配置没有被旧候选副本覆盖 |
-| 授权外 | Ready、合并、`main`、Tag、Release、依赖修复、候选安装生命周期和新增真机动作 |
+| 授权外 | Tag、Release、依赖/新闻/签名修复、候选安装生命周期和新增真机动作 |
 
 已知降级不影响“明确历史成功落库且可重读”的本次完成契约，但阻止无条件全量 PASS。
-本 Work 裁决为 `PASS_WITH_DEGRADATIONS`，当前只待 PR #21 固定证据 Head CI；两份 PR
-通过后仍必须保持 Draft。
+Work14 已完成；Work15 当前只待 PR #21 最终固定 Head CI。通过后按本 Work 授权转
+Ready 并合并，不处理上述降级，也不创建 Tag 或 Release。
 
 当前状态和当前 Active Blocker 以
 [`../_ai-dev/PROJECT_STATUS.md`](../_ai-dev/PROJECT_STATUS.md) 为唯一真源。下列

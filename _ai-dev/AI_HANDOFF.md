@@ -1,30 +1,38 @@
 # PP02 新聊天交接
 
-## 当前接管入口｜WORK-014 / Windows fixed-Head candidate acceptance
+## 当前接管入口｜WORK-015 / PR #20/#21 mainline closure
 
 | 项目 | 当前值 |
 | --- | --- |
-| 当前状态 | `WORK14_ACCEPTANCE_PASS_WITH_DEGRADATIONS_EVIDENCE_CI_PENDING` |
-| 当前 Work | `WORK-014｜PR #20 固定 Head Windows 未发布候选验收` |
-| 固定产品 Head | `e11946f528c9cb64beeec8b626ada457c02b0034`（Draft PR #20） |
-| 状态 Draft PR | [#21](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/21) |
+| 当前状态 | `WORK15_PR20_MERGED_MAIN_CI_PASS_PR21_FINAL_HEAD_CI_PENDING` |
+| 当前 Work | `WORK-015｜PR #20/#21 主线收口` |
+| 新 main | `25de369f8e12438a1ec1f3511c68256c471243e4`（PR #20 merge commit） |
+| main CI | Run `30822458701`，8/8 success；Auto Tag `30822458692` skipped |
+| 当前 PR | [#21](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/21)，保持 Draft 到最终 Head CI 通过 |
+| 非破坏同步 | 双父 merge commit `25313cf0f23f0f4ab4922ea983bcd05b3577e23e` |
 | 未发布候选 | `3.29.1` / `217,003,814` bytes / SHA-256 `DAD0CE0CCF8FC34F7318CD4E4F0CC37347C68A1A03E98D0CA7B048E393B18B33` / `NotSigned` |
 | 正式历史闭环 | `600519` history ID `2`；task/query/trace `1c4ae649232d40eaae7dcb6bb1b6981f` |
 | 相关回归 | Python `130 passed`；Desktop `82/82`；冻结后端动态端口健康通过 |
-| 运行裁决 | `PASS_WITH_DEGRADATIONS`；新闻 0 条、筹码 `mini_racer.dll` 缺失 |
+| Work14 最终裁决 | `PASS_WITH_DEGRADATIONS — DRAFT_HOLD`；证据 Run `30821021196` success |
 | Work12 现场 | 原安装已恢复，端口 8000 `health=ok`；数据库和日志仍在 |
-| 下一动作 | 核验本证据 Commit 的 PR #21 GitHub Actions，然后保持两份 PR 为 Draft |
-| 授权边界 | 禁止 Ready/Merge/main/Tag/Release；不覆盖 Work12 配置、数据库或日志 |
+| 下一动作 | 核验 PR #21 最终固定 Head CI，通过后转 Ready 并合并 |
+| 授权边界 | 禁止 Tag/Release、依赖/新闻/签名修复及新增 Windows 真机动作 |
 
 Work14 只从 PR #20 固定 Head 构建未发布验收候选，没有安装、Tag 或发布该候选。
 正式 `600519` API 任务完成并生成可重读历史；候选后端停机重启、再由 Work12 原安装
 重读后，history ID、query ID、LLM 与运行流保存状态仍一致。同期大盘历史和周内周期
-聚合也可重读。
+聚合也可重读。证据 Head `da229059…` 的 Run `30821021196` 已通过，Work14 正式以
+`PASS_WITH_DEGRADATIONS — DRAFT_HOLD` 结束。
 
 候选整体不是无条件 PASS：诊断状态为 `degraded`，新闻搜索无结果，筹码链因冻结产物
 缺少 `py_mini_racer/mini_racer.dll` 失败；安装器未签名且本 Work 未执行候选安装生命周期。
 Work12 的 `.env` 在受控单股重跑前已发生外部变更，元数据变为 50,268 bytes（来源未判定）；
 Work14 未用旧副本覆盖它，临时副本与目录联接均已精确删除。最后更新：2026-08-03。
+
+Work15 已将 PR #20 合入 `main@25de369f…`，随后核验主线全套 CI 8/8 success。
+PR #21 与产品改动无路径重叠，已用普通双父 merge commit 同步新 main；下一步只处理
+PR #21 最终固定 Head CI、Ready 与合并。Tag、Release 和 Work14 已知降级均不在本 Work
+处理范围内。
 
 以下内容是旧 Work 的追加历史；与本节冲突时，以 `PROJECT_STATUS.md`、本节和
 GitHub 可验证事实为准。

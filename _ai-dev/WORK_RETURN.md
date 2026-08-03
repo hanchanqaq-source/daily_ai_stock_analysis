@@ -1,11 +1,42 @@
-# WORK-014｜PR #20 固定 Head Windows 未发布候选验收（CI 待收口）
+# WORK-015｜PR #20/#21 主线收口（PR #21 最终 CI 待收口）
+
+## Work15｜阶段回传
+
+```text
+PR20_FIXED_HEAD=e11946f528c9cb64beeec8b626ada457c02b0034
+PR20_STATE=MERGED
+PR20_MERGE_COMMIT=25de369f8e12438a1ec1f3511c68256c471243e4
+PR20_MAIN_CI=PASS_RUN_30822458701_8_OF_8
+AUTO_TAG=SKIPPED_RUN_30822458692
+PR21_STATE=OPEN_DRAFT_FINAL_HEAD_CI_PENDING
+PR21_SYNC_METHOD=NON_DESTRUCTIVE_TWO_PARENT_MERGE
+PR21_SYNC_MERGE_HEAD=25313cf0f23f0f4ab4922ea983bcd05b3577e23e
+TAG_RELEASE=NOT_CREATED_OR_CHANGED
+CURRENT_GATE=PR21_FIXED_HEAD_CI_THEN_READY_MERGE
+```
+
+- PR #20 在固定 Head 未漂移、原 CI 成功且 5 文件范围未扩大的条件下转为 Ready，
+  并以仓库既有 merge-commit 方式合入 `main@25de369f…`。
+- 新 main 的 Push CI Run `30822458701` 全部 8 个 Job success；Windows 安装生命周期、
+  macOS、Web、Desktop、后端、Docker 和治理门均通过。Auto Tag 按规则 skipped。
+- PR #21 的原 7 文件证据与 PR #20 的 5 文件产品改动无路径重叠。同步采用普通双父
+  merge commit `25313cf0…`；没有 rebase、force-push、历史改写或文件丢失。
+- 当前状态 Commit 只收口 Work14 最终裁决与 PR #20 合并事实。下一门为 PR #21
+  最终固定 Head CI；通过后按已授权顺序 Ready 并合并。
+- 未创建或修改 Tag/Release，未处理 `mini_racer`、新闻、签名，也未执行新增 Windows
+  真机动作。
+
+
+---
+
+# 历史回传｜WORK-014 / PR #20 固定 Head Windows 未发布候选验收
 
 ## Work14｜真实 Windows 证据回传
 
 ```text
 PR20_FIXED_HEAD=e11946f528c9cb64beeec8b626ada457c02b0034
-PR20_STATE=OPEN_DRAFT_UNMERGED
-PR21_STATE=OPEN_DRAFT_UNMERGED
+PR20_STATE=OPEN_DRAFT_UNMERGED_AT_WORK14_CLOSE
+PR21_STATE=OPEN_DRAFT_UNMERGED_AT_WORK14_CLOSE
 CANDIDATE_VERSION=3.29.1
 INSTALLER_BYTES=217003814
 INSTALLER_SHA256=DAD0CE0CCF8FC34F7318CD4E4F0CC37347C68A1A03E98D0CA7B048E393B18B33
@@ -20,7 +51,9 @@ MARKET_HISTORY=PASS_1
 PERIOD_REPORT=PASS_WEEK_TO_DATE_2_SOURCES
 DIAGNOSTIC=DEGRADED_NEWS_EMPTY_CHIP_DLL_MISSING
 WORK12_RESTORE=PASS_HEALTH_OK_DB_AND_LOGS_PRESENT
-JUDGE=PASS_WITH_DEGRADATIONS_PR21_EVIDENCE_HEAD_CI_PENDING_DRAFT_HOLD
+PR21_EVIDENCE_HEAD=da2290597e880c4c4a4c1c04e5cc548aa5542ea9
+PR21_EVIDENCE_CI=PASS_RUN_30821021196_4_SUCCESS_4_PATH_SKIPPED
+JUDGE=PASS_WITH_DEGRADATIONS_DRAFT_HOLD
 READY_MERGE_MAIN_TAG_RELEASE=NOT_AUTHORIZED
 ```
 
@@ -36,7 +69,11 @@ READY_MERGE_MAIN_TAG_RELEASE=NOT_AUTHORIZED
   `degraded`；安装器 `NotSigned`，且未执行候选安装生命周期。
 - Work12 现场未被候选覆盖或清理。其 `.env` 在受控任务前已发生外部变更（来源未判定）；Work14 没有回写旧副本。临时副本/Junction 已精确移除，原应用恢复为
   `health=ok`，数据库和日志仍存在。
-- Ready、合并、`main`、Tag、Release 均未授权；PR #20/#21 必须继续保持 Draft。
+- PR #21 证据 Head `da229059…` 的 Run `30821021196` 已 success；4 个适用 Job
+  成功，4 个路径无关 Job正常 skipped。Work14 最终裁决为
+  `PASS_WITH_DEGRADATIONS — DRAFT_HOLD`。
+- Work14 结束时 Ready、合并、`main`、Tag、Release 均未授权；后续 PR #20/#21
+  主线收口属于 Work15 的独立精确授权。
 
 
 ---
