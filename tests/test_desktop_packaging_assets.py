@@ -42,6 +42,44 @@ class DesktopPackagingAssetsTestCase(unittest.TestCase):
         self.assertIn("_internal/akshare/file_fold/calendar.json", macos_script)
         self.assertIn("_internal\\akshare\\file_fold\\calendar.json", windows_script)
 
+    def test_windows_backend_collects_and_checks_mini_racer_runtime(self) -> None:
+        windows_script = (self.repo_root / "scripts" / "build-backend.ps1").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("'--collect-all', 'py_mini_racer'", windows_script)
+        self.assertIn("Checking MiniRacer availability", windows_script)
+        self.assertIn("import py_mini_racer", windows_script)
+        self.assertIn("Verifying packaged MiniRacer assets", windows_script)
+        self.assertIn("mini_racer.dll", windows_script)
+        self.assertIn("icudtl.dat", windows_script)
+
+    def test_packaged_chip_probe_loads_v8_without_network(self) -> None:
+        main = (self.repo_root / "main.py").read_text(encoding="utf-8")
+
+        self.assertIn('os.getenv("DSA_PACKAGED_CHIP_PROBE")', main)
+        self.assertIn("import akshare.stock_feature.stock_cyq_em", main)
+        self.assertIn("from py_mini_racer import MiniRacer", main)
+        self.assertIn('chip_probe.eval("6 * 7")', main)
+        self.assertIn("OK: packaged chip runtime probe succeeded", main)
+
+    def test_final_portable_zip_runs_shared_chip_runtime_probe(self) -> None:
+        verifier = (
+            self.repo_root / "scripts" / "verify-frozen-backend.ps1"
+        ).read_text(encoding="utf-8")
+        workflow = (
+            self.repo_root / ".github" / "workflows" / "ci.yml"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("DSA_PACKAGED_CHIP_PROBE", verifier)
+        self.assertIn("Packaged chip runtime probe failed", verifier)
+        self.assertIn("$chipProbeProcess.ExitCode", verifier)
+        self.assertIn("-PackagedEntry $finalPackagedEntry", workflow)
+        self.assertLess(
+            workflow.index("Expand-Archive -LiteralPath $zip -DestinationPath $finalExtract"),
+            workflow.index("-PackagedEntry $finalPackagedEntry"),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
