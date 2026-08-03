@@ -10,8 +10,11 @@ ROOT_CAUSE=CONFIRMED_EXISTING_MINI_RACER_RUNTIME_NOT_COLLECTED
 DEPENDENCY_CHANGE=NONE
 TDD=RED_3_EXPECTED_FAILURES_THEN_GREEN_5_OF_5
 RELATED_VALIDATION=PASS_PACKAGING_CONTRACTS_PY_COMPILE_AI_ASSETS_DIFF_CHECK
-FULL_CI=PENDING_FIXED_HEAD
-JUDGE=IN_PROGRESS_DRAFT_ONLY
+EVIDENCE_HEAD=016e3408795b4adaf1eab25210681be66b7e8ff8
+FULL_CI=PASS_RUN_30831393819_7_SUCCESS_1_PATH_SKIPPED
+WINDOWS_JOB=PASS_91746056804_3_CHIP_PROBES_3_HTTP_SMOKES
+INDEPENDENT_REVIEW=PASS_NO_CRITICAL_OR_IMPORTANT
+JUDGE=PASS_DRAFT_HOLD
 ```
 
 - 只读证据确认 Windows CI 安装 `akshare 1.18.81` 时已安装 `mini-racer 0.14.1`；
@@ -22,8 +25,12 @@ JUDGE=IN_PROGRESS_DRAFT_ONLY
   构建输出与最终解压 ZIP 上执行离线 V8/筹码模块探针。
 - Draft PR #22 已建立并保持 Draft。3 个新增合同先在固定 Base 行为上得到 3 个预期
   RED，最小实现后 `tests.test_desktop_packaging_assets` 5/5 GREEN；Python 编译、
-  AI 资产检查及 `git diff --check` 通过。Windows 实际冻结与最终 ZIP 探针仍须由
-  提交后的固定 Head CI 证明。
+  AI 资产检查及 `git diff --check` 通过。
+- 固定 Head `016e3408…` 的 Run `30831393819` 已 success：7 个 Job 成功、Web
+  路径无关 skipped。Windows 日志含 2 次 MiniRacer 构建可用/资产检查、3 次离线
+  筹码运行时成功标记和 3 次 HTTP smoke 成功，覆盖直接冻结、重建及最终解压 ZIP。
+- 独立只读复审无 Critical/Important。最终裁决 `PASS — DRAFT_HOLD`；PR #22 不得
+  Ready 或合并，发布相关动作仍须独立授权。
 - 当前未 Ready、合并、Tag、Release，未处理新闻/签名，未使用真实凭据/数据，也未
   执行新增 Windows 真机动作。
 
