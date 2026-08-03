@@ -219,4 +219,3 @@ Draft PR #8 的 Run `30576678660` 失败：真实冻结启动门继承 `GITHUB_A
   仓库根 source 扫描与 ZIP/解包/`win-unpacked` artifact 扫描 PASS；所有 Head 标记一致。
 - 当前只剩证据收口 Commit 的最终 8 Job 复验；复验结果必须写入 Draft PR
   元数据而不再改变 Head。
-6d5ed2e3fe4916277f89c86c4a579d78555eaaca
