@@ -8,8 +8,10 @@
   未收集间接包资产，既有 HTTP 健康门也未实例化 V8；不是依赖声明缺失。
 - 3 个新增合同先 RED，最小收集、资产检查与离线 V8/筹码模块探针实现后 5/5 GREEN；
   同一共享验证器覆盖构建输出和最终解压 ZIP。依赖声明保持不变。
-- 当前门为提交后的固定 Head 完整 CI。PR 必须保持 Draft；Ready、合并、Tag、Release、
-  新闻、签名、真实凭据/数据和新增 Windows 真机动作均不在授权范围。
+- 固定 Head `016e3408…` 的 Run `30831393819` 已 7 success、1 path-skipped；Windows
+  直接冻结、重建和最终解压 ZIP 共 3 次实际筹码探针成功，独立复审无重要问题。
+  Work16 裁决 `PASS — DRAFT_HOLD`。Ready、合并、Tag、Release、新闻、签名、真实
+  凭据/数据和新增 Windows 真机动作均不在授权范围。
 
 ## 2026-08-03 Work15 PR #20/#21 mainline closure
 
@@ -97,7 +99,7 @@
 | R5｜Windows 本机验收 | 安装、启动、Web/Desktop 与安全默认值 | 完成 | Work2 / PR #9 真机启动与回滚模拟通过 |
 | R6｜正式数据迁移 | 迁移经确认的真实数据 | 完成（无数据，跳过迁移） | Work6 `NO_FORMAL_DATA_FOUND`；旧项目和数据库从未建立 |
 | R7｜替换 main 与 Release | Ready、合并、main、Tag、Release | 完成 | `v3.29.0` 已发布；PR #15 后续文档主线 Run `30697946093` 8/8 success |
-| R7-Hotfix｜Windows 安装器补丁 | 修复 v3.29.0 引导崩溃并验收历史契约 | Work16 冻结筹码收口中 | Work15 已 `PASS — MAINLINE_CLOSED`；Draft PR #22 本地 TDD GREEN，固定 Head 完整 CI 待核验 |
+| R7-Hotfix｜Windows 安装器补丁 | 修复 v3.29.0 引导崩溃并验收历史契约 | Work16 完成 / Draft Hold | PR #22 固定 Head CI 与 Windows 双层筹码探针通过；禁止自行 Ready、合并或发布 |
 
 ## 当前 R3 顺序
 
