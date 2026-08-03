@@ -47,6 +47,25 @@ if os.getenv("GITHUB_ACTIONS") != "true" and os.getenv("USE_PROXY", "false").low
 
 _packaged_import_probe = os.getenv("DSA_PACKAGED_IMPORT_PROBE")
 _packaged_fake_useragent_probe = os.getenv("DSA_PACKAGED_FAKE_USERAGENT_PROBE")
+_packaged_chip_probe = os.getenv("DSA_PACKAGED_CHIP_PROBE")
+if _packaged_chip_probe:
+    import sys
+
+    try:
+        import akshare.stock_feature.stock_cyq_em  # noqa: F401
+        from py_mini_racer import MiniRacer
+
+        with MiniRacer() as chip_probe:
+            if chip_probe.eval("6 * 7") != 42:
+                raise RuntimeError("MiniRacer returned an unexpected result")
+    except Exception as exc:
+        diagnostic = str(exc)[:500]
+        print(f"ERROR: packaged chip runtime probe failed: {diagnostic}", file=sys.stderr)
+        sys.exit(1)
+
+    print("OK: packaged chip runtime probe succeeded")
+    sys.exit(0)
+
 if _packaged_fake_useragent_probe:
     import sys
 
