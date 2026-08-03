@@ -1,31 +1,43 @@
-# WORK-013｜状态证据校正与个股正式历史完成契约（进行中）
+# WORK-014｜PR #20 固定 Head Windows 未发布候选验收（CI 待收口）
 
-## Work13｜方案 A 双 Draft PR
+## Work14｜真实 Windows 证据回传
 
 ```text
-BASE=f5c7f43359ec81e27395d9bb236ec1cab0f6dcc2
-PR19_MERGED=YES_MAIN_f5c7f43359ec81e27395d9bb236ec1cab0f6dcc2
-V3_29_1_RELEASE=PASS_RUN_30786838156_5_OF_5_7_ASSETS
-WORK11_JUDGE=PASSED_WITH_RESIDUALS
-WORK12_JUDGE=FAILED_STOCK_ANALYSIS_HISTORY_MISSING
-ROOT_CAUSE=EXPLICIT_HISTORY_FAILURE_DID_NOT_BLOCK_API_TASK_COMPLETION
-TDD=RED_1_FAILED_1_PASSED_THEN_GREEN_2_PASSED
-STATIC_GATES=PASS_COMPILE_FATAL_LINT_AI_ASSETS_DIFF_CHECK
-PRODUCT_DRAFT_PR=20_DRAFT
-STATUS_DRAFT_PR=THIS_DRAFT_PR
+PR20_FIXED_HEAD=e11946f528c9cb64beeec8b626ada457c02b0034
+PR20_STATE=OPEN_DRAFT_UNMERGED
+PR21_STATE=OPEN_DRAFT_UNMERGED
+CANDIDATE_VERSION=3.29.1
+INSTALLER_BYTES=217003814
+INSTALLER_SHA256=DAD0CE0CCF8FC34F7318CD4E4F0CC37347C68A1A03E98D0CA7B048E393B18B33
+INSTALLER_SIGNATURE=NotSigned
+PYTHON_RELATED=PASS_130
+DESKTOP_RELATED=PASS_82_OF_82
+FROZEN_BACKEND_HEALTH=PASS_DYNAMIC_PORT
+FORMAL_600519_TASK_QUERY_TRACE=1c4ae649232d40eaae7dcb6bb1b6981f
+FORMAL_600519_HISTORY_ID=2
+FORMAL_600519_COMPLETION=PASS_PERSISTED_AFTER_RESTART
+MARKET_HISTORY=PASS_1
+PERIOD_REPORT=PASS_WEEK_TO_DATE_2_SOURCES
+DIAGNOSTIC=DEGRADED_NEWS_EMPTY_CHIP_DLL_MISSING
+WORK12_RESTORE=PASS_HEALTH_OK_DB_AND_LOGS_PRESENT
+JUDGE=PASS_WITH_DEGRADATIONS_PR21_EVIDENCE_HEAD_CI_PENDING_DRAFT_HOLD
 READY_MERGE_MAIN_TAG_RELEASE=NOT_AUTHORIZED
-JUDGE=WORK13_IMPLEMENTED_AWAITING_FINAL_HEAD_CI_DRAFT_HOLD
 ```
 
-- 只读证据证明旧台账停在 PR #19 合并前：实际 PR #19 已进入当前 main，固定产品
-  Commit 已发布为 annotated `v3.29.1`，正式 Release 与发布 Run 均成功。
-- Work11 的正式安装器来源、大小、SHA、安装版本、后端健康和卸载闭环通过，仅保留
-  验收安装器副本；Work12 的 Codex CLI、行情复盘与周期报告通过，但 `600519` 没有
-  正式个股历史，所以 Work12 总体失败。
-- 产品 Draft PR #20 在共享 `AnalysisService` 返回边界增加最小完成门禁。专项测试先
-  证明旧行为假完成，再证明明确历史失败转为失败且历史成功保持响应。
-- 本状态 Draft PR 与产品 PR 基于同一 main 且互不依赖。没有 Ready、合并、main、
-  Tag、Release、真实凭据/数据或新增真机动作。
+- 候选从 PR #20 固定 Head 构建，内置 build revision 精确一致。安装器只作为未发布
+  验收产物保留证据，没有执行安装、Tag 或 Release。
+- `600519` 受控任务完成为 100%，正式历史 ID `2`；task/query/trace 全部一致。
+  `model_used=codex_cli`，LLM 154,358 ms，评分 59，操作建议“观望”。
+- 诊断 `history=ok`，运行流 `llm_analysis=success`、
+  `history_save=success`。候选后端重启及 Work12 原安装恢复后仍能重读同一历史。
+- 相关回归和聚合通过：Python `130 passed`、Desktop `82/82`、大盘历史 1 条、
+  周内报告来源 2 条（1 个股、1 个大盘）。
+- 降级项保持显式：新闻 0 条；筹码链缺少冻结 `mini_racer.dll`；诊断总体
+  `degraded`；安装器 `NotSigned`，且未执行候选安装生命周期。
+- Work12 现场未被候选覆盖或清理。其 `.env` 在受控任务前已发生外部变更（来源未判定）；Work14 没有回写旧副本。临时副本/Junction 已精确移除，原应用恢复为
+  `health=ok`，数据库和日志仍存在。
+- Ready、合并、`main`、Tag、Release 均未授权；PR #20/#21 必须继续保持 Draft。
+
 
 ---
 

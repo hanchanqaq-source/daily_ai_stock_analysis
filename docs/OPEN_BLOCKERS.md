@@ -1,16 +1,18 @@
 # PP02 当前阻塞
 
-## WORK-013 当前门
+## WORK-014 当前门
 
 | 项目 | 当前事实 |
 | --- | --- |
-| 活动产品阻塞 | 无；根因已由明确历史失败仍返回成功的服务契约解释，并已有专项 RED→GREEN |
-| 当前验收门 | 产品 Draft PR #20 与状态 Draft PR 的最终 Head GitHub Actions CI |
-| Work12 失败 | 手动 `600519` 个股分析未形成正式历史；不回退已通过的安装、Codex CLI、行情复盘和周期报告 |
-| 授权外 | Ready、合并、`main`、Tag、Release、真实数据/凭据、新增 Windows 真机动作 |
+| 活动产品阻塞 | 无；PR #20 固定 Head 的 `600519` 正式历史与重启持久化已通过 |
+| 当前验收门 | Draft PR #21 证据 Commit 的 GitHub Actions CI |
+| 已知降级 | 新闻搜索 0 条；冻结候选缺少 `mini_racer.dll`，筹码链失败；安装器未签名 |
+| Work12 保护 | 原应用已恢复健康，数据库/日志存在；现场配置没有被旧候选副本覆盖 |
+| 授权外 | Ready、合并、`main`、Tag、Release、依赖修复、候选安装生命周期和新增真机动作 |
 
-本节的 CI 是验收门，不是允许绕过的产品阻塞。两份 PR 通过后仍必须保持 Draft，等待
-新的明确授权。
+已知降级不影响“明确历史成功落库且可重读”的本次完成契约，但阻止无条件全量 PASS。
+本 Work 裁决为 `PASS_WITH_DEGRADATIONS`，当前只待 PR #21 固定证据 Head CI；两份 PR
+通过后仍必须保持 Draft。
 
 当前状态和当前 Active Blocker 以
 [`../_ai-dev/PROJECT_STATUS.md`](../_ai-dev/PROJECT_STATUS.md) 为唯一真源。下列

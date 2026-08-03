@@ -8,8 +8,9 @@
 ## 当前路线入口
 
 Work10 已完成 `v3.29.1` 发布；Work11 真机安装闭环裁决 `PASSED_WITH_RESIDUALS`。
-Work12 因个股分析未形成正式历史而失败，当前 Work13 采用方案 A，以两个独立 Draft PR
-分别修复产品完成契约和状态证据；两者均停在 Draft/CI 门。
+Work12 的个股正式历史缺失由 Work13 Draft PR #20 修复。Work14 已在 PR #20 固定 Head
+上完成未发布 Windows 候选的 `600519` 正式历史与重启持久化验收，裁决
+`PASS_WITH_DEGRADATIONS`；当前只待状态 Draft PR #21 证据 Head CI。
 
 | 路线 | 状态 | 边界 |
 | --- | --- | --- |
@@ -21,7 +22,7 @@ Work12 因个股分析未形成正式历史而失败，当前 Work13 采用方�
 | R5｜Windows 本机验收 | 完成 | Work2 / PR #9 真机启动与回滚模拟通过并进入 `main` |
 | R6｜正式数据迁移 | 完成（无数据，跳过迁移） | Work6 `NO_FORMAL_DATA_FOUND`；旧项目和数据库从未建立 |
 | R7｜主线与正式发布 | 完成 | `v3.29.1` annotated Tag/正式 Release；Run `30786838156` 5/5 success、7 assets |
-| R7-Hotfix 验收 | Work13 Draft 修复中 | Work11 通过并有残留；Work12 因个股正式历史缺失失败；产品 PR #20 与状态 PR 保持 Draft |
+| R7-Hotfix 验收 | Work14 证据 CI 待收口 | PR #20 固定 Head 的正式历史与重启持久化通过；新闻/筹码降级和未签名保持显式；PR #20/#21 均为 Draft |
 
 ## Work 1｜官方稳定版干净底座建立（历史）
 

@@ -1,30 +1,30 @@
 # PP02 新聊天交接
 
-## 当前接管入口｜WORK-013 / stock analysis history completion
+## 当前接管入口｜WORK-014 / Windows fixed-Head candidate acceptance
 
 | 项目 | 当前值 |
 | --- | --- |
-| 当前状态 | `WORK13_TWO_DRAFT_PRS_OPEN` |
-| 当前 Work | `WORK-013｜状态证据校正＋个股正式历史完成契约` |
-| 固定产品 Commit | `3e1311ee94c96d2b8d0b97bc2337ee0933a2eb65` |
-| 当前 main | `f5c7f43359ec81e27395d9bb236ec1cab0f6dcc2`（PR #19 已合并） |
-| 正式发布 | `v3.29.1` / Release Run `30786838156` / 5 of 5 success / 7 assets |
-| Work11 | `PASSED_WITH_RESIDUALS`；正式安装、后端健康、清洁卸载通过 |
-| Work12 | `FAILED_STOCK_ANALYSIS_HISTORY_MISSING`；`600519` 无正式历史 |
-| 产品 Draft PR | [#20](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/20) |
-| 状态 Draft PR | 本 PR；分支 `agent/pp02-work13-status-reconciliation` |
-| 当前子段 | `Work13｜方案 A 双 Draft PR` |
-| 本地验证 | 产品专项 `2/2`、compile、fatal lint、AI assets、diff check 通过 |
-| 下一动作 | 核验两份最终 Head CI 后保持 Draft 并停止 |
-| 授权边界 | 允许分支/Commit/Draft PR/CI；禁止 Ready/Merge/main/Tag/Release/真实数据/真机动作 |
+| 当前状态 | `WORK14_ACCEPTANCE_PASS_WITH_DEGRADATIONS_EVIDENCE_CI_PENDING` |
+| 当前 Work | `WORK-014｜PR #20 固定 Head Windows 未发布候选验收` |
+| 固定产品 Head | `e11946f528c9cb64beeec8b626ada457c02b0034`（Draft PR #20） |
+| 状态 Draft PR | [#21](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/21) |
+| 未发布候选 | `3.29.1` / `217,003,814` bytes / SHA-256 `DAD0CE0CCF8FC34F7318CD4E4F0CC37347C68A1A03E98D0CA7B048E393B18B33` / `NotSigned` |
+| 正式历史闭环 | `600519` history ID `2`；task/query/trace `1c4ae649232d40eaae7dcb6bb1b6981f` |
+| 相关回归 | Python `130 passed`；Desktop `82/82`；冻结后端动态端口健康通过 |
+| 运行裁决 | `PASS_WITH_DEGRADATIONS`；新闻 0 条、筹码 `mini_racer.dll` 缺失 |
+| Work12 现场 | 原安装已恢复，端口 8000 `health=ok`；数据库和日志仍在 |
+| 下一动作 | 核验本证据 Commit 的 PR #21 GitHub Actions，然后保持两份 PR 为 Draft |
+| 授权边界 | 禁止 Ready/Merge/main/Tag/Release；不覆盖 Work12 配置、数据库或日志 |
 
-Work10 已完成 PR #19 合并和 `v3.29.1` 正式发布。Work11 证明正式 Windows 安装器
-可安装、启动内置后端并清洁卸载。Work12 继续验证 Codex CLI 配置、行情复盘和周期
-报告，但手动 `600519` 个股分析没有形成正式历史，因此总体失败。
+Work14 只从 PR #20 固定 Head 构建未发布验收候选，没有安装、Tag 或发布该候选。
+正式 `600519` API 任务完成并生成可重读历史；候选后端停机重启、再由 Work12 原安装
+重读后，history ID、query ID、LLM 与运行流保存状态仍一致。同期大盘历史和周内周期
+聚合也可重读。
 
-Work13 采用方案 A：产品 PR #20 只修复“正式历史明确落库失败却仍报告完成”的服务
-门禁；本状态 PR 只同步证据与路线。两个 PR 都基于相同 main、互不依赖且保持 Draft。
-最后更新：2026-08-03。
+候选整体不是无条件 PASS：诊断状态为 `degraded`，新闻搜索无结果，筹码链因冻结产物
+缺少 `py_mini_racer/mini_racer.dll` 失败；安装器未签名且本 Work 未执行候选安装生命周期。
+Work12 的 `.env` 在受控单股重跑前已发生外部变更，元数据变为 50,268 bytes（来源未判定）；
+Work14 未用旧副本覆盖它，临时副本与目录联接均已精确删除。最后更新：2026-08-03。
 
 以下内容是旧 Work 的追加历史；与本节冲突时，以 `PROJECT_STATUS.md`、本节和
 GitHub 可验证事实为准。

@@ -1,5 +1,19 @@
 # PP02 安全重建路线 R0–R7
 
+
+## 2026-08-03 Work14 fixed-Head Windows acceptance
+
+- 从 Draft PR #20 固定 Head `e11946f528c9cb64beeec8b626ada457c02b0034`
+  构建未发布 Windows 候选。安装器版本 `3.29.1`、大小 `217,003,814` bytes、
+  SHA-256 `DAD0CE0CCF8FC34F7318CD4E4F0CC37347C68A1A03E98D0CA7B048E393B18B33`、Authenticode `NotSigned`；没有安装、Tag 或 Release。
+- 相关回归通过：Python `130 passed`、Desktop `82/82`、冻结后端动态端口健康。
+  `600519` task/query/trace `1c4ae649232d40eaae7dcb6bb1b6981f` 完成并保存正式历史 ID `2`；
+  候选后端重启与 Work12 原安装恢复后仍可重读，运行流保存节点成功。
+- 大盘历史与周内周期聚合可重读。整体为 `PASS_WITH_DEGRADATIONS`：新闻 0 条，
+  筹码链因冻结 `mini_racer.dll` 缺失失败；未签名和未执行候选安装生命周期保持未验收。
+- Work12 原配置、数据库和日志没有被候选覆盖或清理，原应用已恢复 `health=ok`。
+  证据只写入 Draft PR #21；PR #20/#21 必须保持 Draft，不得 Ready、合并、Tag 或 Release。
+
 ## 2026-08-03 Work10–Work13 evidence reconciliation and history contract
 
 - PR #19 已合并为 `main@f5c7f43359ec81e27395d9bb236ec1cab0f6dcc2`；annotated
@@ -56,7 +70,7 @@
 | R5｜Windows 本机验收 | 安装、启动、Web/Desktop 与安全默认值 | 完成 | Work2 / PR #9 真机启动与回滚模拟通过 |
 | R6｜正式数据迁移 | 迁移经确认的真实数据 | 完成（无数据，跳过迁移） | Work6 `NO_FORMAL_DATA_FOUND`；旧项目和数据库从未建立 |
 | R7｜替换 main 与 Release | Ready、合并、main、Tag、Release | 完成 | `v3.29.0` 已发布；PR #15 后续文档主线 Run `30697946093` 8/8 success |
-| R7-Hotfix｜Windows 安装器补丁 | 修复 v3.29.0 `System.dll / 0xC0000005` 引导崩溃 | 已发布；Work13 Draft 修复中 | `v3.29.1` Run `30786838156` 5/5；Work12 个股历史失败由 PR #20 修复 |
+| R7-Hotfix｜Windows 安装器补丁 | 修复 v3.29.0 引导崩溃并验收历史契约 | Work14 证据 CI 待收口 | PR #20 固定 Head 正式历史/重启通过，降级项显式；PR #20/#21 保持 Draft |
 
 ## 当前 R3 顺序
 

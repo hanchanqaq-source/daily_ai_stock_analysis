@@ -1,44 +1,49 @@
-# WORK-013｜状态证据校正与个股正式历史完成契约
+# WORK-014｜PR #20 固定 Head Windows 未发布候选验收
 
-## Work13｜方案 A 双 Draft PR
+## Work14｜授权与验收合同
 
 ```text
-WORK_ID=WORK-013
+WORK_ID=WORK-014
 WORK_STATE=ACTIVE_DRAFT_HOLD
-BASE=f5c7f43359ec81e27395d9bb236ec1cab0f6dcc2
-PRODUCT_BRANCH=agent/pp02-work13-analysis-history-contract
-STATUS_BRANCH=agent/pp02-work13-status-reconciliation
-PRODUCT_DRAFT_PR=20
-STATUS_DRAFT_PR=THIS_DRAFT_PR
-ROOT_CAUSE=EXPLICIT_HISTORY_FAILURE_DID_NOT_BLOCK_API_TASK_COMPLETION
-CURRENT_GATE=FINAL_HEAD_CI_THEN_DRAFT_HOLD
+PRODUCT_PR=20
+PRODUCT_FIXED_HEAD=e11946f528c9cb64beeec8b626ada457c02b0034
+STATUS_PR=21
+TARGET=UNPUBLISHED_WINDOWS_ACCEPTANCE_CANDIDATE
+CURRENT_GATE=PR21_EVIDENCE_HEAD_CI_THEN_DRAFT_HOLD
 ```
 
 ## 授权范围
 
-- 先只读核对 `main`、PR #19、`v3.29.1` Tag/Release/发布 Run 和 Work11/12 真机证据。
-- 从同一固定 Base 建立两个独立 Draft PR：一个只校正 Work10–Work13 状态证据，一个
-  只修复个股分析历史完成契约及直接测试、设计/计划和 Changelog。
-- 允许正常 Commit、远端分支、Draft PR、完整 GitHub Actions CI 和范围内失败修复。
+- 先核对 Windows 环境及 Work12 安装、配置、数据库和日志现场。
+- 从 PR #20 固定 Head 构建未发布 Windows 候选，不替换 Work12 原安装。
+- 重跑 `600519` 正式历史闭环及相关 Python/Desktop、冻结健康、大盘历史和周期报告
+  回归；取得真实证据后只补入现有 Draft PR #21 并运行 CI。
+- 允许本 Work 所需的精确进程停启、临时候选配置副本/Junction 建立与移除，以及
+  恢复 Work12 原应用；不得清理或覆盖 Work12 配置、数据库和日志。
 
-## 产品修复合同
+## 验收门
 
-- 复用现有 `diagnostic_summary.components.history`，不增加数据库查询或第二次落库。
-- 只有明确的 `history.status=failed` 才使 `AnalysisService` 返回失败并保留诊断消息。
-- 历史成功、缺少旧诊断、CLI-only 流程、行情复盘和周期报告行为保持不变。
-- 不修改数据库结构、配置、模型、提示词、通知、安装器或发布流程。
+1. 候选源码、build revision 与 PR #20 固定 Head 精确一致；记录版本、大小、SHA 和签名。
+2. `600519` 不能只凭任务完成：必须有正式历史、history 诊断成功、运行流保存成功，
+   且候选重启和 Work12 恢复后仍可重读。
+3. 相关回归必须记录真实通过数；数据源/冻结依赖降级必须保留，不能升级为全量 PASS。
+4. Work12 原安装恢复健康；配置、数据库、日志不被候选清理或旧副本覆盖。
+5. PR #21 只改 7 个状态/路线文件并完成固定 Head CI；PR #20/#21 继续保持 Draft。
 
 ## 非目标与停止门
 
-- 不 Ready、不合并、不写 `main`、不创建或修改 Tag/Release。
-- 不读取或使用真实凭据、真实用户数据，不新增 Windows 真机操作。
-- 两份 Draft PR 最终 Head CI 核验后停止；后续任何状态转换需要单独明确授权。
+- 不 Ready、不合并、不写 `main`，不创建或修改 Tag/Release。
+- 不安装或发布 Work14 候选，不读取或输出凭据，不上传配置、数据库、日志或报告正文。
+- CI 完成后停止；任何产品修复、依赖补包、签名、候选安装生命周期或新增真机动作
+  都需要新的明确授权。
 
-## 验收
+## 当前结果
 
-1. 状态 PR 的 GitHub、Release 与 Work11/12 事实可追溯且不改写已完成历史。
-2. 产品 PR 有 RED→GREEN 回归，明确失败历史不能得到成功响应，成功历史保持原响应。
-3. 静态门、AI 资产和远端 CI 通过；两份 PR 始终为 Draft，Base 均为固定 `main`。
+- 真实 `600519` 历史闭环与重启持久化通过；相关测试与聚合通过。
+- 当前 Judge 上限为 `PASS_WITH_DEGRADATIONS`：新闻 0 条、筹码冻结 DLL 缺失、
+  安装器未签名且候选安装生命周期未执行。
+- Work12 原应用已恢复 `health=ok`，数据库和日志存在；PR #21 证据 Head CI 待核验。
+
 
 ---
 
