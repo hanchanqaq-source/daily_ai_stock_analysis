@@ -7,6 +7,10 @@
 
 ## 当前路线入口
 
+Work10 已完成 `v3.29.1` 发布；Work11 真机安装闭环裁决 `PASSED_WITH_RESIDUALS`。
+Work12 因个股分析未形成正式历史而失败，当前 Work13 采用方案 A，以两个独立 Draft PR
+分别修复产品完成契约和状态证据；两者均停在 Draft/CI 门。
+
 | 路线 | 状态 | 边界 |
 | --- | --- | --- |
 | R0｜云端安全重建基线 | 完成 | 官方 v3.28.0 + V1.5.6 候选、Draft PR 和两轮 CI 已通过 |
@@ -16,7 +20,8 @@
 | R4｜数据库兼容与脱敏迁移演练 | 完成 | Work4 方案 A；PR #12 固定 Head CI 通过；Draft Hold |
 | R5｜Windows 本机验收 | 完成 | Work2 / PR #9 真机启动与回滚模拟通过并进入 `main` |
 | R6｜正式数据迁移 | 完成（无数据，跳过迁移） | Work6 `NO_FORMAL_DATA_FOUND`；旧项目和数据库从未建立 |
-| R7｜主线与正式发布 | 进行中 | 已选 A / `v3.29.0`；按 PR 固定 Head、`main` CI、Tag 和产物门执行 |
+| R7｜主线与正式发布 | 完成 | `v3.29.1` annotated Tag/正式 Release；Run `30786838156` 5/5 success、7 assets |
+| R7-Hotfix 验收 | Work13 Draft 修复中 | Work11 通过并有残留；Work12 因个股正式历史缺失失败；产品 PR #20 与状态 PR 保持 Draft |
 
 ## Work 1｜官方稳定版干净底座建立（历史）
 
