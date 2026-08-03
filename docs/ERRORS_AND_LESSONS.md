@@ -171,3 +171,15 @@ PR Head 验收。Windows Job 必须 checkout `pull_request.head.sha`，并用同
   option 真正渲染；过早 change 得到空值，`Number('')` 变成 `0`。
 - 修复：两个目标用例先等待账户 option，删除用例再等待按钮可用；
   生产组件与业务逻辑不变。
+
+## Work16｜冻结健康通过不等于间接原生运行时可用
+
+- 现象：Windows 冻结后端的 HTTP 健康门通过，但 AkShare 筹码链在运行时因
+  `py_mini_racer/mini_racer.dll` 缺失而失败。
+- 根因：AkShare 已自动安装带 DLL/ICU 的 MiniRacer wheel；PyInstaller 只收集
+  AkShare 数据，没有收集间接包的原生资产，既有探针也从未创建 V8 实例。
+- 修复：显式收集已安装的 `py_mini_racer` 全部运行资产，构建后检查 DLL/ICU，
+  并在构建输出与最终解压 ZIP 上运行同一个离线筹码模块导入和 V8 求值探针。
+- 经验：冻结应用包含间接原生依赖时，包可导入、构建成功和 HTTP 健康都不是充分
+  证据；必须在最终交付边界实际加载原生库并执行最小业务调用，而且不应把打包遗漏
+  误诊为需要新增或升级依赖。
