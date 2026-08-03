@@ -5,10 +5,11 @@
 ```text
 BASE=568e26adf0e6393a7a0da1be57369535735cd05a
 BRANCH=agent/pp02-work16-windows-chip-runtime
-DRAFT_PR=PENDING
+DRAFT_PR=22_DRAFT
 ROOT_CAUSE=CONFIRMED_EXISTING_MINI_RACER_RUNTIME_NOT_COLLECTED
 DEPENDENCY_CHANGE=NONE
-TDD=PENDING_RED
+TDD=RED_3_EXPECTED_FAILURES_THEN_GREEN_5_OF_5
+RELATED_VALIDATION=PASS_PACKAGING_CONTRACTS_PY_COMPILE_AI_ASSETS_DIFF_CHECK
 FULL_CI=NOT_RUN
 JUDGE=IN_PROGRESS_DRAFT_ONLY
 ```
@@ -19,6 +20,10 @@ JUDGE=IN_PROGRESS_DRAFT_ONLY
   健康，不创建 MiniRacer/V8；这解释了冻结健康成功但 Work14 筹码链因 DLL 缺失退化。
 - 已批准最小方案不改 `requirements.txt`：收集现有运行资产，检查 DLL/ICU，并在
   构建输出与最终解压 ZIP 上执行离线 V8/筹码模块探针。
+- Draft PR #22 已建立并保持 Draft。3 个新增合同先在固定 Base 行为上得到 3 个预期
+  RED，最小实现后 `tests.test_desktop_packaging_assets` 5/5 GREEN；Python 编译、
+  AI 资产检查及 `git diff --check` 通过。Windows 实际冻结与最终 ZIP 探针仍须由
+  提交后的固定 Head CI 证明。
 - 当前未 Ready、合并、Tag、Release，未处理新闻/签名，未使用真实凭据/数据，也未
   执行新增 Windows 真机动作。
 
