@@ -1,4 +1,54 @@
-# WORK-015｜PR #20/#21 主线收口
+# WORK-016｜Windows 冻结筹码依赖收口
+
+## Work16｜授权与执行合同
+
+```text
+WORK_ID=WORK-016
+WORK_STATE=ACTIVE_WINDOWS_FROZEN_CHIP_CLOSURE
+BASE=568e26adf0e6393a7a0da1be57369535735cd05a
+BRANCH=agent/pp02-work16-windows-chip-runtime
+DRAFT_PR=22
+ROOT_CAUSE=EXISTING_MINI_RACER_RUNTIME_NOT_COLLECTED_OR_LOADED_BY_FROZEN_GATES
+DEPENDENCY_CHANGE=FORBIDDEN
+CURRENT_GATE=PASS_DRAFT_HOLD_NO_FURTHER_ACTION_WITHOUT_NEW_AUTHORIZATION
+```
+
+## 授权范围
+
+- 先只读定位冻结候选缺少 `py_mini_racer/mini_racer.dll` 的根因，再从固定 Base 建立
+  独立分支和 Draft PR。
+- 测试先行增加 DLL/ICU 存在、MiniRacer 可加载求值及最终解压冻结产物筹码模块链契约。
+- 只实施最小 PyInstaller 收集与验证修复；运行相关回归、完整固定 Head CI，并保持 Draft。
+- 允许范围内普通 Commit、Push、Draft PR 更新及 CI 失败修复，不重复申请逐步授权。
+
+## 已确认根因与设计
+
+1. 固定主线 Windows CI 安装 `akshare 1.18.81`，自动解析 `mini-racer 0.14.1`；不是
+   缺少依赖声明或安装失败。
+2. 该 Windows wheel 已包含 `py_mini_racer/mini_racer.dll` 与 `icudtl.dat`，且其
+   PyInstaller 运行时代码明确从 `_MEIPASS/py_mini_racer/` 读取二者。
+3. 当前 `scripts/build-backend.ps1` 仅 `--collect-data akshare`，没有收集
+   `py_mini_racer`；现有 import、fake-useragent 和 HTTP 健康探针不会实例化 V8。
+4. 最小修复为收集现有 `py_mini_racer` 全部运行资产，显式检查 DLL/ICU，并让冻结
+   EXE 在构建输出和最终解压 ZIP 上执行离线 MiniRacer 求值与筹码模块导入。
+
+## 验收门
+
+1. TDD RED 必须先证明现有脚本没有 `py_mini_racer` 收集、DLL/ICU 检查与 V8 探针。
+2. GREEN 后相关合同全部通过，且 `requirements.txt` 和所有依赖版本声明保持不变。
+3. Windows 固定 Head CI 必须在最终冻结输出与最终解压 ZIP 上通过筹码运行时探针。
+4. 完整固定 Head CI 的全部适用 Job 成功后才可裁决；PR 始终保持 Draft。
+
+## 非目标与停止门
+
+- 不 Ready、不合并、不写 `main`，不创建、移动或删除 Tag/Release，不触发发布。
+- 不处理新闻、签名、版本发布、真实凭据、真实用户数据或新增 Windows 真机动作。
+- 不新增、移除、固定或升级依赖；如果最小打包修复无法复用现有依赖，立即停在证据与方案门。
+- 不顺带修改 macOS 打包、筹码算法、数据源网络行为或其他已知残留。
+
+---
+
+# 历史任务合同｜WORK-015 / PR #20/#21 主线收口
 
 ## Work15｜授权与执行合同
 

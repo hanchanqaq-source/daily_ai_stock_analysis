@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - [修复] Desktop Release 新增固定产品 Commit 的云端手动发布入口，在同一次流水线内完成只读预检、双平台构建、annotated Tag 安全创建或恢复及正式 Release，避免工作流修复后的新 `main` Head 被误发。
 - [修复] Desktop Release 的 Windows 最终 ZIP 冒烟临时目录改为限定路径的有限重试清理，避免短暂 `.pyd` 文件占用让已通过安装验证的发布失败，同时保留超限失败关闭。
 - [修复] 个股分析只有在正式历史保存成功后才返回完成；落库失败会明确标记任务失败，避免任务显示完成但历史列表没有报告。
+- [修复] Windows 冻结后端显式收集并实际加载 AkShare 筹码链所需的 MiniRacer DLL/ICU，并在最终便携 ZIP 上执行离线 V8 探针，避免健康检查通过但筹码运行时退化。
 
 ## [3.29.0] - 2026-08-01
 

@@ -19,14 +19,22 @@ New-Item -ItemType Directory -Path $dataDir,$logDir -Force | Out-Null
 Set-Content -LiteralPath $envFile -Value "WEBUI_HOST=127.0.0.1`nWEBUI_ENABLED=false`nBOT_ENABLED=false`n" -Encoding UTF8
 $port = Get-FreeTcpPort
 $stdout = Join-Path $tempRoot 'stdout.log'; $stderr = Join-Path $tempRoot 'stderr.log'; $process = $null
+$chipProbeStdout = Join-Path $tempRoot 'chip-probe-stdout.log'; $chipProbeStderr = Join-Path $tempRoot 'chip-probe-stderr.log'
 $httpHandler = [Net.Http.HttpClientHandler]::new(); $httpHandler.UseProxy = $false
 $httpClient = [Net.Http.HttpClient]::new($httpHandler); $httpClient.Timeout = [TimeSpan]::FromSeconds(3)
 $saved = @{}
-foreach ($name in @('GITHUB_ACTIONS','PYTHONUTF8','PYTHONIOENCODING','PYTHONSAFEPATH','ENV_FILE','DATABASE_PATH','LOG_DIR','WEBUI_HOST','WEBUI_PORT','WEBUI_ENABLED','BOT_ENABLED','DSA_DESKTOP_MODE')) { $saved[$name] = [Environment]::GetEnvironmentVariable($name, 'Process') }
+foreach ($name in @('GITHUB_ACTIONS','PYTHONUTF8','PYTHONIOENCODING','PYTHONSAFEPATH','ENV_FILE','DATABASE_PATH','LOG_DIR','WEBUI_HOST','WEBUI_PORT','WEBUI_ENABLED','BOT_ENABLED','DSA_DESKTOP_MODE','DSA_PACKAGED_CHIP_PROBE')) { $saved[$name] = [Environment]::GetEnvironmentVariable($name, 'Process') }
 try {
   $env:GITHUB_ACTIONS = 'false'; $env:PYTHONUTF8 = '1'; $env:PYTHONIOENCODING = 'utf-8'; $env:PYTHONSAFEPATH = '1'
   $env:ENV_FILE = $envFile; $env:DATABASE_PATH = Join-Path $dataDir 'stock_analysis.db'; $env:LOG_DIR = $logDir
   $env:WEBUI_HOST = '127.0.0.1'; $env:WEBUI_PORT = [string]$port; $env:WEBUI_ENABLED = 'false'; $env:BOT_ENABLED = 'false'; $env:DSA_DESKTOP_MODE = 'true'
+  $env:DSA_PACKAGED_CHIP_PROBE = '1'
+  $chipProbeProcess = Start-Process -FilePath $entry -WorkingDirectory $tempRoot -Wait -PassThru -WindowStyle Hidden -RedirectStandardOutput $chipProbeStdout -RedirectStandardError $chipProbeStderr
+  if ($chipProbeProcess.ExitCode -ne 0) {
+    throw "Packaged chip runtime probe failed with code $($chipProbeProcess.ExitCode).`n$(Get-Content -LiteralPath $chipProbeStderr -Raw -ErrorAction SilentlyContinue)"
+  }
+  Write-Host ((Get-Content -LiteralPath $chipProbeStdout -Raw).Trim())
+  Remove-Item Env:DSA_PACKAGED_CHIP_PROBE -ErrorAction SilentlyContinue
   $process = Start-Process -FilePath $entry -ArgumentList @('--serve-only','--host','127.0.0.1','--port',[string]$port) -WorkingDirectory $tempRoot -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru -WindowStyle Hidden
   $deadline = (Get-Date).AddSeconds($TimeoutSeconds); $healthy = $false
   $healthDiagnostic = 'not attempted'; $homeDiagnostic = 'not attempted'

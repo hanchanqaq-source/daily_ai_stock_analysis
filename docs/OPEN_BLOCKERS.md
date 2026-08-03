@@ -1,20 +1,21 @@
 # PP02 当前阻塞
 
-## WORK-015 当前门
+## WORK-016 当前门
 
 | 项目 | 当前事实 |
 | --- | --- |
-| 活动产品阻塞 | 无；PR #20 已合并，`main@25de369f…` 的 Run `30822458701` 已 8/8 success |
+| 活动产品阻塞 | 无；固定 Base 为 `main@568e26adf0e6393a7a0da1be57369535735cd05a` |
 | Work14 最终裁决 | `PASS_WITH_DEGRADATIONS — DRAFT_HOLD`；证据 Run `30821021196` success |
-| 当前验收门 | PR #21 最终固定 Head GitHub Actions CI，通过后 Ready 并合并 |
-| 同步方式 | 新 main 已用双父 merge commit `25313cf0…` 非破坏同步；无 rebase/force-push |
-| 已知降级 | 新闻搜索 0 条；冻结候选缺少 `mini_racer.dll`，筹码链失败；安装器未签名 |
+| Work15 结果 | PR #20/#21 已合并；最终 Run `30825436318` success，裁决 `PASS — MAINLINE_CLOSED` |
+| 当前验收门 | 已完成：Head `016e3408…` / Run `30831393819` 为 7 success、1 path-skipped；Windows 直接冻结与最终 ZIP 探针通过 |
+| 根因与本地证据 | 已安装 MiniRacer wheel 含 DLL/ICU，但 PyInstaller 未收集且健康门未加载 V8；3 个新合同先 RED，最小实现后 5/5 GREEN |
+| 依赖门 | `requirements.txt` 与依赖版本声明不变；如无法复用现有运行时，必须停止并另行授权 |
 | Work12 保护 | 原应用已恢复健康，数据库/日志存在；现场配置没有被旧候选副本覆盖 |
-| 授权外 | Tag、Release、依赖/新闻/签名修复、候选安装生命周期和新增真机动作 |
+| 授权外 | Ready、合并、Tag、Release、依赖变更、新闻、签名、真实凭据/数据和新增真机动作 |
 
-已知降级不影响“明确历史成功落库且可重读”的本次完成契约，但阻止无条件全量 PASS。
-Work14 已完成；Work15 当前只待 PR #21 最终固定 Head CI。通过后按本 Work 授权转
-Ready 并合并，不处理上述降级，也不创建 Tag 或 Release。
+Work16 当前无活动代码阻塞，最终裁决为 `PASS — DRAFT_HOLD`。新闻与签名降级不属于
+本 Work；PR #22 仍须保持 Draft，不得 Ready、合并、Tag 或 Release。任何后续动作
+都需要新的单独授权。
 
 当前状态和当前 Active Blocker 以
 [`../_ai-dev/PROJECT_STATUS.md`](../_ai-dev/PROJECT_STATUS.md) 为唯一真源。下列

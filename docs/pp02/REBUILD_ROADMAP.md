@@ -1,5 +1,18 @@
 # PP02 安全重建路线 R0–R7
 
+## 2026-08-03 Work16 Windows frozen chip runtime closure
+
+- 固定 Base 为 `main@568e26adf0e6393a7a0da1be57369535735cd05a`，独立 Draft
+  PR #22 只处理 Work14 已证明的冻结筹码运行时缺口。
+- 根因是 `mini-racer 0.14.1` 已由 AkShare 安装且 wheel 含 DLL/ICU，但 PyInstaller
+  未收集间接包资产，既有 HTTP 健康门也未实例化 V8；不是依赖声明缺失。
+- 3 个新增合同先 RED，最小收集、资产检查与离线 V8/筹码模块探针实现后 5/5 GREEN；
+  同一共享验证器覆盖构建输出和最终解压 ZIP。依赖声明保持不变。
+- 固定 Head `016e3408…` 的 Run `30831393819` 已 7 success、1 path-skipped；Windows
+  直接冻结、重建和最终解压 ZIP 共 3 次实际筹码探针成功，独立复审无重要问题。
+  Work16 裁决 `PASS — DRAFT_HOLD`。Ready、合并、Tag、Release、新闻、签名、真实
+  凭据/数据和新增 Windows 真机动作均不在授权范围。
+
 ## 2026-08-03 Work15 PR #20/#21 mainline closure
 
 - PR #20 固定 Head `e11946f528c9cb64beeec8b626ada457c02b0034` 已转 Ready，并以
@@ -9,8 +22,9 @@
 - PR #21 的 7 文件 Work14 证据与 PR #20 的 5 文件产品改动无路径重叠。新 main 已
   通过双父 merge commit `25313cf0f23f0f4ab4922ea983bcd05b3577e23e` 非破坏同步；
   未 rebase、force-push 或丢弃历史。
-- 当前只待 PR #21 最终固定 Head CI；通过后按 Work15 授权转 Ready 并合并。Tag、
-  Release、`mini_racer`、新闻、签名和新增 Windows 真机动作不在本 Work 范围。
+- PR #21 最终固定 Head CI Run `30825436318` success，随后已合并；最终主线为
+  `main@568e26adf0e6393a7a0da1be57369535735cd05a`，Work15 裁决
+  `PASS — MAINLINE_CLOSED`。其余降级由独立后续 Work 处理。
 
 
 ## 2026-08-03 Work14 fixed-Head Windows acceptance
@@ -85,7 +99,7 @@
 | R5｜Windows 本机验收 | 安装、启动、Web/Desktop 与安全默认值 | 完成 | Work2 / PR #9 真机启动与回滚模拟通过 |
 | R6｜正式数据迁移 | 迁移经确认的真实数据 | 完成（无数据，跳过迁移） | Work6 `NO_FORMAL_DATA_FOUND`；旧项目和数据库从未建立 |
 | R7｜替换 main 与 Release | Ready、合并、main、Tag、Release | 完成 | `v3.29.0` 已发布；PR #15 后续文档主线 Run `30697946093` 8/8 success |
-| R7-Hotfix｜Windows 安装器补丁 | 修复 v3.29.0 引导崩溃并验收历史契约 | Work15 主线收口中 | Work14 最终裁决已固定；PR #20/main CI 通过，PR #21 最终 CI 待核验 |
+| R7-Hotfix｜Windows 安装器补丁 | 修复 v3.29.0 引导崩溃并验收历史契约 | Work16 完成 / Draft Hold | PR #22 固定 Head CI 与 Windows 双层筹码探针通过；禁止自行 Ready、合并或发布 |
 
 ## 当前 R3 顺序
 
