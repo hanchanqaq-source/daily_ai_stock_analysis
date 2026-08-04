@@ -96,7 +96,10 @@ def test_official_uninstaller_closes_only_exact_product_owned_processes() -> Non
         "from": "windows/close-owned-processes.ps1",
         "to": "close-owned-processes.ps1",
     } in resources
-    assert "customCheckAppRunning" in installer_script
+    assert "!macro _dsaCloseOwnedProcesses" in installer_script
+    assert "!macro customCheckAppRunning" in installer_script
+    assert "!macro customUnInstall" in installer_script
+    assert installer_script.count("!insertmacro _dsaCloseOwnedProcesses") == 2
     assert "$INSTDIR\\resources\\close-owned-processes.ps1" in installer_script
     assert "${APP_EXECUTABLE_FILENAME}" in installer_script
     assert "resources\\backend\\stock_analysis\\stock_analysis.exe" in installer_script

@@ -4,26 +4,35 @@
   StrCpy $isForceCurrentInstall 1
 !macroend
 
-!macro customCheckAppRunning
-  ; The default electron-builder check can fall back to process-name matching.
+!macro _dsaCloseOwnedProcesses SUFFIX
   ; PP02 closes only the exact app/backend executable paths under this install.
-  IfFileExists "$INSTDIR\resources\close-owned-processes.ps1" 0 DsaOwnedProcessCheckDone
+  ; The shared helper is required for both install/upgrade checks and the
+  ; always-run uninstall section because silent uninstall skips checkAppRunning.
+  IfFileExists "$INSTDIR\resources\close-owned-processes.ps1" 0 DsaOwnedProcessCheckDone_${SUFFIX}
   DetailPrint "Stopping PP02-owned processes before installer file operations."
   ClearErrors
   ExecWait '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$INSTDIR\resources\close-owned-processes.ps1" -InstallRoot "$INSTDIR" -ProductExecutableName "${APP_EXECUTABLE_FILENAME}" -BackendRelativePath "resources\backend\stock_analysis\stock_analysis.exe"' $R0
-  IfErrors 0 DsaOwnedProcessCheckResult
+  IfErrors 0 DsaOwnedProcessCheckResult_${SUFFIX}
   DetailPrint "PP02-owned process helper could not be started."
   SetErrorLevel 2
   Abort "PP02-owned processes could not be checked safely."
 
-DsaOwnedProcessCheckResult:
+DsaOwnedProcessCheckResult_${SUFFIX}:
   ${if} $R0 != 0
     DetailPrint "PP02-owned process helper failed with code: $R0."
     SetErrorLevel 2
     Abort "PP02-owned processes did not exit safely."
   ${endif}
 
-DsaOwnedProcessCheckDone:
+DsaOwnedProcessCheckDone_${SUFFIX}:
+!macroend
+
+!macro customCheckAppRunning
+  !insertmacro _dsaCloseOwnedProcesses Install
+!macroend
+
+!macro customUnInstall
+  !insertmacro _dsaCloseOwnedProcesses Uninstall
 !macroend
 
 !macro _dsaRetryQuotedOldUninstall ROOT_KEY SUFFIX
