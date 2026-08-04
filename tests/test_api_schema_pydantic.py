@@ -1,6 +1,8 @@
 """Regression tests for API schema metadata under Pydantic v2."""
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -75,6 +77,43 @@ def _collect_component_schema_refs(node: Any) -> set[str]:
         for value in node:
             refs.update(_collect_component_schema_refs(value))
     return refs
+
+
+def test_period_report_schema_import_does_not_eagerly_load_api_router() -> None:
+    """Schema-only imports must not enter the API router/service cycle."""
+    script = """
+import sys
+
+from api.v1.schemas.period_report import PeriodReportResponse
+
+assert "api.v1.router" not in sys.modules
+assert set(PeriodReportResponse.model_fields) == {
+    "report_id",
+    "status",
+    "period",
+    "report_kind",
+    "start_date",
+    "end_date",
+    "generated_at",
+    "source_record_count",
+    "stock_summaries",
+    "etf_summaries",
+    "market_reviews",
+    "outlook",
+    "matched_outlook",
+    "disclaimer",
+}
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=Path(__file__).resolve().parents[1],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
 
 
 def test_schema_examples_remain_in_openapi_schema() -> None:
