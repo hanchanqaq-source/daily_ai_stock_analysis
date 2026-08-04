@@ -1,5 +1,19 @@
 # PP02 安全重建路线 R0–R7
 
+## 2026-08-04 Work20 full backup restore and period persistence
+
+- Base is the released `v3.29.2` main Head `41fd6a6c76c3e3b56211ef5fb4483d869122b568`.
+- Period reports now use a verified additive table and exact stored reads; same-window generation
+  preserves IDs, and legacy outlook records remain available through a read-only fallback.
+- The complete backup is an allow-listed `pp02.full-data.backup` v1 JSON document with canonical
+  SHA-256, explicit inclusions/exclusions, one-use preview, pre-restore recovery artifact,
+  transactional database replacement and CAS-based configuration compensation.
+- PP02 has no formal fund model; the manifest records funds as `not_applicable` with zero rows.
+- Tasks 1–6, the local Task 7 gates and the final scoped security re-review are complete at
+  reviewed implementation Head `dd7dc21a665e450b6427c522657e7fcfa95e4162`; all four Important
+  findings are closed with no new Critical/Important. Draft PR and fixed-Head CI evidence remain pending.
+  Ready, merge, Tag, Release, v3.29.3 publication and database-directory migration are forbidden.
+
 ## 2026-08-03 Work16 Windows frozen chip runtime closure
 
 - 固定 Base 为 `main@568e26adf0e6393a7a0da1be57369535735cd05a`，独立 Draft

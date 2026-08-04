@@ -1,5 +1,5 @@
 import { CalendarRange, Database, FileClock, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getParsedApiError, type ParsedApiError } from '../api/error';
 import { periodReportApi } from '../api/periodReport';
 import {
@@ -54,6 +54,9 @@ const COPY = {
       months_2: '2个月',
     },
     reportRange: '报告区间',
+    storedReport: '报告',
+    ready: '已就绪',
+    insufficientData: '数据不足',
     generatedAt: '生成时间',
     sourceRecords: '来源记录',
     sourceIds: '来源标识',
@@ -107,6 +110,9 @@ const COPY = {
       months_2: '2 months',
     },
     reportRange: 'Report range',
+    storedReport: 'Report',
+    ready: 'Ready',
+    insufficientData: 'Insufficient data',
     generatedAt: 'Generated at',
     sourceRecords: 'Source records',
     sourceIds: 'Source IDs',
@@ -452,8 +458,35 @@ const PeriodReportPage = () => {
   const [report, setReport] = useState<PeriodReportResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ParsedApiError | null>(null);
+  const latestRequestId = useRef(0);
+
+  useEffect(() => {
+    let active = true;
+    const requestId = ++latestRequestId.current;
+    setError(null);
+    setReport(null);
+    void periodReportApi.getLatest(selectedPeriod)
+      .then((storedReport) => {
+        if (active && requestId === latestRequestId.current) {
+          setReport(storedReport);
+        }
+      })
+      .catch((requestError: unknown) => {
+        if (!active || requestId !== latestRequestId.current) {
+          return;
+        }
+        const parsed = getParsedApiError(requestError);
+        if (parsed.status !== 404) {
+          setError(parsed);
+        }
+      })
+    return () => {
+      active = false;
+    };
+  }, [selectedPeriod]);
 
   const generate = async () => {
+    latestRequestId.current += 1;
     setLoading(true);
     setError(null);
     try {
@@ -474,7 +507,13 @@ const PeriodReportPage = () => {
       <div className="grid gap-2 text-sm text-secondary-text md:grid-cols-3">
         <p>{copy.reportRange}：<span className="text-foreground">{report.startDate} 至 {report.endDate}</span></p>
         <p>{copy.generatedAt}：<span className="text-foreground">{formatTimestamp(report.generatedAt)}</span></p>
-        <p>{copy.sourceRecords}：<span className="text-foreground">{report.sourceRecordCount}</span></p>
+        <p className="flex flex-wrap items-center gap-2">
+          <span>{copy.sourceRecords}：<span className="text-foreground">{report.sourceRecordCount}</span></span>
+          <Badge variant="history">{copy.storedReport} #{report.reportId}</Badge>
+          <Badge variant={report.status === 'ready' ? 'success' : 'warning'}>
+            {report.status === 'ready' ? copy.ready : copy.insufficientData}
+          </Badge>
+        </p>
       </div>
     </Card>
   ) : null;

@@ -1,4 +1,28 @@
-# WORK-016｜Windows 冻结筹码依赖收口（执行中）
+# WORK-020｜完整备份恢复与周期报告持久化（执行中）
+
+## Work20｜Task7 前本地回传快照
+
+> Work20 尚未结束。本节记录已验证本地事实；Draft PR、固定 Head 和 CI Run 必须在
+> 远端结果取得后写入 PR 元数据与最终回报，不以未运行冒充通过。
+
+- Plan：完成。只读审计证明无需迁移数据库目录；采用白名单版本化 JSON、正式
+  `period_reports` 表、恢复前保护副本、数据库事务与配置 CAS 补偿。
+- Build：Task1–6 完成。已复审实现 Head
+  `dd7dc21a665e450b6427c522657e7fcfa95e4162`，保留 Task4 安全链和 Task5/6 API/UI
+  历史的普通双父 merge。
+- Test：Task4 核心 `99 passed`，配置/API `281 passed`；合并后后端联合
+  `389 passed`；完整后端门禁 `5220 passed / 4 deselected / 499 subtests passed`；
+  Web 受影响套件 `109 passed`，Lint 与 Production Build 通过；最终安全修复专项联合
+  回归 `410 passed`，整分支审查提出的 4 项 Important 已全部关闭，最终 scoped
+  re-review 无新 Critical/Important。
+- CI：尚未 Push，Draft PR 和固定 Head CI 均未运行。
+- Judge：`IN_PROGRESS — LOCAL_PASS — REMOTE_EVIDENCE_PENDING`。
+- 未解决风险：尚无 Windows 安装—卸载—重装真机闭环证据；本 Work 明确不处理签名、
+  行情/新闻失败、数据库目录迁移或发布。PP02 无基金正式表，基金清单为不适用而非备份 0 条。
+
+---
+
+# 历史任务回传｜WORK-016 / Windows 冻结筹码依赖收口
 
 ## Work16｜阶段回传
 

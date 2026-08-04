@@ -128,6 +128,14 @@ from api.v1.schemas.decision_signals import (
     DecisionSignalProfileCalibrationBucket,
     DecisionSignalStatusUpdateRequest,
 )
+from api.v1.schemas.full_data_backup import (
+    FullDataBackupDocument,
+    FullDataBackupIntegrity,
+    FullDataBackupPreviewResponse,
+    FullDataBackupRecoveryResponse,
+    FullDataBackupRestoreRequest,
+    FullDataBackupRestoreResponse,
+)
 
 __all__ = [
     # common
@@ -238,6 +246,13 @@ __all__ = [
     "DecisionSignalOutcomeRunResponse",
     "DecisionSignalOutcomeStatsBucket",
     "DecisionSignalOutcomeStatsResponse",
+    # full data backup
+    "FullDataBackupDocument",
+    "FullDataBackupIntegrity",
+    "FullDataBackupPreviewResponse",
+    "FullDataBackupRecoveryResponse",
+    "FullDataBackupRestoreRequest",
+    "FullDataBackupRestoreResponse",
     "DecisionSignalProfileCalibration",
     "DecisionSignalProfileCalibrationBreakdowns",
     "DecisionSignalProfileCalibrationBucket",

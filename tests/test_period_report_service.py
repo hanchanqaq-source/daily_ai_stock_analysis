@@ -14,7 +14,7 @@ from typing import Any
 from unittest.mock import patch
 
 from src.services.history_service import HistoryService
-from src.storage import AnalysisHistory, DatabaseManager
+from src.storage import AnalysisHistory, DatabaseManager, PeriodReportRecord
 
 try:
     from src.services.period_report_service import (
@@ -530,6 +530,120 @@ class PeriodOutlookPersistenceTestCase(unittest.TestCase):
             report["matched_outlook"]["target_period"],
             {"start_date": "2026-08-03", "end_date": "2026-08-09"},
         )
+
+
+class CanonicalPeriodReportPersistenceTestCase(unittest.TestCase):
+    def setUp(self) -> None:
+        self.assertIsNotNone(PeriodReportService)
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.db_path = Path(self.temp_dir.name) / "period-report-canonical.db"
+        DatabaseManager.reset_instance()
+        storage_config = SimpleNamespace(
+            sqlite_wal_enabled=True,
+            sqlite_busy_timeout_ms=5000,
+            sqlite_write_retry_max=2,
+            sqlite_write_retry_base_delay=0.01,
+        )
+        with patch("src.storage.get_config", return_value=storage_config):
+            self.db = DatabaseManager(db_url=f"sqlite:///{self.db_path}")
+
+    def tearDown(self) -> None:
+        DatabaseManager.reset_instance()
+        self.temp_dir.cleanup()
+
+    def _seed_history(self, record_id: int, *, created_at: datetime, code: str = "600519") -> None:
+        with self.db.get_session() as session:
+            session.add(
+                AnalysisHistory(
+                    id=record_id,
+                    query_id=f"canonical-query-{record_id}",
+                    code=code,
+                    name=f"Synthetic {code}",
+                    report_type="detailed",
+                    sentiment_score=70,
+                    operation_advice="持有",
+                    trend_prediction="看多",
+                    analysis_summary=f"synthetic summary {record_id}",
+                    raw_result="{}",
+                    created_at=created_at,
+                )
+            )
+            session.commit()
+
+    def test_generation_upserts_same_window_and_reloads_exact_content_after_restart(self) -> None:
+        self._seed_history(102, created_at=datetime(2026, 7, 29, 9, 0))
+        first_service = PeriodReportService(
+            history_service=HistoryService(self.db),
+            db_manager=self.db,
+            now_provider=lambda: datetime(2026, 7, 30, 12, 0),
+        )
+
+        first = first_service.generate("week_to_date", as_of=date(2026, 7, 30))
+        self.assertGreater(first["report_id"], 0)
+        self.assertEqual(first["status"], "ready")
+
+        self._seed_history(101, created_at=datetime(2026, 7, 30, 9, 0))
+        replacement = first_service.generate("week_to_date", as_of=date(2026, 7, 30))
+        self.assertEqual(replacement["report_id"], first["report_id"])
+        self.assertEqual(replacement["source_record_count"], 2)
+
+        with self.db.get_session() as session:
+            stored = session.get(PeriodReportRecord, first["report_id"])
+            self.assertIsNotNone(stored)
+            self.assertEqual(json.loads(stored.source_record_ids_json), [101, 102])
+
+        restarted_db = DatabaseManager(db_url=f"sqlite:///{self.db_path}")
+        restarted_service = PeriodReportService(
+            history_service=HistoryService(restarted_db),
+            db_manager=restarted_db,
+        )
+        self.assertEqual(restarted_service.get_report(first["report_id"]), replacement)
+
+        different_window = first_service.generate("week_to_date", as_of=date(2026, 7, 31))
+        self.assertNotEqual(different_window["report_id"], first["report_id"])
+
+    def test_legacy_outlook_is_read_only_fallback_for_stored_reads(self) -> None:
+        legacy_id = 901
+        legacy_snapshot = {
+            "snapshot_version": 1,
+            "status": "insufficient_data",
+            "message": INSUFFICIENT_OUTLOOK_MESSAGE,
+            "target_period": {"start_date": "2026-08-03", "end_date": "2026-08-09"},
+            "generated_at": "2026-07-30T12:00:00",
+            "overall_tendency": None,
+            "stocks": [],
+            "etfs": [],
+            "market_signals": [],
+            "data_as_of": None,
+            "source_record_count": 0,
+            "source_record_ids": [],
+            "disclaimer": OUTLOOK_DISCLAIMER,
+        }
+        with self.db.get_session() as session:
+            session.add(
+                AnalysisHistory(
+                    id=legacy_id,
+                    query_id="legacy-period-outlook",
+                    code="PERIOD",
+                    name="Legacy outlook",
+                    report_type=PERIOD_OUTLOOK_REPORT_TYPE,
+                    context_snapshot=json.dumps(legacy_snapshot, ensure_ascii=False),
+                    created_at=datetime(2026, 7, 30, 12, 0),
+                )
+            )
+            session.commit()
+
+        service = PeriodReportService(history_service=HistoryService(self.db), db_manager=self.db)
+        latest = service.get_latest("next_week")
+        by_id = service.get_report(legacy_id)
+
+        self.assertEqual(latest, by_id)
+        self.assertEqual(latest["report_id"], legacy_id)
+        self.assertEqual(latest["status"], "insufficient_data")
+        self.assertEqual(latest["period"], "next_week")
+        self.assertEqual(latest["outlook"]["target_period"], legacy_snapshot["target_period"])
+        with self.db.get_session() as session:
+            self.assertEqual(session.query(PeriodReportRecord).count(), 0)
 
 
 if __name__ == "__main__":

@@ -54,6 +54,7 @@ from sqlalchemy.orm import (
     Session,
 )
 from sqlalchemy.exc import IntegrityError, OperationalError
+from sqlalchemy.inspection import inspect as sqlalchemy_inspect
 
 from src.agent.provider_trace import PROVIDER_TRACE_RETENTION_LIMIT
 from src.config import get_config
@@ -62,7 +63,8 @@ from src.utils.sniper_points import extract_sniper_points, parse_sniper_value
 
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
-CURRENT_SCHEMA_VERSION = "2026-06-05-create-all-baseline"
+PERIOD_REPORT_SCHEMA_VERSION = "2026-08-04-work20-period-reports"
+CURRENT_SCHEMA_VERSION = PERIOD_REPORT_SCHEMA_VERSION
 INTELLIGENCE_ITEM_NULL_SCOPE_VALUE = "__dsa_null_scope__"
 
 # SQLAlchemy ORM 基类
@@ -361,6 +363,39 @@ class AnalysisHistory(Base):
             'take_profit': self.take_profit,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class PeriodReportRecord(Base):
+    """Canonical persisted period report and outlook record."""
+
+    __tablename__ = "period_reports"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    period = Column(String(32), nullable=False, index=True)
+    report_kind = Column(String(32), nullable=False, index=True)
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
+    content_json = Column(Text, nullable=False)
+    source_record_ids_json = Column(Text, nullable=False)
+    status = Column(String(32), nullable=False)
+    generated_at = Column(DateTime, default=utc_naive_now, nullable=False, index=True)
+    updated_at = Column(
+        DateTime,
+        default=utc_naive_now,
+        onupdate=utc_naive_now,
+        nullable=False,
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "period",
+            "report_kind",
+            "start_date",
+            "end_date",
+            name="uix_period_report_identity",
+        ),
+        Index("ix_period_reports_period_generated_at", "period", "generated_at"),
+    )
 
 
 class BacktestResult(Base):
@@ -1253,12 +1288,10 @@ class DatabaseManager(metaclass=_DatabaseManagerMeta):
                 autoflush=False,
             )
 
-            # 创建所有表
-            Base.metadata.create_all(self._engine)
+            self._initialize_base_schema_transaction()
             self._ensure_llm_usage_telemetry_columns()
             self._ensure_decision_signal_profile_schema()
             self._ensure_intelligence_item_scope_values()
-            self._ensure_schema_migration_record()
             self._ensure_intelligence_items_unique_index()
 
             self._initialized = True
@@ -1278,19 +1311,88 @@ class DatabaseManager(metaclass=_DatabaseManagerMeta):
             self.__class__._instance = None
             raise
 
-    def _ensure_schema_migration_record(self) -> None:
-        session = self._SessionLocal()
-        values = {
-            "version": CURRENT_SCHEMA_VERSION,
-            "description": "Baseline schema created through SQLAlchemy metadata.create_all",
+    def _initialize_base_schema_transaction(self) -> None:
+        """Create, verify, and mark the base schema as one database transaction."""
+
+        if self._is_sqlite_engine:
+            with self._engine.connect() as connection:
+                connection.exec_driver_sql("BEGIN IMMEDIATE")
+                try:
+                    Base.metadata.create_all(connection)
+                    self._verify_period_report_schema(connection)
+                    self._ensure_schema_migration_record(connection)
+                except Exception:
+                    connection.rollback()
+                    raise
+                else:
+                    connection.commit()
+            return
+
+        with self._engine.begin() as connection:
+            Base.metadata.create_all(connection)
+            self._verify_period_report_schema(connection)
+            self._ensure_schema_migration_record(connection)
+
+    def _verify_period_report_schema(self, bind=None) -> None:
+        """Verify the additive Work20 period-report table before recording its marker."""
+
+        inspector = sqlalchemy_inspect(bind or self._engine)
+        table_name = PeriodReportRecord.__tablename__
+        if not inspector.has_table(table_name):
+            raise RuntimeError(f"{table_name} table was not created")
+
+        required_columns = {
+            "id",
+            "period",
+            "report_kind",
+            "start_date",
+            "end_date",
+            "content_json",
+            "source_record_ids_json",
+            "status",
+            "generated_at",
+            "updated_at",
         }
+        actual_columns = {
+            column["name"] for column in inspector.get_columns(table_name)
+        }
+        missing_columns = required_columns - actual_columns
+        if missing_columns:
+            raise RuntimeError(
+                "period_reports schema verification failed; missing columns: "
+                f"{sorted(missing_columns)}"
+            )
+
+        identity = ("period", "report_kind", "start_date", "end_date")
+        unique_identities = {
+            tuple(constraint.get("column_names") or [])
+            for constraint in inspector.get_unique_constraints(table_name)
+        }
+        if identity not in unique_identities:
+            raise RuntimeError(
+                "period_reports schema verification failed; missing unique identity "
+                f"{identity}"
+            )
+
+    def _ensure_schema_migration_record(self, connection=None) -> None:
+        if connection is not None:
+            self._insert_schema_migration_record(connection)
+            return
+
+        session = self._SessionLocal()
         try:
             if self._is_sqlite_engine:
-                statement = sqlite_insert(DatabaseSchemaMigration).values(**values)
+                statement = sqlite_insert(DatabaseSchemaMigration).values(
+                    **self._schema_migration_values()
+                )
                 statement = statement.on_conflict_do_nothing(index_elements=["version"])
                 session.execute(statement)
             else:
-                session.execute(DatabaseSchemaMigration.__table__.insert().values(**values))
+                session.execute(
+                    DatabaseSchemaMigration.__table__.insert().values(
+                        **self._schema_migration_values()
+                    )
+                )
             session.commit()
         except IntegrityError:
             session.rollback()
@@ -1303,6 +1405,31 @@ class DatabaseManager(metaclass=_DatabaseManagerMeta):
             raise
         finally:
             session.close()
+
+    @staticmethod
+    def _schema_migration_values() -> Dict[str, str]:
+        return {
+            "version": CURRENT_SCHEMA_VERSION,
+            "description": "Work20 period_reports schema verified through SQLAlchemy metadata.create_all",
+        }
+
+    def _insert_schema_migration_record(self, connection) -> None:
+        values = self._schema_migration_values()
+        try:
+            if self._is_sqlite_engine:
+                statement = sqlite_insert(DatabaseSchemaMigration).values(**values)
+                statement = statement.on_conflict_do_nothing(index_elements=["version"])
+                connection.execute(statement)
+            else:
+                connection.execute(DatabaseSchemaMigration.__table__.insert().values(**values))
+        except IntegrityError:
+            existing = connection.execute(
+                select(DatabaseSchemaMigration.version).where(
+                    DatabaseSchemaMigration.version == CURRENT_SCHEMA_VERSION
+                )
+            ).scalar_one_or_none()
+            if existing is None:
+                raise
 
     def _ensure_decision_signal_profile_schema(self) -> None:
         """Add and backfill nullable decision_profile for existing SQLite DBs."""

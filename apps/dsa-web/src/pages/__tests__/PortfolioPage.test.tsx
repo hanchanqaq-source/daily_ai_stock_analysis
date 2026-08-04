@@ -1260,7 +1260,7 @@ describe('PortfolioPage FX refresh', () => {
     Object.defineProperty(file, 'text', {
       value: vi.fn().mockResolvedValue(JSON.stringify(backup)),
     });
-    fireEvent.change(screen.getByLabelText('选择股票备份 JSON'), {
+    fireEvent.change(screen.getByLabelText('选择股票组合账本备份 JSON'), {
       target: { files: [file] },
     });
 
@@ -1268,13 +1268,29 @@ describe('PortfolioPage FX refresh', () => {
     expect(restoreBackup).not.toHaveBeenCalled();
     expect(screen.getByText('将恢复 2 个账户、3 条交易事件')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '确认替换当前股票账本' }));
+    fireEvent.click(screen.getByRole('button', { name: '确认替换当前股票组合账本' }));
 
     await waitFor(() => expect(restoreBackup).toHaveBeenCalledWith({
       backup,
       previewToken: 'backup-preview-1',
     }));
-    expect(await screen.findByText('股票备份恢复完成。')).toBeInTheDocument();
+    expect(await screen.findByText('股票组合账本恢复完成。')).toBeInTheDocument();
+  });
+
+  it('labels the portfolio backup as a portfolio-event-only ledger flow', async () => {
+    render(<PortfolioPage />);
+    await waitForInitialLoad();
+
+    expect(screen.getByRole('heading', { name: '股票组合账本备份（仅组合事件）' })).toBeInTheDocument();
+    expect(screen.getByText(/不能用于恢复完整正式用户数据/)).toBeInTheDocument();
+  });
+
+  it('keeps the portfolio-ledger limitation explicit in English', async () => {
+    renderEnglishPage();
+    await waitForInitialLoad();
+
+    expect(screen.getByRole('heading', { name: 'Portfolio ledger backup (portfolio events only)' })).toBeInTheDocument();
+    expect(screen.getByText(/cannot restore complete formal user data/i)).toBeInTheDocument();
   });
 
   it('exports a versioned stock backup only after an explicit click', async () => {
@@ -1301,10 +1317,10 @@ describe('PortfolioPage FX refresh', () => {
 
     render(<PortfolioPage />);
     await waitForInitialLoad();
-    fireEvent.click(screen.getByRole('button', { name: '导出股票备份' }));
+    fireEvent.click(screen.getByRole('button', { name: '导出股票组合账本备份' }));
 
     await waitFor(() => expect(exportBackup).toHaveBeenCalledTimes(1));
-    expect(await screen.findByText('股票备份已导出。')).toBeInTheDocument();
+    expect(await screen.findByText('股票组合账本备份已导出。')).toBeInTheDocument();
   });
 
 });

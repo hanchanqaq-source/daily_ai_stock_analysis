@@ -20,6 +20,12 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 logger = logging.getLogger(__name__)
 
+_FULL_DATA_BACKUP_ROUTE_PREFIX = "/api/v1/system/full-data-backup/"
+_FULL_DATA_BACKUP_VALIDATION_ERROR = {
+    "error": "full_data_backup_validation_failed",
+    "message": "Full-data backup validation failed",
+}
+
 
 class ErrorHandlerMiddleware(BaseHTTPMiddleware):
     """
@@ -101,6 +107,11 @@ def add_error_handlers(app) -> None:
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
         """处理请求验证异常"""
+        if request.url.path.startswith(_FULL_DATA_BACKUP_ROUTE_PREFIX):
+            return JSONResponse(
+                status_code=400,
+                content=_FULL_DATA_BACKUP_VALIDATION_ERROR,
+            )
         return JSONResponse(
             status_code=422,
             content={

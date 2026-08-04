@@ -2,13 +2,63 @@
 """Unit tests for structured `.env` line preservation in ConfigManager."""
 
 import errno
+import hashlib
+import multiprocessing
 import os
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from src.core.config_manager import ConfigManager
+from src.core.config_manager import ConfigManager, ConfigManagerPublicationUncertain
+from src.services.system_config_service import ConfigConflictError, SystemConfigService
+
+
+def _atomic_restore_apply_process(
+    env_path: str,
+    expected_version: str,
+    value: str,
+    label: str,
+    pause_before_publish: bool,
+    entered,
+    release,
+    started,
+    finished,
+    results,
+) -> None:
+    manager = ConfigManager(env_path=Path(env_path))
+    service = SystemConfigService(manager=manager)
+    if pause_before_publish:
+        if hasattr(manager, "_publish_staged_bytes"):
+            original_publish = manager._publish_staged_bytes
+            method_name = "_publish_staged_bytes"
+        else:
+            original_publish = manager._atomic_replace_bytes
+            method_name = "_atomic_replace_bytes"
+
+        def pausing_publish(*args, **kwargs):
+            entered.set()
+            if not release.wait(timeout=15):
+                raise TimeoutError("test did not release staged config publish")
+            return original_publish(*args, **kwargs)
+
+        setattr(manager, method_name, pausing_publish)
+    started.set()
+    try:
+        service.apply_env_subset_atomically(
+            expected_version=expected_version,
+            values={"STOCK_LIST": value},
+            managed_keys={"STOCK_LIST"},
+            reload_now=False,
+        )
+    except ConfigConflictError:
+        results.put((label, "conflict"))
+    except Exception as exc:
+        results.put((label, f"error:{type(exc).__name__}:{exc}"))
+    else:
+        results.put((label, "success"))
+    finally:
+        finished.set()
 
 
 class ConfigManagerTestCase(unittest.TestCase):
@@ -49,6 +99,105 @@ class ConfigManagerTestCase(unittest.TestCase):
         self.assertIn("\n\nexport SHOULD_STAY_UNCHANGED\n", env_content)
         self.assertIn("# Secrets\nGEMINI_API_KEY=secret-key\n", env_content)
         self.assertIn("STOCK_LIST=600519,300750\n", env_content)
+
+    def test_config_version_is_exact_content_generation_not_file_metadata(self) -> None:
+        content = b"STOCK_LIST=600519\n"
+        self.env_path.write_bytes(content)
+        original_version = self.manager.get_config_version()
+
+        os.utime(self.env_path, ns=(1_900_000_000_000_000_000,) * 2)
+        self.assertEqual(self.manager.get_config_version(), original_version)
+        self.env_path.write_bytes(content)
+        self.assertEqual(self.manager.get_config_version(), original_version)
+
+        self.env_path.write_bytes(b"STOCK_LIST=300750\n")
+        self.assertNotEqual(self.manager.get_config_version(), original_version)
+        self.env_path.unlink()
+        missing_version = self.manager.get_config_version()
+        self.env_path.write_bytes(b"")
+        self.assertNotEqual(self.manager.get_config_version(), missing_version)
+
+    def test_read_paths_work_when_advisory_lock_cannot_be_opened(self) -> None:
+        content = b"# readable deployment config\nSTOCK_LIST=600519,AAPL\n"
+        self.env_path.write_bytes(content)
+        self.env_path.with_name(self.env_path.name + ".lock").mkdir()
+        expected_version = "sha256:" + hashlib.sha256(
+            b"present\0" + content
+        ).hexdigest()
+
+        self.assertEqual(
+            self.manager.read_config_map(),
+            {"STOCK_LIST": "600519,AAPL"},
+        )
+        self.assertEqual(self.manager.get_config_version(), expected_version)
+        exported = SystemConfigService(manager=self.manager).export_env()
+        self.assertEqual(exported["content"], content.decode("utf-8"))
+        self.assertEqual(exported["config_version"], expected_version)
+        self.assertIsNotNone(exported["updated_at"])
+
+    def test_two_process_atomic_restore_writers_linearize_on_expected_generation(self) -> None:
+        self.env_path.write_text("STOCK_LIST=600519\n", encoding="utf-8")
+        expected_version = self.manager.get_config_version()
+        context = multiprocessing.get_context(
+            "spawn" if os.name == "nt" else "fork"
+        )
+        first_entered = context.Event()
+        release_first = context.Event()
+        first_started = context.Event()
+        first_finished = context.Event()
+        second_started = context.Event()
+        second_finished = context.Event()
+        results = context.Queue()
+        first = context.Process(
+            target=_atomic_restore_apply_process,
+            args=(
+                str(self.env_path),
+                expected_version,
+                "300750",
+                "first",
+                True,
+                first_entered,
+                release_first,
+                first_started,
+                first_finished,
+                results,
+            ),
+        )
+        second = context.Process(
+            target=_atomic_restore_apply_process,
+            args=(
+                str(self.env_path),
+                expected_version,
+                "AAPL",
+                "second",
+                False,
+                context.Event(),
+                context.Event(),
+                second_started,
+                second_finished,
+                results,
+            ),
+        )
+        first.start()
+        try:
+            self.assertTrue(first_started.wait(timeout=10))
+            self.assertTrue(first_entered.wait(timeout=10))
+            second.start()
+            self.assertTrue(second_started.wait(timeout=10))
+            second_completed_while_first_locked = second_finished.wait(timeout=1)
+        finally:
+            release_first.set()
+        first.join(timeout=15)
+        second.join(timeout=15)
+        self.assertFalse(first.is_alive())
+        self.assertFalse(second.is_alive())
+        self.assertFalse(second_completed_while_first_locked)
+        outcomes = dict(results.get(timeout=5) for _ in range(2))
+        self.assertEqual(outcomes, {"first": "success", "second": "conflict"})
+        self.assertEqual(
+            ConfigManager(env_path=self.env_path).read_config_map()["STOCK_LIST"],
+            "300750",
+        )
 
     def test_apply_updates_only_rewrites_last_duplicate_assignment(self) -> None:
         self.env_path.write_text(

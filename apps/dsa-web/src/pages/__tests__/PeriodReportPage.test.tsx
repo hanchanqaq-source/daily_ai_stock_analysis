@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { periodReportApi } from '../../api/periodReport';
 import { UiLanguageProvider } from '../../contexts/UiLanguageContext';
@@ -8,10 +8,14 @@ import PeriodReportPage from '../PeriodReportPage';
 vi.mock('../../api/periodReport', () => ({
   periodReportApi: {
     generate: vi.fn(),
+    getLatest: vi.fn(),
+    getById: vi.fn(),
   },
 }));
 
 const historicalReport: PeriodReportResponse = {
+  reportId: 401,
+  status: 'ready',
   period: 'week_to_date',
   reportKind: 'historical',
   startDate: '2026-07-27',
@@ -117,6 +121,8 @@ const readyOutlook = {
 };
 
 const outlookReport: PeriodReportResponse = {
+  reportId: 407,
+  status: 'ready',
   period: 'next_week',
   reportKind: 'outlook',
   startDate: '2026-08-03',
@@ -139,15 +145,24 @@ function renderPage() {
   );
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+  return { promise, resolve };
+}
+
 beforeEach(() => {
   window.localStorage.clear();
   window.localStorage.setItem('dsa.uiLanguage', 'zh');
   vi.clearAllMocks();
   vi.mocked(periodReportApi.generate).mockResolvedValue(historicalReport);
+  vi.mocked(periodReportApi.getLatest).mockResolvedValue(historicalReport);
 });
 
 describe('PeriodReportPage', () => {
-  it('shows all seven entrances and does not generate anything on mount', () => {
+  it('loads the latest stored report on mount without generating anything', async () => {
     renderPage();
 
     for (const label of [
@@ -161,8 +176,54 @@ describe('PeriodReportPage', () => {
     ]) {
       expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
     }
+    await waitFor(() => {
+      expect(periodReportApi.getLatest).toHaveBeenCalledWith('week_to_date');
+    });
     expect(periodReportApi.generate).not.toHaveBeenCalled();
-    expect(screen.getByText('尚未生成周期报告')).toBeInTheDocument();
+    expect(await screen.findByText('报告 #401')).toBeInTheDocument();
+    expect(screen.getByText('股票历史摘要')).toBeInTheDocument();
+  });
+
+  it('loads that period latest stored report when the selection changes', async () => {
+    vi.mocked(periodReportApi.getLatest).mockImplementation(async (period) => ({
+      ...historicalReport,
+      reportId: period === 'weeks_5' ? 405 : 401,
+      period,
+    }));
+    renderPage();
+
+    await screen.findByText('报告 #401');
+    fireEvent.click(screen.getByRole('button', { name: '5周' }));
+
+    await waitFor(() => {
+      expect(periodReportApi.getLatest).toHaveBeenLastCalledWith('weeks_5');
+    });
+    expect(await screen.findByText('报告 #405')).toBeInTheDocument();
+    expect(periodReportApi.generate).not.toHaveBeenCalled();
+  });
+
+  it('does not let a slow stored-report read overwrite an explicit generation result', async () => {
+    const latest = createDeferred<PeriodReportResponse>();
+    vi.mocked(periodReportApi.getLatest).mockReturnValue(latest.promise);
+    vi.mocked(periodReportApi.generate).mockResolvedValue({
+      ...historicalReport,
+      reportId: 499,
+      stockSummaries: [{
+        ...historicalReport.stockSummaries[0],
+        latestSummary: '用户刚刚生成的报告',
+      }],
+    });
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: '生成报告' }));
+    expect(await screen.findByText('报告 #499')).toBeInTheDocument();
+    await act(async () => {
+      latest.resolve(historicalReport);
+      await latest.promise;
+    });
+
+    expect(screen.getByText('报告 #499')).toBeInTheDocument();
+    expect(screen.getByText('用户刚刚生成的报告')).toBeInTheDocument();
   });
 
   it('calls the single manual endpoint only after the user chooses a period and generates', async () => {

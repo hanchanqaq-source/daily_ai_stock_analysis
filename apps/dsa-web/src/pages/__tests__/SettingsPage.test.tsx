@@ -1,7 +1,9 @@
 import type React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { UiLanguageProvider } from '../../contexts/UiLanguageContext';
 import { resolveWebBuildInfo } from '../../utils/constants';
+import { UI_LANGUAGE_STORAGE_KEY } from '../../utils/uiLanguage';
 import type { SetupStatusResponse } from '../../types/systemConfig';
 import SettingsPage from '../SettingsPage';
 
@@ -507,6 +509,7 @@ describe('SettingsPage', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.clearAllMocks();
+    window.localStorage.clear();
     Object.assign(webBuildInfoMock, {
       version: '3.11.0',
       rawVersion: '3.11.0',
@@ -2441,10 +2444,25 @@ describe('SettingsPage', () => {
   it('renders env backup actions outside desktop runtime', () => {
     render(<SettingsPage />);
 
-    expect(screen.getByRole('heading', { name: '配置备份' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '配置备份（仅非敏感配置）' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '完整数据备份与恢复' })).toBeInTheDocument();
+    expect(screen.getByText(/不包含分析历史、股票组合账本\/事件或其他完整正式用户数据/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '导出 .env' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '导入 .env' })).toBeInTheDocument();
     expect(screen.getByText(/Docker 部署中/)).toHaveTextContent('ENV_FILE');
+  });
+
+  it('distinguishes complete and configuration-only backup entrances in English', () => {
+    window.localStorage.setItem(UI_LANGUAGE_STORAGE_KEY, 'en');
+    render(
+      <UiLanguageProvider>
+        <SettingsPage />
+      </UiLanguageProvider>,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Complete data backup and restore' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Configuration backup (non-sensitive configuration only)' })).toBeInTheDocument();
+    expect(screen.getByText(/excludes analysis histories, portfolio ledger events, and all other complete formal user data/i)).toBeInTheDocument();
   });
 
   it('disables env backup actions when web auth is not enabled', () => {

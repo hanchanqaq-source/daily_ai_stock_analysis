@@ -24,6 +24,7 @@ import {
   SettingsSectionCard,
 } from '../components/settings';
 import { WEB_BUILD_INFO } from '../utils/constants';
+import FullDataBackupCard from '../components/settings/FullDataBackupCard';
 import { parseStockListValue } from '../utils/stockList';
 import { getCategoryDescription, getCategoryTitle } from '../utils/systemConfigI18n';
 import type {
@@ -1809,6 +1810,9 @@ const SettingsPage: React.FC = () => {
                   ) : null}
                 </div>
               </SettingsSectionCard>
+            ) : null}
+            {activeCategory === 'system' ? (
+              <FullDataBackupCard />
             ) : null}
             {activeCategory === 'base' ? (
               <SettingsSectionCard

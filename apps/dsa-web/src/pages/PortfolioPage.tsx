@@ -720,7 +720,7 @@ const PortfolioPage: React.FC = () => {
         link.click();
         URL.revokeObjectURL(url);
       }
-      setBackupMessage('股票备份已导出。');
+      setBackupMessage(t('portfolio.backupExported'));
     } catch (err) {
       setError(getParsedApiError(err));
     } finally {
@@ -763,7 +763,7 @@ const PortfolioPage: React.FC = () => {
       setEventPage(1);
       setPortfolioSignalsRefreshKey((value) => value + 1);
       await loadAccounts();
-      setBackupMessage('股票备份恢复完成。');
+      setBackupMessage(t('portfolio.backupRestored'));
     } catch (err) {
       setError(getParsedApiError(err));
     } finally {
@@ -1727,10 +1727,10 @@ const PortfolioPage: React.FC = () => {
 
       <section className="grid grid-cols-1 xl:grid-cols-2 gap-3">
         <Card padding="md">
-          <h3 className="text-sm font-semibold text-foreground mb-3">股票备份与恢复</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-3">{t('portfolio.backupTitle')}</h3>
           <div className="space-y-3">
             <p className="text-xs text-secondary">
-              仅包含账户、交易、资金和公司行动；不包含密钥、配置、基金或派生持仓缓存。
+              {t('portfolio.backupDescription')}
             </p>
             <button
               type="button"
@@ -1738,10 +1738,10 @@ const PortfolioPage: React.FC = () => {
               disabled={backupLoading}
               onClick={() => void handleExportBackup()}
             >
-              {backupLoading ? '处理中...' : '导出股票备份'}
+              {backupLoading ? t('common.processing') : t('portfolio.backupExport')}
             </button>
             <label className={PORTFOLIO_FILE_PICKER_CLASS}>
-              选择股票备份 JSON
+              {t('portfolio.backupChoose')}
               <input
                 type="file"
                 accept=".json,application/json"
@@ -1752,11 +1752,13 @@ const PortfolioPage: React.FC = () => {
             {backupPreview ? (
               <div className="space-y-2 rounded-lg border border-amber-400/30 bg-amber-500/5 p-3">
                 <p className="text-sm font-medium text-foreground">
-                  将恢复 {backupPreview.incomingCounts.accounts} 个账户、
-                  {backupPreview.incomingCounts.trades} 条交易事件
+                  {t('portfolio.backupIncoming', {
+                    accounts: backupPreview.incomingCounts.accounts,
+                    trades: backupPreview.incomingCounts.trades,
+                  })}
                 </p>
                 <p className="text-xs text-secondary">
-                  当前 {backupPreview.currentCounts.accounts} 个账户及其正式事件将被整套替换。
+                  {t('portfolio.backupCurrent', { accounts: backupPreview.currentCounts.accounts })}
                 </p>
                 {backupPreview.warnings.map((warning) => (
                   <p key={warning} className="text-xs text-amber-200">{warning}</p>
@@ -1767,7 +1769,7 @@ const PortfolioPage: React.FC = () => {
                   disabled={backupLoading}
                   onClick={() => void handleRestoreBackup()}
                 >
-                  确认替换当前股票账本
+                  {t('portfolio.backupConfirm')}
                 </button>
               </div>
             ) : null}

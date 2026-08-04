@@ -1,4 +1,43 @@
-# WORK-016｜Windows 冻结筹码依赖收口
+# WORK-020｜完整备份恢复与周期报告持久化
+
+## Work20｜授权与执行合同
+
+```text
+WORK_ID=WORK-020
+WORK_STATE=ACTIVE_TASK7
+BASE=41fd6a6c76c3e3b56211ef5fb4483d869122b568
+BRANCH=agent/pp02-work20-full-backup-period-persistence
+DRAFT_PR=PENDING
+PRODUCT_GOAL=SOFTWARE_NATIVE_COMPLETE_EXPORT_CLEAN_REINSTALL_FORMAL_RESTORE
+DATABASE_DIRECTORY_MIGRATION=FORBIDDEN
+CURRENT_GATE=TASK7_DOCUMENTATION_COMMIT_THEN_DRAFT_PR_FIXED_HEAD_CI
+REVIEWED_IMPLEMENTATION_HEAD=dd7dc21a665e450b6427c522657e7fcfa95e4162
+LOCAL_SECURITY_REVIEW=PASS_ALL_4_IMPORTANT_CLOSED
+```
+
+### 授权范围
+
+- 正式持久化周期报告，保存报告 ID、区间、类型、完整内容、来源历史 ID、状态和时间。
+- 建立一个非敏感、版本化、完整性校验的完整数据备份格式和正式 API/UI 入口。
+- 在写入前生成当前状态保护副本；数据库事务替换，配置 CAS 补偿；拒绝损坏、缺项、
+  不兼容、过期预览和中断，不破坏原数据。
+- 允许独立分支 Commit、Push、单个 Draft PR、范围内测试/修复和固定 Head CI。
+
+### 验收与非目标
+
+1. v3.29.2 原历史 ID/Query ID 和内容不变；迁移失败完整回滚。
+2. 周期报告同区间同 ID、不同区间新 ID，重启后直接读取且不重新生成。
+3. 完整导出覆盖正式股票历史、市场历史、组合事件、周期报告、支持的结构化记录和
+   非敏感配置；PP02 基金项固定 `not_applicable/0`。
+4. 凭据、Token、Cookie、vault 密文、运行路径、缓存、日志、草稿和调度状态排除。
+5. 干净环境恢复后 ID、Query ID、摘要、事件和报告一致，再次重启仍可读。
+6. 不迁移数据库目录；不处理行情/新闻临时失败、MiniRacer、`stocks.index.json`、签名、
+   依赖或其他无关事项。
+7. 不 Ready、合并、Tag、Release 或发布 v3.29.3；不使用真实凭据、账户或交易数据。
+
+---
+
+# 历史任务合同｜WORK-016 / Windows 冻结筹码依赖收口
 
 ## Work16｜授权与执行合同
 

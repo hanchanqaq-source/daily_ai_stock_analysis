@@ -98,6 +98,8 @@ class PeriodOutlookSnapshot(BaseModel):
 
 
 class PeriodReportResponse(BaseModel):
+    report_id: int = Field(..., ge=1)
+    status: Literal["ready", "insufficient_data"]
     period: PeriodKey
     report_kind: Literal["historical", "outlook"]
     start_date: str
