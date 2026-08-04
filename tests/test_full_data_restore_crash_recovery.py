@@ -212,6 +212,9 @@ def _cli_proxy_recovery_observer(
     )
     for key in proxy_keys:
         os.environ.pop(key, None)
+    # Exercise the normal CLI proxy path independently of the CI host.  The
+    # product intentionally suppresses derived proxies inside GitHub Actions.
+    os.environ.pop("GITHUB_ACTIONS", None)
     os.environ.update(initial_proxy_env)
     os.environ["ENV_FILE"] = env_path
     os.environ["DATABASE_PATH"] = db_path

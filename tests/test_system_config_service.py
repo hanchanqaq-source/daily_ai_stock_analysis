@@ -3123,6 +3123,10 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         self.assertFalse(validation["valid"])
         self.assertTrue(any(issue["code"] == "missing_api_key" for issue in validation["issues"]))
 
+    @patch.dict(
+        os.environ,
+        {"OPENAI_API_KEY": "", "OPENAI_API_KEYS": "", "AIHUBMIX_KEY": ""},
+    )
     def test_validate_reports_stale_primary_model_when_all_channels_disabled(self) -> None:
         validation = self.service.validate(
             items=[
@@ -3198,6 +3202,10 @@ class SystemConfigServiceTestCase(unittest.TestCase):
 
         self.assertFalse(any(issue.get("key") == "LITELLM_MODEL" and issue["code"] == "missing_runtime_source" for issue in validation.get("issues", [])))
 
+    @patch.dict(
+        os.environ,
+        {"OPENAI_API_KEY": "", "OPENAI_API_KEYS": "", "AIHUBMIX_KEY": ""},
+    )
     def test_validate_reports_stale_agent_primary_model_when_all_channels_disabled(self) -> None:
         validation = self.service.validate(
             items=[
@@ -3252,6 +3260,10 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         self.assertTrue(validation["valid"], validation["issues"])
         self.assertEqual(validation["issues"], [])
 
+    @patch.dict(
+        os.environ,
+        {"OPENAI_API_KEY": "", "OPENAI_API_KEYS": "", "AIHUBMIX_KEY": ""},
+    )
     def test_validate_excludes_blank_disabled_anspire_channel_from_runtime_models(self) -> None:
         validation = self.service.validate(
             items=[
@@ -3266,6 +3278,10 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         self.assertFalse(validation["valid"])
         self.assertTrue(any(issue["key"] == "LITELLM_MODEL" and issue["code"] == "missing_runtime_source" for issue in validation["issues"]))
 
+    @patch.dict(
+        os.environ,
+        {"OPENAI_API_KEY": "", "OPENAI_API_KEYS": "", "AIHUBMIX_KEY": ""},
+    )
     def test_validate_excludes_disabled_anspire_channel_from_legacy_runtime_source(self) -> None:
         validation = self.service.validate(
             items=[
