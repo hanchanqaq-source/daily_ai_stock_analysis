@@ -12,6 +12,7 @@ import threading
 from contextlib import ExitStack
 from datetime import date, datetime
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from sqlalchemy import MetaData, Table
@@ -138,6 +139,33 @@ def _stored_period_report_content() -> str:
         sort_keys=True,
         separators=(",", ":"),
     )
+
+
+def test_period_report_validation_rebuilds_schema_after_lazy_import() -> None:
+    """A prior API import cycle must not leave backup validation incomplete."""
+    from api.v1.schemas.period_report import PeriodReportResponse
+    from src.services import full_data_backup_service as backup
+
+    row = {
+        "id": 303,
+        "status": "ready",
+        "period": "previous_week",
+        "report_kind": "historical",
+        "start_date": "2026-07-20",
+        "end_date": "2026-07-24",
+        "generated_at": "2026-08-01T11:00:00",
+        "source_record_ids_json": "[101, 202]",
+        "content_json": _stored_period_report_content(),
+    }
+
+    with patch.object(
+        PeriodReportResponse,
+        "model_rebuild",
+        wraps=PeriodReportResponse.model_rebuild,
+    ) as rebuild:
+        backup.FullDataBackupService._validate_period_report_content(row)
+
+    rebuild.assert_called_once_with(force=True)
 
 
 def _valid_outlook_period_content() -> dict:

@@ -17,7 +17,6 @@ from urllib.parse import urlsplit
 
 from sqlalchemy import delete, insert, select
 
-from api.v1.schemas.period_report import PeriodReportResponse
 from src.core.config_registry import get_registered_field_keys, is_sensitive_config_key
 from src.core.durable_file import durable_replace
 from src.services.alert_service import (
@@ -1513,6 +1512,9 @@ class FullDataBackupService:
     @classmethod
     def _validate_period_report_content(cls, row: Mapping[str, Any]) -> None:
         try:
+            from api.v1.schemas.period_report import PeriodReportResponse
+
+            PeriodReportResponse.model_rebuild(force=True)
             content = json.loads(row["content_json"])
             payload = PeriodReportResponse.model_validate(content, strict=True)
             values = payload.model_dump()
