@@ -83,11 +83,12 @@ def test_period_report_schema_import_does_not_eagerly_load_api_router() -> None:
     """Schema-only imports must not enter the API router/service cycle."""
     script = """
 import sys
+import pydantic
 
 from api.v1.schemas.period_report import PeriodReportResponse
 
 assert "api.v1.router" not in sys.modules
-assert set(PeriodReportResponse.model_fields) == {
+expected_fields = {
     "report_id",
     "status",
     "period",
@@ -102,6 +103,16 @@ assert set(PeriodReportResponse.model_fields) == {
     "outlook",
     "matched_outlook",
     "disclaimer",
+}
+actual_fields = set(PeriodReportResponse.model_fields)
+assert actual_fields == expected_fields, {
+    "python": sys.version,
+    "pydantic": pydantic.__version__,
+    "actual": sorted(actual_fields),
+    "missing": sorted(expected_fields - actual_fields),
+    "extra": sorted(actual_fields - expected_fields),
+    "complete": PeriodReportResponse.__pydantic_complete__,
+    "annotations": sorted(PeriodReportResponse.__annotations__),
 }
 """
     result = subprocess.run(
