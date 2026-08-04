@@ -35,6 +35,7 @@ from src.storage import (
     ConversationSummary,
     DatabaseManager,
     FullDataRestoreCommitMarker,
+    FundamentalSnapshot,
     PeriodReportRecord,
     PortfolioAccount,
     PortfolioCashLedger,
@@ -43,6 +44,7 @@ from src.storage import (
     PortfolioPosition,
     PortfolioPositionLot,
     PortfolioTrade,
+    StockDaily,
 )
 
 
@@ -159,6 +161,15 @@ def _seed_source(db: DatabaseManager) -> None:
                     analysis_summary="fixed market content summary",
                     created_at=datetime(2026, 8, 1, 10, 0, 0),
                 ),
+                FundamentalSnapshot(
+                    id=203,
+                    query_id="analysis-fixed-101",
+                    code="600519",
+                    payload='{"source":"fixed-source"}',
+                    source_chain='["provider-a"]',
+                    coverage='{"financials":true}',
+                    created_at=datetime(2026, 8, 1, 10, 1, 0),
+                ),
                 PeriodReportRecord(
                     id=303,
                     period="previous_week",
@@ -259,6 +270,21 @@ def _seed_destination(db: DatabaseManager) -> None:
                     report_type="stock",
                     analysis_summary="destination content before restore",
                     created_at=datetime(2026, 8, 2, 9, 0, 0),
+                ),
+                FundamentalSnapshot(
+                    id=8,
+                    query_id="stale-destination-query",
+                    code="000001",
+                    payload='{"source":"stale-destination"}',
+                    source_chain="[]",
+                    coverage="{}",
+                ),
+                StockDaily(
+                    id=7,
+                    code="000001",
+                    date=date(2026, 8, 1),
+                    close=9.0,
+                    data_source="stale-destination-cache",
                 ),
                 PortfolioAccount(
                     id=401,
@@ -390,6 +416,17 @@ def _assert_fixed_source_state(service: FullDataBackupService) -> None:
         (101, "analysis-fixed-101", "fixed stock content summary"),
         (202, "market-fixed-202", "fixed market content summary"),
     ]
+    assert data["tables"]["fundamental_snapshot"] == [
+        {
+            "id": 203,
+            "query_id": "analysis-fixed-101",
+            "code": "600519",
+            "payload": '{"source":"fixed-source"}',
+            "source_chain": '["provider-a"]',
+            "coverage": '{"financials":true}',
+            "created_at": "2026-08-01T10:01:00",
+        }
+    ]
     assert [row["id"] for row in data["tables"]["period_reports"]] == [303]
     assert data["tables"]["period_reports"][0]["content_json"] == _stored_period_report_content()
     assert data["tables"]["period_reports"][0]["source_record_ids_json"] == "[101,202]"
@@ -407,6 +444,8 @@ def _assert_fixed_source_state(service: FullDataBackupService) -> None:
     assert [row["id"] for row in data["tables"]["conversation_messages"]] == [405, 406]
     assert data["tables"]["conversation_summaries"][0]["id"] == 407
     assert data["configuration"]["values"] == {"STOCK_LIST": "600519,AAPL"}
+    with service.db.get_session() as session:
+        assert session.query(StockDaily).count() == 0
 
 
 def test_clean_install_restore_writes_recovery_before_replace_and_survives_restart(

@@ -20,6 +20,8 @@ const { sanitizeEnvFile } = require('./secure-credentials/envSanitizer');
 
 let mainWindow = null;
 let backendProcess = null;
+let appQuitReady = false;
+let appQuitDrainPromise = null;
 let logFilePath = null;
 let backendStartError = null;
 let desktopUpdateState = null;
@@ -1552,6 +1554,29 @@ function stopBackend() {
   return waitAndClear();
 }
 
+function drainBackendBeforeAppQuit() {
+  if (appQuitDrainPromise) {
+    return appQuitDrainPromise;
+  }
+  appQuitDrainPromise = stopBackend()
+    .then(() => {
+      if (backendProcess) {
+        logLine('[desktop] app quit paused because backend exit was not confirmed');
+        appQuitDrainPromise = null;
+        return false;
+      }
+      appQuitReady = true;
+      app.quit();
+      return true;
+    })
+    .catch((error) => {
+      logLine(`[desktop] app quit backend drain failed: ${String(error)}`);
+      appQuitDrainPromise = null;
+      return false;
+    });
+  return appQuitDrainPromise;
+}
+
 function resolveDesktopVersion() {
   return String(app.getVersion() || '').trim();
 }
@@ -2318,14 +2343,20 @@ app.on('activate', () => {
 });
 
 app.on('window-all-closed', () => {
-  void stopBackend();
   if (process.platform !== 'darwin') {
     app.quit();
+  } else {
+    void stopBackend();
   }
 });
 
-app.on('before-quit', () => {
-  void stopBackend();
+app.on('before-quit', (event) => {
+  if (appQuitReady || !backendProcess) {
+    appQuitReady = true;
+    return;
+  }
+  event.preventDefault();
+  void drainBackendBeforeAppQuit();
 });
 
 module.exports = {
@@ -2366,6 +2397,7 @@ module.exports = {
   shouldForwardBackendOutput,
   startBackend,
   stopBackend,
+  drainBackendBeforeAppQuit,
   __getBackendProcessForTest() {
     return backendProcess;
   },

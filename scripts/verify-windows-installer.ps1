@@ -4,7 +4,8 @@ param(
   [Parameter(Mandatory=$true)][string]$InstallRoot,
   [Parameter(Mandatory=$true)][string]$DiagnosticRoot,
   [string]$ExpectedCommitSha = '',
-  [int]$StartupTimeoutSeconds = 120
+  [int]$StartupTimeoutSeconds = 120,
+  [switch]$RequireValidSignature
 )
 
 $ErrorActionPreference = 'Stop'
@@ -315,6 +316,39 @@ function Get-SafeProcessState {
   catch {
     return "$Label pid=$ProcessId state=not_running"
   }
+}
+
+function Get-ExactOwnedProcesses {
+  param(
+    [Parameter(Mandatory=$true)][string]$AppExecutable,
+    [Parameter(Mandatory=$true)][string]$BackendExecutable
+  )
+
+  $expectedPaths = @(
+    [IO.Path]::GetFullPath($AppExecutable),
+    [IO.Path]::GetFullPath($BackendExecutable)
+  )
+  $matches = @()
+  foreach ($candidate in @(Get-CimInstance Win32_Process -ErrorAction Stop)) {
+    $candidatePath = [string]$candidate.ExecutablePath
+    if ([string]::IsNullOrWhiteSpace($candidatePath)) {
+      continue
+    }
+    foreach ($expectedPath in $expectedPaths) {
+      if ($candidatePath.Equals($expectedPath, [StringComparison]::OrdinalIgnoreCase)) {
+        $matches += $candidate
+        break
+      }
+    }
+  }
+  return $matches
+}
+
+function Get-AuthenticodeStatus {
+  param([Parameter(Mandatory=$true)][string]$Path)
+
+  $signature = Get-AuthenticodeSignature -FilePath $Path -ErrorAction Stop
+  return [string]$signature.Status
 }
 
 function Write-PortAndProcessDiagnostics {
@@ -815,6 +849,17 @@ try {
   if ($expectedHead) {
     Write-Output "WINDOWS_INSTALLER_HEAD=$expectedHead"
   }
+  if ($RequireValidSignature) {
+    Write-Output 'WINDOWS_SIGNATURE_POLICY=REQUIRE_VALID'
+  }
+  else {
+    Write-Output 'WINDOWS_SIGNATURE_POLICY=AUDIT_ONLY'
+  }
+  $installerSignatureStatus = Get-AuthenticodeStatus -Path $installer
+  Write-Output "WINDOWS_INSTALLER_SIGNATURE_STATUS=$installerSignatureStatus"
+  if ($RequireValidSignature -and $installerSignatureStatus -ne 'Valid') {
+    throw "Authenticode signature is required but installer status is $installerSignatureStatus."
+  }
 
   $failureStage = 'installer_process'
   Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
@@ -843,17 +888,52 @@ try {
     }
   }
 
+  $appSignatureStatus = Get-AuthenticodeStatus -Path $appExe
+  Write-Output "WINDOWS_APP_SIGNATURE_STATUS=$appSignatureStatus"
+  if ($RequireValidSignature -and $appSignatureStatus -ne 'Valid') {
+    throw "Authenticode signature is required but application status is $appSignatureStatus."
+  }
+
   $uninstallers = @(Get-ChildItem -LiteralPath $ownedRoot -Filter 'Uninstall *.exe' -File)
   if ($uninstallers.Count -ne 1) {
     throw "Installed package must contain exactly one uninstaller; found $($uninstallers.Count)."
   }
   $uninstaller = $uninstallers[0].FullName
 
-  $productVersion = (Get-Item -LiteralPath $appExe).VersionInfo.ProductVersion
-  $versionMatch = [regex]::Match([string]$productVersion, '^(\d+)\.(\d+)\.(\d+)')
-  if (-not $versionMatch.Success -or $versionMatch.Value -ne $ExpectedVersion) {
-    throw "Installed executable version does not match $ExpectedVersion."
+  $appFileVersion = [string](Get-Item -LiteralPath $appExe).VersionInfo.FileVersion
+  $appProductVersion = [string](Get-Item -LiteralPath $appExe).VersionInfo.ProductVersion
+  foreach ($versionResource in @(
+    @{ Name = 'FileVersion'; Value = $appFileVersion },
+    @{ Name = 'ProductVersion'; Value = $appProductVersion }
+  )) {
+    $versionMatch = [regex]::Match(
+      $versionResource.Value,
+      '^(\d+)\.(\d+)\.(\d+)'
+    )
+    if (-not $versionMatch.Success -or $versionMatch.Value -ne $ExpectedVersion) {
+      throw "Installed executable $($versionResource.Name) does not match $ExpectedVersion."
+    }
   }
+  Write-Output "WINDOWS_APP_FILE_VERSION=$appFileVersion"
+  Write-Output "WINDOWS_APP_PRODUCT_VERSION=$appProductVersion"
+
+  $webBuildInfoCandidates = @(
+    (Join-Path $ownedRoot 'resources/backend/stock_analysis/_internal/static/build-info.json'),
+    (Join-Path $ownedRoot 'resources/backend/stock_analysis/static/build-info.json')
+  )
+  $webBuildInfoPaths = @(
+    $webBuildInfoCandidates |
+      Where-Object { Test-Path -LiteralPath $_ -PathType Leaf }
+  )
+  if ($webBuildInfoPaths.Count -ne 1) {
+    throw "Installed package must contain exactly one Web build-info.json; found $($webBuildInfoPaths.Count)."
+  }
+  $webBuildInfo = Get-Content -LiteralPath $webBuildInfoPaths[0] -Raw |
+    ConvertFrom-Json
+  if ([string]$webBuildInfo.version -ne $ExpectedVersion) {
+    throw "Installed Web build metadata version does not match $ExpectedVersion."
+  }
+  Write-Output "WINDOWS_WEB_BUILD_VERSION=$($webBuildInfo.version)"
 
   $failureStage = 'uninstall_registration'
   Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
@@ -952,15 +1032,6 @@ try {
   Write-Output 'WINDOWS_INSTALLED_APP_RESTART_VALIDATION=PASS'
   Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'PASS'
 
-  $failureStage = 'installed_app_restart_shutdown'
-  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
-  Stop-StartedProcessTree -Process $appProcess
-  $stageProcessExitedUtc = (Get-Date).ToUniversalTime().ToString('o')
-  $stageProcessExitCode = '0'
-  $appProcess = $null
-  Write-Output 'WINDOWS_INSTALLED_APP_RESTART_EXIT_VALIDATION=PASS'
-  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'PASS'
-
   $uninstallAttempted = $true
   $failureStage = 'uninstaller_process'
   Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
@@ -976,6 +1047,21 @@ try {
   if ($uninstallProcess.ExitCode -ne 0) {
     throw "Uninstaller exited with code $($uninstallProcess.ExitCode)."
   }
+  $appProcess.Refresh()
+  if (-not $appProcess.HasExited) {
+    throw 'One normal uninstaller run did not close the running installed application.'
+  }
+  $ownedProcessesAfterUninstall = @(
+    Get-ExactOwnedProcesses `
+      -AppExecutable $appExe `
+      -BackendExecutable $backendExe
+  )
+  if ($ownedProcessesAfterUninstall.Count -ne 0) {
+    throw 'One normal uninstaller run left a product-owned process behind.'
+  }
+  $appProcess = $null
+  Write-Output 'WINDOWS_OWNED_PROCESS_COUNT_AFTER_UNINSTALL=0'
+  Write-Output 'WINDOWS_UNINSTALL_LIVE_PROCESS_VALIDATION=PASS'
   Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'PASS'
 
   $failureStage = 'uninstall_cleanup'

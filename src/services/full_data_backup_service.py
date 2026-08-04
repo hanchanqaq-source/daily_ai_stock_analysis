@@ -58,13 +58,13 @@ BACKUP_FORMAT = "pp02.full-data.backup"
 BACKUP_FORMAT_VERSION = 1
 PROJECT_ID = "PP02"
 PROJECT_NAME = "AI 每日股票分析"
-DEFAULT_APPLICATION_VERSION = "3.29.2"
+DEFAULT_APPLICATION_VERSION = "3.29.3"
 DEFAULT_PREVIEW_TOKEN_TTL_SECONDS = 300.0
 PERIOD_REPORT_KINDS = frozenset({"historical", "outlook"})
 PERIOD_REPORT_STATUSES = frozenset({"ready", "insufficient_data"})
 
 TABLE_GROUPS = {
-    "analysis": ("analysis_history",),
+    "analysis": ("analysis_history", "fundamental_snapshot"),
     "portfolio_events": (
         "portfolio_accounts",
         "portfolio_trades",
@@ -100,6 +100,9 @@ TABLE_COLUMN_ALLOWLIST = {
         "id", "query_id", "code", "name", "report_type", "sentiment_score", "operation_advice",
         "trend_prediction", "analysis_summary", "raw_result", "news_content", "context_snapshot",
         "ideal_buy", "secondary_buy", "stop_loss", "take_profit", "created_at",
+    ),
+    "fundamental_snapshot": (
+        "id", "query_id", "code", "payload", "source_chain", "coverage", "created_at",
     ),
     "portfolio_accounts": (
         "id", "owner_id", "name", "broker", "market", "base_currency", "is_active", "created_at",
@@ -190,6 +193,7 @@ DATE_COLUMNS = {
 }
 DATETIME_COLUMNS = {
     "analysis_history": frozenset({"created_at"}),
+    "fundamental_snapshot": frozenset({"created_at"}),
     "portfolio_accounts": frozenset({"created_at", "updated_at"}),
     "portfolio_trades": frozenset({"created_at"}),
     "portfolio_cash_ledger": frozenset({"created_at"}),
@@ -210,6 +214,7 @@ DATETIME_COLUMNS = {
 }
 INTEGER_COLUMNS = {
     "analysis_history": frozenset({"id", "sentiment_score"}),
+    "fundamental_snapshot": frozenset({"id"}),
     "portfolio_accounts": frozenset({"id"}),
     "portfolio_trades": frozenset({"id", "account_id"}),
     "portfolio_cash_ledger": frozenset({"id", "account_id"}),
@@ -251,6 +256,7 @@ BOOLEAN_COLUMNS = {
 }
 REQUIRED_COLUMNS = {
     "analysis_history": frozenset({"id", "code"}),
+    "fundamental_snapshot": frozenset({"id", "query_id", "code", "payload"}),
     "portfolio_accounts": frozenset({"id", "name", "market", "base_currency", "is_active"}),
     "portfolio_trades": frozenset({
         "id", "account_id", "symbol", "market", "currency", "trade_date", "side", "quantity", "price",
@@ -287,12 +293,14 @@ REQUIRED_COLUMNS = {
 }
 JSON_OBJECT_COLUMNS = {
     "analysis_history": frozenset({"context_snapshot"}),
+    "fundamental_snapshot": frozenset({"payload", "coverage"}),
     "period_reports": frozenset({"content_json"}),
     "backtest_summaries": frozenset({"advice_breakdown_json", "diagnostics_json"}),
     "alert_rules": frozenset({"parameters", "cooldown_policy", "notification_policy"}),
     "decision_signals": frozenset({"metadata_json"}),
 }
 JSON_ARRAY_COLUMNS = {
+    "fundamental_snapshot": frozenset({"source_chain"}),
     "period_reports": frozenset({"source_record_ids_json"}),
 }
 JSON_VALUE_COLUMNS = {
@@ -398,7 +406,7 @@ REFERENCE_COLUMNS = (
 )
 EXCLUDED_CONTENT = (
     "derived_portfolio_caches",
-    "price_news_fundamental_caches",
+    "rebuildable_price_news_caches",
     "scheduler_runtime_state",
     "provider_traces",
     "logs",
@@ -406,6 +414,15 @@ EXCLUDED_CONTENT = (
     "schema_bookkeeping",
     "credentials_tokens_cookies_vault_ciphertext",
 )
+EXCLUDED_TABLES = {
+    "stock_daily": {
+        "classification": "rebuildable_market_data_cache",
+        "contains_user_data": False,
+        "restore_behavior": "cleared_then_rebuilt_on_demand",
+        "rebuild_entrypoint": "get_daily_history",
+    },
+}
+REBUILDABLE_CACHE_TABLES = tuple(EXCLUDED_TABLES)
 ROOT_KEYS = {"format", "format_version", "metadata", "manifest", "data", "integrity"}
 _ASSIGNMENT_RE = re.compile(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$")
 _SENSITIVE_EMBEDDED_KEYS = frozenset({
@@ -1008,6 +1025,8 @@ class FullDataBackupService:
             )
 
     def _replace_tables(self, session, tables: Mapping[str, Any]) -> None:
+        for table_name in REBUILDABLE_CACHE_TABLES:
+            session.execute(delete(Base.metadata.tables[table_name]))
         for table_name in DERIVED_PORTFOLIO_TABLES:
             session.execute(delete(Base.metadata.tables[table_name]))
         session.execute(delete(Base.metadata.tables["agent_provider_turns"]))
@@ -1218,6 +1237,10 @@ class FullDataBackupService:
         return {
             "categories": categories,
             "excluded": list(EXCLUDED_CONTENT),
+            "excluded_tables": {
+                table_name: dict(EXCLUDED_TABLES[table_name])
+                for table_name in sorted(EXCLUDED_TABLES)
+            },
             "table_row_counts": table_row_counts,
         }
 
@@ -1232,7 +1255,11 @@ class FullDataBackupService:
 
     def _validate_manifest(self, value: Any) -> None:
         manifest = self._object(value, "manifest")
-        self._keys(manifest, {"categories", "excluded", "table_row_counts"}, "manifest")
+        self._keys(
+            manifest,
+            {"categories", "excluded", "excluded_tables", "table_row_counts"},
+            "manifest",
+        )
         categories = self._object(manifest["categories"], "manifest.categories")
         expected_categories = {
             "agent_conversations", "analysis", "configuration", "fund", "period_reports", "portfolio_events",
@@ -1257,6 +1284,29 @@ class FullDataBackupService:
         excluded = manifest["excluded"]
         if not isinstance(excluded, list) or not all(isinstance(item, str) for item in excluded):
             raise FullDataBackupValidationError("manifest.excluded must be a string list.")
+        excluded_tables = self._object(
+            manifest["excluded_tables"],
+            "manifest.excluded_tables",
+        )
+        self._keys(
+            excluded_tables,
+            set(EXCLUDED_TABLES),
+            "manifest.excluded_tables",
+        )
+        for table_name, expected_declaration in EXCLUDED_TABLES.items():
+            declaration = self._object(
+                excluded_tables[table_name],
+                f"manifest.excluded_tables.{table_name}",
+            )
+            self._keys(
+                declaration,
+                set(expected_declaration),
+                f"manifest.excluded_tables.{table_name}",
+            )
+            if declaration != expected_declaration:
+                raise FullDataBackupValidationError(
+                    f"manifest.excluded_tables.{table_name} is invalid."
+                )
         table_counts = self._object(manifest["table_row_counts"], "manifest.table_row_counts")
         self._keys(table_counts, set(TABLE_NAMES), "manifest.table_row_counts")
         for table_name, count in table_counts.items():

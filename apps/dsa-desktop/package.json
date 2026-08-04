@@ -1,6 +1,6 @@
 {
   "name": "pp02-ai-daily-stock-analysis-desktop",
-  "version": "3.21.0",
+  "version": "3.29.3",
   "private": true,
   "main": "main.js",
   "scripts": {
@@ -44,6 +44,10 @@
       {
         "from": "portable-update/portable-update-helper.ps1",
         "to": "portable-update-helper.ps1"
+      },
+      {
+        "from": "windows/close-owned-processes.ps1",
+        "to": "close-owned-processes.ps1"
       }
     ],
     "win": {

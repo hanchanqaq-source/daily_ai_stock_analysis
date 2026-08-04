@@ -7,6 +7,27 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DESKTOP_DIR = REPO_ROOT / "apps" / "dsa-desktop"
+WEB_DIR = REPO_ROOT / "apps" / "dsa-web"
+
+
+def test_work23_candidate_version_is_consistent() -> None:
+    desktop = json.loads(
+        (DESKTOP_DIR / "package.json").read_text(encoding="utf-8")
+    )
+    desktop_lock = json.loads(
+        (DESKTOP_DIR / "package-lock.json").read_text(encoding="utf-8")
+    )
+    web = json.loads((WEB_DIR / "package.json").read_text(encoding="utf-8"))
+    web_lock = json.loads(
+        (WEB_DIR / "package-lock.json").read_text(encoding="utf-8")
+    )
+
+    assert desktop["version"] == "3.29.3"
+    assert desktop_lock["version"] == desktop["version"]
+    assert desktop_lock["packages"][""]["version"] == desktop["version"]
+    assert web["version"] == desktop["version"]
+    assert web_lock["version"] == desktop["version"]
+    assert web_lock["packages"][""]["version"] == desktop["version"]
 
 
 def test_windows_nsis_build_allows_custom_install_directory() -> None:
@@ -61,6 +82,31 @@ def test_old_uninstaller_retry_quotes_install_location_parameter() -> None:
 
     assert '"_?=$R8"' in installer_script
     assert "Retrying old uninstaller with quoted _? installation directory." in installer_script
+
+
+def test_official_uninstaller_closes_only_exact_product_owned_processes() -> None:
+    package = json.loads((DESKTOP_DIR / "package.json").read_text(encoding="utf-8"))
+    installer_script = (DESKTOP_DIR / "installer.nsh").read_text(encoding="utf-8")
+    helper_path = DESKTOP_DIR / "windows" / "close-owned-processes.ps1"
+
+    assert helper_path.is_file()
+    helper = helper_path.read_text(encoding="utf-8")
+    resources = package["build"]["extraResources"]
+    assert {
+        "from": "windows/close-owned-processes.ps1",
+        "to": "close-owned-processes.ps1",
+    } in resources
+    assert "customCheckAppRunning" in installer_script
+    assert "$INSTDIR\\resources\\close-owned-processes.ps1" in installer_script
+    assert "${APP_EXECUTABLE_FILENAME}" in installer_script
+    assert "resources\\backend\\stock_analysis\\stock_analysis.exe" in installer_script
+    assert "Get-CimInstance Win32_Process" in helper
+    assert "[StringComparison]::OrdinalIgnoreCase" in helper
+    assert ".CloseMainWindow()" in helper
+    assert "Stop-Process -Id" in helper
+    assert "Get-Process -Name" not in helper
+    assert "taskkill" not in helper.lower()
+    assert "-like" not in helper.lower()
 
 
 def test_windows_auto_updater_reuses_current_install_directory() -> None:

@@ -4,6 +4,28 @@
   StrCpy $isForceCurrentInstall 1
 !macroend
 
+!macro customCheckAppRunning
+  ; The default electron-builder check can fall back to process-name matching.
+  ; PP02 closes only the exact app/backend executable paths under this install.
+  IfFileExists "$INSTDIR\resources\close-owned-processes.ps1" 0 DsaOwnedProcessCheckDone
+  DetailPrint "Stopping PP02-owned processes before installer file operations."
+  ClearErrors
+  ExecWait '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$INSTDIR\resources\close-owned-processes.ps1" -InstallRoot "$INSTDIR" -ProductExecutableName "${APP_EXECUTABLE_FILENAME}" -BackendRelativePath "resources\backend\stock_analysis\stock_analysis.exe"' $R0
+  IfErrors 0 DsaOwnedProcessCheckResult
+  DetailPrint "PP02-owned process helper could not be started."
+  SetErrorLevel 2
+  Abort "PP02-owned processes could not be checked safely."
+
+DsaOwnedProcessCheckResult:
+  ${if} $R0 != 0
+    DetailPrint "PP02-owned process helper failed with code: $R0."
+    SetErrorLevel 2
+    Abort "PP02-owned processes did not exit safely."
+  ${endif}
+
+DsaOwnedProcessCheckDone:
+!macroend
+
 !macro _dsaRetryQuotedOldUninstall ROOT_KEY SUFFIX
   ${if} $R0 == 0
     Return

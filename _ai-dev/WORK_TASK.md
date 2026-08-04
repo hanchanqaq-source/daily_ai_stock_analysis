@@ -1,4 +1,54 @@
-# WORK-020 | Complete backup and period-report persistence
+# WORK-023 | PR #23 Windows strict-acceptance failure repairs
+
+## Work23 authorization and execution contract
+
+```text
+WORK_ID=WORK-023
+BASE=41fd6a6c76c3e3b56211ef5fb4483d869122b568
+BRANCH=agent/pp02-work20-full-backup-period-persistence
+DRAFT_PR=23_OPEN_DRAFT
+WORK22_EVIDENCE_REPORT_SHA256=30AC65C81E3F86E4CADBAEC9D2DBA95B432BA4DF8DBE81F12015857B9E5E39BE
+WORK22_JUDGE=FAIL_LOCKED
+AUTHORITATIVE_VERSION=3.29.3
+REMOTE_FIXED_HEAD=PENDING_FIRST_PUSH
+REMOTE_CI=PENDING_EXACT_HEAD
+JUDGE=ACTIVE_DRAFT_HOLD
+```
+
+### Scope
+
+- Make one normal official uninstall naturally close the product-owned process
+  tree, without retries, orphan processes, or broad cleanup of unrelated paths.
+- Normalize EXE file/product version, UI version, build information, and
+  manifest to the single authoritative candidate version `3.29.3`.
+- Prove the backup boundary for `fundamental_snapshot` and `stock_daily`.
+  Include any non-rebuildable/user data; otherwise declare the exact cache
+  contract in the manifest and verify safe restore-time clearing and rebuild.
+- Assess Windows signing read-only. A credential-free policy interface and
+  tests are allowed; real certificates, private keys, purchases, and CI secrets
+  are prohibited and require a separate authorization gate.
+- Run related regressions and complete CI on one exact PR #23 Head, then record
+  the Windows candidate filename, size, and SHA-256 for the next strict retest.
+
+### Acceptance and stop gates
+
+1. Work22 remains `FAIL`; no lowered criterion or rewritten conclusion may be
+   used to claim success.
+2. The official uninstaller is executed once; installed app/backend processes
+   must exit naturally, and cleanup is limited to evidence-confirmed product
+   ownership.
+3. `fundamental_snapshot` is included unless proven rebuildable, while an
+   excluded `stock_daily` must have an exact no-user-data/rebuild manifest and
+   deterministic restore behavior.
+4. No Work22 real database, cold backup, complete export, or restore checkpoint
+   may be read or modified.
+5. PR #23 must remain Open Draft. Do not Ready, merge, write `main`, create
+   another PR, tag, or release. Real signing identity acquisition is a separate
+   authorization gate.
+
+---
+
+# Historical contract | WORK-020 / complete backup and period-report persistence
 
 ## Work20 authorization and execution contract
 

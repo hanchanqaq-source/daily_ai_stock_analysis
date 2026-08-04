@@ -1,37 +1,35 @@
 # PP02 handoff
 
-## Current takeover entry | WORK-020
+## Current takeover entry | WORK-023
 
 | Item | Current fact |
 | --- | --- |
-| State | `WORK20_LOCAL_VERIFICATION_PASS_REMOTE_PENDING_DRAFT_HOLD` |
+| State | `WORK23_LOCAL_RELATED_PASS_REMOTE_PENDING_DRAFT_HOLD` |
 | Base | `main@41fd6a6c76c3e3b56211ef5fb4483d869122b568` (`v3.29.2`) |
-| Local branch | `agent/pp02-work20-full-backup-period-persistence-pr` |
-| Goal | Complete non-secret formal-data backup/restore and persisted period reports |
-| Local implementation Head | `ae310d1e7fd22fc7139d1ebb63f1bd1d3a0f416c` before Task 7 closeout |
-| Local evidence commit | `42e8f75d435b9d90ad5764f538cb20e9e48c1e9f`; local verification complete |
-| Draft PR | Pending controller; no number or URL exists in this phase |
-| Fixed-Head CI | Pending controller push and Draft PR |
-| Judge | `DRAFT_HOLD` |
-| Prohibited | Ready, merge, `main`, Tag, Release, real credentials/data |
+| Branch | `agent/pp02-work20-full-backup-period-persistence` |
+| Goal | Fix PR #23 Windows strict-acceptance blockers and produce the next exact-Head candidate identity |
+| Work22 evidence | Report SHA-256 `30AC65C81E3F86E4CADBAEC9D2DBA95B432BA4DF8DBE81F12015857B9E5E39BE`; Judge remains `FAIL` |
+| Draft PR | [#23](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/23), Open Draft |
+| Candidate version | Authoritative `3.29.3` |
+| Fixed-Head CI | Pending first Work23 push |
+| Signing | Read-only audit/policy interface; real signing identity is a separate authorization gate |
+| Judge | `ACTIVE — DRAFT_HOLD` |
+| Prohibited | Ready, merge, `main`, another PR, Tag, Release, real signing material, Work22 real data/checkpoints |
 
-Continue from local Task 7 evidence commit
-`42e8f75d435b9d90ad5764f538cb20e9e48c1e9f`. Local verification is complete;
-the only next actions are for the controller to push the intended remote branch,
-create one Draft PR to `main`, then run and record all applicable blocking
-Actions jobs for that exact remote Head. Do not infer a PR number, Run ID, URL,
-or CI result from historical Work items.
+Continue by committing the Work23 governance checkpoint, pushing only the
+existing PR #23 branch, and verifying all applicable Actions jobs for that
+exact remote Head. Record the resulting Windows installer/ZIP filename, byte
+size, and SHA-256 without changing the fixed Head afterward.
 
-Work20 distinguishes complete, configuration-only, and portfolio-event-only
-backups. Complete backup is format v1 canonical JSON with a manifest and
-SHA-256, excludes credentials/drafts/runtime paths, records fund as
-`not_applicable`, requires preview/confirm, writes a recovery artifact before
-replacement, rolls back pre-commit failures, and requires restart. Period
-reports are stored and can be loaded without generation.
+The implementation requires a one-run exact-path uninstaller lifecycle,
+normalizes every candidate-version source to `3.29.3`, includes non-rebuildable
+`fundamental_snapshot`, and excludes `stock_daily` only under an explicit
+rebuildable-cache manifest/restore contract. Authenticode checks are read-only;
+stop at the separate authorization gate if a real signing identity is needed.
 
-Work18, Work19, and Work19-A history is locked. This Work20 append does not
-change their accepted results, merge/tag/release evidence, or authorization
-boundaries.
+Work22 remains `FAIL`. Do not use its real database, cold backup, complete
+export, or restore checkpoint, and do not Ready, merge, tag, release, or create
+another PR.
 
 ---
 

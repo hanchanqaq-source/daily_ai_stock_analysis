@@ -291,9 +291,9 @@ class IntelligenceItem(Base):
 
 class FundamentalSnapshot(Base):
     """
-    基本面上下文快照（P0 write-only）。
+    基本面上下文快照。
 
-    仅用于写入，主链路不依赖读取该表，便于后续回测/画像扩展。
+    分析与历史查询可在外部数据不可用时读取该表，因此它不是可重建缓存。
     """
     __tablename__ = 'fundamental_snapshot'
 
@@ -2265,7 +2265,7 @@ class DatabaseManager(metaclass=_DatabaseManagerMeta):
         coverage: Optional[Any] = None,
     ) -> int:
         """
-        保存基本面快照（P0 write-only）。失败不抛异常，返回写入条数 0/1。
+        保存基本面快照。失败不抛异常，返回写入条数 0/1。
         """
         if not query_id or not code or payload is None:
             return 0

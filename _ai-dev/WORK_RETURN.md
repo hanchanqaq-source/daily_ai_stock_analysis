@@ -1,4 +1,50 @@
-# WORK-020 | Local closeout return
+# WORK-023 | PR #23 strict-acceptance repair return
+
+## Work23 current evidence
+
+```text
+BASE=41fd6a6c76c3e3b56211ef5fb4483d869122b568
+BRANCH=agent/pp02-work20-full-backup-period-persistence
+DRAFT_PR=23_OPEN_DRAFT
+WORK22_EVIDENCE_REPORT_SHA256=30AC65C81E3F86E4CADBAEC9D2DBA95B432BA4DF8DBE81F12015857B9E5E39BE
+WORK22_JUDGE=FAIL_LOCKED
+AUTHORITATIVE_VERSION=3.29.3
+RELATED_BACKEND=PASS_169_PLUS_30
+DESKTOP=PASS_83_OF_83
+WINDOWS_PACKAGING=PASS_26_OF_26
+WEB=PASS_1076_2_SKIPPED_LINT_BUILD
+BACKEND_AGGREGATE=PASS_5327_4_DESELECTED_499_SUBTESTS_EXCLUDING_SANDBOX_BLOCKED_CRASH_FILE
+REMOTE_FIXED_HEAD=PENDING_FIRST_PUSH
+REMOTE_CI=PENDING_EXACT_HEAD
+WINDOWS_CANDIDATE=PENDING_EXACT_HEAD_CI
+SIGNING=READ_ONLY_GATE_NO_REAL_IDENTITY
+JUDGE=ACTIVE_DRAFT_HOLD
+```
+
+- The one-run Windows uninstall contract now waits for Electron/backend drain
+  and uses exact installed executable paths for graceful close plus exact-PID
+  fallback. The verifier does not pre-kill or retry the official uninstaller.
+- Candidate metadata and Windows file/product version checks use `3.29.3`.
+- `fundamental_snapshot` is now included because its formal snapshot is not
+  safely reconstructible. `stock_daily` remains excluded only under the exact
+  `rebuildable_market_data_cache` manifest contract; restore clears it and
+  `get_daily_history` rebuilds it on demand.
+- Signature inspection is read-only and emits sanitized status/policy evidence.
+  Enforcing a real `Valid` signature requires separately authorized identity
+  material; none was accessed in Work23.
+- One stale, contradictory Chinese JP/KR Web assertion was corrected to match
+  the already-enforced market-light service boundary; product behavior was not
+  changed. The complete Web suite, lint, and build then passed.
+- Linux sandbox policy blocks the crash-recovery tests that intentionally kill
+  and recover subprocesses. All other offline backend tests passed locally; the
+  exact remote Head CI remains the authority for the complete gate.
+- No Work22 real database, cold backup, complete export, or restore checkpoint
+  was used. No Ready, merge, main write, tag, release, or additional PR action
+  has occurred.
+
+---
+
+# Historical return | WORK-020 / local closeout
 
 ## Work20 current evidence
 

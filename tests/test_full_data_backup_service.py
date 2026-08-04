@@ -35,12 +35,14 @@ from src.storage import (
     DecisionSignalFeedbackRecord,
     DecisionSignalOutcomeRecord,
     DecisionSignalRecord,
+    FundamentalSnapshot,
     PeriodReportRecord,
     PortfolioAccount,
     PortfolioCashLedger,
     PortfolioCorporateAction,
     PortfolioTrade,
     SkillOpinionSampleRecord,
+    StockDaily,
 )
 
 try:
@@ -316,6 +318,22 @@ class TestFullDataBackupService:
                         analysis_summary="market history",
                         created_at=datetime(2026, 8, 1, 10, 0, 0),
                     ),
+                    FundamentalSnapshot(
+                        id=203,
+                        query_id="analysis-fixed-101",
+                        code="600519",
+                        payload='{"revenue":123456}',
+                        source_chain='["provider-a"]',
+                        coverage='{"financials":true}',
+                        created_at=datetime(2026, 8, 1, 10, 1, 0),
+                    ),
+                    StockDaily(
+                        id=204,
+                        code="600519",
+                        date=date(2026, 8, 1),
+                        close=1500.0,
+                        data_source="rebuildable-fixture",
+                    ),
                     PeriodReportRecord(
                         id=303,
                         period="previous_week",
@@ -523,7 +541,11 @@ class TestFullDataBackupService:
                     "row_count": 4,
                     "tables": ["conversation_messages", "conversation_summaries"],
                 },
-                "analysis": {"status": "supported", "row_count": 2, "tables": ["analysis_history"]},
+                "analysis": {
+                    "status": "supported",
+                    "row_count": 3,
+                    "tables": ["analysis_history", "fundamental_snapshot"],
+                },
                 "configuration": {"status": "supported", "row_count": 1, "tables": ["configuration"]},
                 "fund": {"status": "not_applicable", "row_count": 0, "tables": []},
                 "period_reports": {"status": "supported", "row_count": 1, "tables": ["period_reports"]},
@@ -556,7 +578,7 @@ class TestFullDataBackupService:
             },
             "excluded": [
                 "derived_portfolio_caches",
-                "price_news_fundamental_caches",
+                "rebuildable_price_news_caches",
                 "scheduler_runtime_state",
                 "provider_traces",
                 "logs",
@@ -564,6 +586,14 @@ class TestFullDataBackupService:
                 "schema_bookkeeping",
                 "credentials_tokens_cookies_vault_ciphertext",
             ],
+            "excluded_tables": {
+                "stock_daily": {
+                    "classification": "rebuildable_market_data_cache",
+                    "contains_user_data": False,
+                    "restore_behavior": "cleared_then_rebuilt_on_demand",
+                    "rebuild_entrypoint": "get_daily_history",
+                },
+            },
             "table_row_counts": {
                 "alert_cooldowns": 1,
                 "alert_notifications": 1,
@@ -575,6 +605,7 @@ class TestFullDataBackupService:
                 "decision_signal_feedback": 1,
                 "decision_signal_outcomes": 1,
                 "decision_signals": 1,
+                "fundamental_snapshot": 1,
                 "conversation_messages": 3,
                 "conversation_summaries": 1,
                 "period_reports": 1,
@@ -586,6 +617,18 @@ class TestFullDataBackupService:
             },
         }
         assert [row["id"] for row in backup["data"]["tables"]["analysis_history"]] == [101, 202]
+        assert backup["data"]["tables"]["fundamental_snapshot"] == [
+            {
+                "id": 203,
+                "query_id": "analysis-fixed-101",
+                "code": "600519",
+                "payload": '{"revenue":123456}',
+                "source_chain": '["provider-a"]',
+                "coverage": '{"financials":true}',
+                "created_at": "2026-08-01T10:01:00",
+            }
+        ]
+        assert "stock_daily" not in backup["data"]["tables"]
         assert backup["data"]["tables"]["period_reports"][0]["id"] == 303
         assert backup["data"]["tables"]["portfolio_accounts"][0]["id"] == 401
         assert backup["data"]["tables"]["alert_notifications"][0]["id"] == 603
@@ -1161,6 +1204,12 @@ class TestFullDataBackupService:
             lambda document: document.pop("manifest"),
             lambda document: document.update(unexpected="not-allowed"),
             lambda document: document["data"]["tables"].update(unknown_fund_table=[]),
+            lambda document: document["manifest"]["excluded_tables"]["stock_daily"].update(
+                contains_user_data=True
+            ),
+            lambda document: document["manifest"]["excluded_tables"]["stock_daily"].update(
+                rebuild_entrypoint="uncontrolled_rebuild"
+            ),
             lambda document: document["metadata"].update(database_schema_version="unsupported-schema"),
         ),
     )

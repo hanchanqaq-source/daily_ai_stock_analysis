@@ -17,7 +17,8 @@ state.
 
 The complete backup uses an explicit allow-list. Version 1 includes:
 
-- analysis history;
+- analysis history and the fundamental snapshots referenced by analysis and
+  history fallback paths;
 - stock portfolio accounts (including their owner identity), trades,
   cash-ledger events, and corporate-action events;
 - persisted period reports;
@@ -37,10 +38,22 @@ The following content is deliberately excluded:
 - unsaved Web drafts;
 - database, environment-file, log, report-template, skill, and LiteLLM runtime
   paths;
-- logs, provider traces (including agent-provider turns), scheduler runtime state, schema bookkeeping, and
-  price/news/fundamental caches; and
+- logs, provider traces (including agent-provider turns), scheduler runtime state,
+  schema bookkeeping, and rebuildable price/news caches;
+- the `stock_daily` market-data cache, whose manifest declaration fixes its
+  classification as `rebuildable_market_data_cache`, states that it contains no
+  user data, records restore behavior `cleared_then_rebuilt_on_demand`, and names
+  `get_daily_history` as the controlled rebuild entry point; and
 - derived portfolio positions, lots, and daily snapshots. These are rebuilt
   from the restored stock event ledger.
+
+`fundamental_snapshot` is deliberately included rather than classified as a
+cache. Although its write path is fail-open, the analysis/history fallback path
+reads stored snapshots when an external provider cannot reproduce the prior
+response. A snapshot can therefore contain non-reproducible historical context.
+By contrast, `stock_daily` stores provider-derived OHLCV/indicator rows only.
+The application can safely serve newly fetched history even if cache persistence
+fails, so those rows are fully reconstructable and contain no user-authored data.
 
 The validator rejects unknown root fields, sections, tables, columns, versions,
 invalid references (including a conversation summary that covers a message in
@@ -64,8 +77,9 @@ The root contract is closed and contains:
 - `format_version`: `1`;
 - `metadata`: PP02 identity, application version, database schema version, and
   UTC creation time;
-- `manifest`: category status, exact table names, per-category and per-table
-  row counts, and the exclusion list;
+- `manifest`: category status, exact included table names, per-category and
+  per-table row counts, the content exclusion list, and the exact per-table
+  exclusion/rebuild declaration;
 - `data`: the allow-listed table rows and non-sensitive configuration; and
 - `integrity`: algorithm `sha256` and the digest.
 
@@ -124,8 +138,10 @@ Validation and stale-preview conflicts write nothing. If a pre-commit restore
 step fails or is interrupted, including by process-level Python interruption,
 database changes are rolled back and the prior managed configuration is
 compensated before the interruption propagates. Concurrent configuration
-writers are not overwritten. Derived portfolio caches are cleared so they can
-be rebuilt from the restored event ledger. A failure to finalize the internal
+writers are not overwritten. Derived portfolio caches and `stock_daily` are
+cleared inside the restore transaction. Portfolio state is rebuilt from the
+restored event ledger; `stock_daily` is repopulated only through
+`get_daily_history` when requested. A failure to finalize the internal
 configuration receipt after the durable database commit does not falsely report
 the restore as failed: cleanup is retried safely and success is returned with a
 sanitized warning if the retry path was needed.
@@ -162,8 +178,9 @@ copy individual SQLite rows by hand.
   status, generated time, and recursive source-history references.
 - Credentials and secure-vault data must be configured separately on the target
   installation.
-- Unsaved drafts, logs, caches, runtime paths, provider traces, and scheduler
-  runtime state cannot be recovered from this file.
+- Unsaved drafts, logs, the explicitly declared rebuildable caches, runtime
+  paths, provider traces, and scheduler runtime state cannot be recovered from
+  this file. `fundamental_snapshot` is not in that exclusion.
 - Complete backup does not add fund support. The manifest must continue to show
   fund as `not_applicable`.
 - The feature has deterministic local automated coverage with synthetic data.

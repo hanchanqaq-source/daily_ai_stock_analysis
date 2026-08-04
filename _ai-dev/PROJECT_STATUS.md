@@ -6,21 +6,21 @@
 PROJECT_ID=PP02
 PROJECT_NAME=AI 每日股票分析
 CHAT_ROLE=AUTO_TAKEOVER
-WORK_ID=WORK-020
+WORK_ID=WORK-023
 ROLE_LOCK=SUPERSEDED_BY_PP02-WORK-HANDOFF-002
 WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
-WORK_STATE=LOCAL_VERIFICATION_PASS_REMOTE_PENDING_DRAFT_HOLD
-EXECUTION_LOCK=WAITING_CONTROLLER_REMOTE_PHASE
-APPLICATION_BASE_VERSION=3.29.2
+WORK_STATE=LOCAL_RELATED_PASS_SANDBOX_LIMITED_FULL_GATE_REMOTE_PENDING_DRAFT_HOLD
+EXECUTION_LOCK=EXACT_REMOTE_HEAD_CI_AND_WINDOWS_CANDIDATE_PENDING
+APPLICATION_BASE_VERSION=3.29.3
 CURRENT_RELEASE_VERSION=3.29.2
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
 ACTIVE_BASE=41fd6a6c76c3e3b56211ef5fb4483d869122b568
-ACTIVE_BRANCH=agent/pp02-work20-full-backup-period-persistence-pr
-ACTIVE_PR=PENDING_CONTROLLER_DRAFT_CREATION
-CURRENT_STAGE=Work20 local verification complete; controller publication pending
-CURRENT_WORK=WORK-020 — complete non-secret formal-data backup/restore and persisted period reports
-ACTIVE_GOAL=controller push, Draft PR creation, and exact-Head CI only
+ACTIVE_BRANCH=agent/pp02-work20-full-backup-period-persistence
+ACTIVE_PR=23_OPEN_DRAFT
+CURRENT_STAGE=Work23 fixes implemented and related local regressions passed; exact remote Head CI pending
+CURRENT_WORK=WORK-023 — PR #23 Windows strict-acceptance failure repairs
+ACTIVE_GOAL=push exact Head, complete CI, and record the next unsigned Windows candidate identity
 PRODUCT_PR=20_MERGED
 PRODUCT_FIXED_HEAD=e11946f528c9cb64beeec8b626ada457c02b0034
 PRODUCT_MERGE_COMMIT=25de369f8e12438a1ec1f3511c68256c471243e4
@@ -51,16 +51,52 @@ WORK16_REVIEW=PASS_NO_CRITICAL_OR_IMPORTANT
 WORK16_JUDGE=PASS_DRAFT_HOLD
 WORK20_LOCAL_IMPLEMENTATION_HEAD=ae310d1e7fd22fc7139d1ebb63f1bd1d3a0f416c
 WORK20_EVIDENCE_COMMIT=42e8f75d435b9d90ad5764f538cb20e9e48c1e9f
-WORK20_DRAFT_PR=PENDING_CONTROLLER
-WORK20_REMOTE_CI=PENDING_CONTROLLER_FIXED_HEAD
-WORK20_JUDGE=DRAFT_HOLD
-CURRENT_STATUS=WORK20_LOCAL_VERIFICATION_PASS_REMOTE_PENDING_DRAFT_HOLD
-ACTIVE_BLOCKER=REMOTE_DRAFT_PR_AND_FIXED_HEAD_CI_PENDING_CONTROLLER
+WORK22_EVIDENCE_REPORT_SHA256=30AC65C81E3F86E4CADBAEC9D2DBA95B432BA4DF8DBE81F12015857B9E5E39BE
+WORK22_JUDGE=FAIL_LOCKED
+WORK23_AUTHORITATIVE_VERSION=3.29.3
+WORK23_DRAFT_PR=23_OPEN_DRAFT
+WORK23_REMOTE_FIXED_HEAD=PENDING_FIRST_PUSH
+WORK23_REMOTE_CI=PENDING_EXACT_HEAD
+WORK23_WINDOWS_CANDIDATE=PENDING_EXACT_HEAD_CI
+WORK23_SIGNING=READ_ONLY_AUDIT_INTERFACE_NO_REAL_IDENTITY
+WORK23_JUDGE=ACTIVE_DRAFT_HOLD
+CURRENT_STATUS=WORK23_LOCAL_RELATED_PASS_REMOTE_PENDING_DRAFT_HOLD
+ACTIVE_BLOCKER=EXACT_REMOTE_HEAD_CI_AND_WINDOWS_ARTIFACT_IDENTITY_PENDING
 NEXT_WORK=NONE
-NEXT_ACTION=CONTROLLER_PUSH_THEN_DRAFT_PR_THEN_EXACT_HEAD_CI
+NEXT_ACTION=PUSH_EXISTING_PR23_BRANCH_THEN_VERIFY_EXACT_HEAD_CI_AND_ARTIFACT
 AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/TAG/RELEASE
 LAST_UPDATED=2026-08-04
 ```
+
+## 2026-08-04 Work23 / PR #23 Windows strict-acceptance failure repairs
+
+- Work22 remains `FAIL`, bound to evidence-report SHA-256
+  `30AC65C81E3F86E4CADBAEC9D2DBA95B432BA4DF8DBE81F12015857B9E5E39BE`.
+  Work23 does not lower its gates or revise that decision.
+- The official uninstaller now drains the Electron-owned backend before final
+  quit and invokes a bundled exact-path process helper. Windows verification
+  runs the official uninstaller once and requires the installed app/backend
+  process tree to reach zero without a retry or broad name-based termination.
+- Candidate identity is normalized to `3.29.3` across Desktop/Web package
+  metadata, backend defaults, build information, installer manifest, and the
+  Windows file/product-version checks.
+- Evidence shows `fundamental_snapshot` contains formal non-rebuildable
+  snapshot data, so it is included in the complete backup. `stock_daily` is a
+  rebuildable market-data cache with no user data; it remains excluded under an
+  exact manifest contract, is cleared on restore, and rebuilds on demand via
+  `get_daily_history`.
+- Authenticode handling is read-only. The verifier records installer/app status
+  and supports a credential-free `RequireValidSignature` policy gate, but no
+  certificate, private key, signing purchase, or CI secret was accessed. A real
+  signing identity remains a separate authorization gate.
+- Related backend suites, Desktop `83/83`, Windows packaging contracts `26/26`,
+  and Web `1076 passed / 2 skipped` plus lint/build pass locally. The offline
+  backend aggregate passed `5327` tests plus `499` subtests when the sandbox-
+  blocked crash-recovery process-kill file was omitted; exact remote CI remains
+  authoritative for the complete gate.
+- PR #23 remains Open Draft. Remote fixed Head, complete Actions evidence, and
+  the Windows candidate name/size/SHA-256 are pending the authorized push.
+  No Work22 real database, cold backup, export, or restore checkpoint was used.
 
 ## 2026-08-04 Work20 / complete backup and persisted period reports
 

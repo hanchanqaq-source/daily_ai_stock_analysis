@@ -28,6 +28,13 @@ type ManifestCategory = {
   rowCount: number;
 };
 
+type ManifestExcludedTable = {
+  name: string;
+  classification: string;
+  restoreBehavior: string;
+  rebuildEntrypoint: string;
+};
+
 const MANIFEST_CATEGORY_LABEL_KEYS: Record<string, UiTextKey> = {
   agent_conversations: 'settings.fullBackupManifestCategoryAgentConversations',
   analysis: 'settings.fullBackupManifestCategoryAnalysis',
@@ -40,7 +47,7 @@ const MANIFEST_CATEGORY_LABEL_KEYS: Record<string, UiTextKey> = {
 
 const MANIFEST_EXCLUSION_LABEL_KEYS: Record<string, UiTextKey> = {
   derived_portfolio_caches: 'settings.fullBackupManifestExclusionDerivedPortfolio',
-  price_news_fundamental_caches: 'settings.fullBackupManifestExclusionMarketCaches',
+  rebuildable_price_news_caches: 'settings.fullBackupManifestExclusionMarketCaches',
   scheduler_runtime_state: 'settings.fullBackupManifestExclusionSchedulerState',
   provider_traces: 'settings.fullBackupManifestExclusionProviderTraces',
   logs: 'settings.fullBackupManifestExclusionLogs',
@@ -85,6 +92,35 @@ function readManifestExclusions(manifest: Record<string, unknown>): string[] {
   );
 }
 
+function readManifestExcludedTables(
+  manifest: Record<string, unknown>,
+): ManifestExcludedTable[] {
+  if (!isRecord(manifest.excluded_tables)) {
+    return [];
+  }
+  return Object.entries(manifest.excluded_tables).flatMap(([name, candidate]) => {
+    if (!isRecord(candidate)) {
+      return [];
+    }
+    const classification = candidate.classification;
+    const containsUserData = candidate.contains_user_data;
+    const restoreBehavior = candidate.restore_behavior;
+    const rebuildEntrypoint = candidate.rebuild_entrypoint;
+    if (
+      typeof classification !== 'string'
+      || classification.trim().length === 0
+      || containsUserData !== false
+      || typeof restoreBehavior !== 'string'
+      || restoreBehavior.trim().length === 0
+      || typeof rebuildEntrypoint !== 'string'
+      || rebuildEntrypoint.trim().length === 0
+    ) {
+      return [];
+    }
+    return [{ name, classification, restoreBehavior, rebuildEntrypoint }];
+  });
+}
+
 function getOwnLabelKey(
   labels: Record<string, UiTextKey>,
   name: string,
@@ -96,6 +132,7 @@ function ManifestSummary({ manifest }: { manifest: Record<string, unknown> }) {
   const { t } = useUiLanguage();
   const categories = readManifestCategories(manifest);
   const exclusions = readManifestExclusions(manifest);
+  const excludedTables = readManifestExcludedTables(manifest);
 
   return (
     <div className="space-y-3">
@@ -141,6 +178,25 @@ function ManifestSummary({ manifest }: { manifest: Record<string, unknown> }) {
           })}
         </ul>
       </div>
+      {excludedTables.length > 0 && (
+        <div>
+          <p className="mb-1 text-xs font-medium text-foreground">
+            {t('settings.fullBackupManifestExcludedTables')}
+          </p>
+          <ul className="space-y-1 text-xs text-secondary-text">
+            {excludedTables.map((table) => (
+              <li key={table.name}>
+                {t('settings.fullBackupManifestExcludedTableRow', {
+                  name: table.name,
+                  classification: table.classification,
+                  restoreBehavior: table.restoreBehavior,
+                  rebuildEntrypoint: table.rebuildEntrypoint,
+                })}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

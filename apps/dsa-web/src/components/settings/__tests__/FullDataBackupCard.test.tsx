@@ -46,7 +46,7 @@ const backup = {
     },
     excluded: [
       'derived_portfolio_caches',
-      'price_news_fundamental_caches',
+      'rebuildable_price_news_caches',
       'scheduler_runtime_state',
       'provider_traces',
       'logs',
@@ -54,6 +54,14 @@ const backup = {
       'schema_bookkeeping',
       'credentials_tokens_cookies_vault_ciphertext',
     ],
+    excluded_tables: {
+      stock_daily: {
+        classification: 'rebuildable_market_data_cache',
+        contains_user_data: false,
+        restore_behavior: 'cleared_then_rebuilt_on_demand',
+        rebuild_entrypoint: 'get_daily_history',
+      },
+    },
     table_row_counts: {
       analysis_history: 7,
       period_reports: 3,
@@ -318,7 +326,7 @@ describe('FullDataBackupCard', () => {
     expect(previewSection).toHaveTextContent('Explicitly excluded from this backup');
     for (const exclusion of [
       'Derived portfolio caches (derived_portfolio_caches)',
-      'Price, news, and fundamental caches (price_news_fundamental_caches)',
+      'Rebuildable price and news caches (rebuildable_price_news_caches)',
       'Scheduler runtime state (scheduler_runtime_state)',
       'Provider traces (provider_traces)',
       'Logs (logs)',
@@ -328,6 +336,10 @@ describe('FullDataBackupCard', () => {
     ]) {
       expect(previewSection).toHaveTextContent(exclusion);
     }
+    expect(previewSection).toHaveTextContent('Excluded database tables and rebuild contract');
+    expect(previewSection).toHaveTextContent(
+      'stock_daily: rebuildable_market_data_cache · no user data · cleared_then_rebuilt_on_demand · get_daily_history',
+    );
     expect(fullDataBackupApi.restore).not.toHaveBeenCalled();
   });
 
@@ -342,6 +354,21 @@ describe('FullDataBackupCard', () => {
           malformed_fields: { status: { unsafe: true }, row_count: '99' },
         },
         excluded: ['drafts', { unsafe: 'do-not-render' }, null, 'logs'],
+        excluded_tables: {
+          safe_cache: {
+            classification: 'rebuildable_cache',
+            contains_user_data: false,
+            restore_behavior: 'cleared',
+            rebuild_entrypoint: 'safe_rebuild',
+          },
+          malformed_null: null,
+          malformed_user_data: {
+            classification: 'cache',
+            contains_user_data: true,
+            restore_behavior: 'kept',
+            rebuild_entrypoint: 'none',
+          },
+        },
       },
     } as never);
     const { container } = renderCard('zh');
@@ -357,10 +384,15 @@ describe('FullDataBackupCard', () => {
     expect(previewSection).toHaveTextContent('此备份明确排除');
     expect(previewSection).toHaveTextContent('未保存草稿（drafts）');
     expect(previewSection).toHaveTextContent('日志（logs）');
+    expect(previewSection).toHaveTextContent('排除的数据库表与重建约定');
+    expect(previewSection).toHaveTextContent(
+      'safe_cache：rebuildable_cache · 不含用户数据 · cleared · safe_rebuild',
+    );
     expect(previewSection).not.toHaveTextContent('do-not-render');
     expect(previewSection).not.toHaveTextContent('malformed_null');
     expect(previewSection).not.toHaveTextContent('malformed_array');
     expect(previewSection).not.toHaveTextContent('malformed_fields');
+    expect(previewSection).not.toHaveTextContent('malformed_user_data');
     expect(screen.getByRole('button', { name: '确认恢复并替换当前完整数据' })).toBeInTheDocument();
   });
 
