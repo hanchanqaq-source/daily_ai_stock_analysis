@@ -53,11 +53,11 @@ from src.llm.hermes import (
 )
 from src.core.config_manager import (
     ConfigManager,
-    ConfigManagerPublicationInterrupted,
     ConfigManagerPublicationUncertain,
     ConfigManagerVersionConflict,
 )
 from src.core.config_registry import (
+    WEB_SETTINGS_HIDDEN_FROM_UI,
     build_schema_response,
     get_category_definitions,
     get_field_definition,
@@ -256,9 +256,6 @@ class SystemConfigService:
     _LLM_STREAM_CHUNK_LIMIT = 8
     _WEB_SETTINGS_LLM_CHANNEL_SUPPORT_KEY_RE = re.compile(
         r"^LLM_([A-Z0-9_]+)_(PROTOCOL|BASE_URL|API_KEY|API_KEYS|MODELS|EXTRA_HEADERS|ENABLED)$"
-    )
-    _SAFE_MANAGED_LLM_CHANNEL_KEY_RE = re.compile(
-        r"^LLM_[A-Z0-9_]+_(PROTOCOL|BASE_URL|MODELS|ENABLED)$"
     )
     _LLM_CAPABILITY_PROBE_IMAGE = (
         "data:image/png;base64,"
@@ -500,7 +497,11 @@ class SystemConfigService:
         container. Use these values as display fallbacks so Settings can show
         startup-injected config without letting it override later WebUI saves.
         """
-        registered_keys = {key.upper() for key in get_registered_field_keys()}
+        registered_keys = {
+            key.upper()
+            for key in get_registered_field_keys()
+            if key.upper() not in WEB_SETTINGS_HIDDEN_FROM_UI
+        }
         channel_names = {
             segment.strip().upper()
             for raw_channels in (
@@ -532,7 +533,7 @@ class SystemConfigService:
             **runtime_config_map,
             **saved_config_map,
         }
-        registered_keys = set(get_registered_field_keys())
+        registered_keys = set(get_registered_field_keys()) - WEB_SETTINGS_HIDDEN_FROM_UI
         all_keys = set(config_map.keys()) | registered_keys
         if include_schema:
             all_keys = self._get_schema_config_keys(config_map, registered_keys)
@@ -799,17 +800,34 @@ class SystemConfigService:
     def export_env(self) -> Dict[str, Any]:
         """Return active non-sensitive `.env` content for backup."""
         content, config_version, updated_at = self._manager.snapshot_without_matching_keys(
-            lambda key: (
-                bool(get_field_definition(key).get("is_sensitive", False))
-                or is_sensitive_config_key(key)
-            )
-            and not self._SAFE_MANAGED_LLM_CHANNEL_KEY_RE.fullmatch(
-                str(key).strip().upper()
-            )
+            lambda key: bool(get_field_definition(key).get("is_sensitive", False))
+            or is_sensitive_config_key(key)
         )
 
         return {
             "content": content,
+            "config_version": config_version,
+            "updated_at": updated_at,
+            "credentials_excluded": True,
+        }
+
+    def snapshot_non_sensitive_values(
+        self,
+        *,
+        allowed_keys: Set[str],
+    ) -> Dict[str, Any]:
+        """Return allow-listed logical values from one locked raw generation."""
+        values, config_version, updated_at = self._manager.snapshot_config_map()
+        normalized_allowed = {str(key).upper() for key in allowed_keys}
+        filtered = {
+            key.upper(): value
+            for key, value in values.items()
+            if key.upper() in normalized_allowed
+            and not is_sensitive_config_key(key)
+            and not get_field_definition(key).get("is_sensitive", False)
+        }
+        return {
+            "values": filtered,
             "config_version": config_version,
             "updated_at": updated_at,
             "credentials_excluded": True,
@@ -961,18 +979,30 @@ class SystemConfigService:
         normalized_managed_keys = {
             str(key).strip().upper() for key in managed_keys if str(key).strip()
         }
+        registered_keys = set(get_registered_field_keys())
         if any(
-            not self._is_supported_managed_subset_key(key)
+            key not in registered_keys or is_sensitive_config_key(key)
             for key in normalized_managed_keys
         ):
             raise ConfigImportError(
                 "Replacement config subset contains an unknown or sensitive key"
             )
 
-        normalized_values = self.normalize_and_validate_env_subset_values(
+        normalized_values = self.normalize_env_subset_values(
             values=values,
             managed_keys=normalized_managed_keys,
         )
+        items: List[Dict[str, str]] = []
+        for key, normalized_value in normalized_values.items():
+            items.append({"key": key, "value": normalized_value})
+
+        issues = self._collect_issues(
+            items=items,
+            mask_token="__DSA_RESTORE_LITERAL_MASK__",
+        )
+        errors = [issue for issue in issues if issue["severity"] == "error"]
+        if errors:
+            raise ConfigValidationError(issues=errors)
 
         try:
             return self._manager.replace_managed_assignments_atomically(
@@ -984,20 +1014,6 @@ class SystemConfigService:
             )
         except ConfigManagerVersionConflict as exc:
             raise ConfigConflictError(current_version=exc.current_version) from exc
-        except ConfigManagerPublicationInterrupted as exc:
-            try:
-                self.compensate_env_subset_atomically(
-                    receipt=exc.receipt,
-                    reload_now=False,
-                )
-            except ConfigConflictError:
-                raise
-            except BaseException as compensation_exc:
-                raise ConfigReceiptStateError(
-                    "Interrupted configuration publication retained private "
-                    "compensation state after rollback failed"
-                ) from compensation_exc
-            interruption = exc.interruption
         except ConfigManagerPublicationUncertain as exc:
             try:
                 self.compensate_env_subset_atomically(
@@ -1015,68 +1031,36 @@ class SystemConfigService:
                 "Uncertain configuration publication was compensated internally"
             ) from exc
 
-        raise interruption.with_traceback(interruption.__traceback__)
-
-    @classmethod
-    def _is_supported_managed_subset_key(cls, key: str) -> bool:
-        normalized = str(key or "").strip().upper()
-        is_safe_dynamic_llm_field = bool(
-            cls._SAFE_MANAGED_LLM_CHANNEL_KEY_RE.fullmatch(normalized)
-        )
-        return (
-            (is_safe_dynamic_llm_field or not is_sensitive_config_key(normalized))
-            and (
-                normalized in set(get_registered_field_keys())
-                or is_safe_dynamic_llm_field
-            )
-        )
-
-    def normalize_and_validate_env_subset_values(
-        self,
+    @staticmethod
+    def normalize_env_subset_values(
         *,
         values: Mapping[str, str],
         managed_keys: Set[str],
     ) -> Dict[str, str]:
-        """Normalize and semantically validate a non-secret replacement subset."""
+        """Return the exact normalized representation written by atomic restore."""
         normalized_managed_keys = {
             str(key).strip().upper() for key in managed_keys if str(key).strip()
         }
-        if any(
-            not self._is_supported_managed_subset_key(key)
-            for key in normalized_managed_keys
-        ):
-            raise ConfigImportError(
-                "Replacement config subset contains an unknown or sensitive key"
-            )
-
+        registered_keys = set(get_registered_field_keys())
         normalized_values: Dict[str, str] = {}
-        items: List[Dict[str, str]] = []
         for raw_key, raw_value in values.items():
             key = str(raw_key).strip().upper()
-            if key not in normalized_managed_keys or not self._is_supported_managed_subset_key(key):
+            if (
+                key not in normalized_managed_keys
+                or key not in registered_keys
+                or is_sensitive_config_key(key)
+            ):
                 raise ConfigImportError(
                     "Replacement config content contains a key outside its managed subset"
                 )
             if not isinstance(raw_value, str) or "\n" in raw_value or "\r" in raw_value:
                 raise ConfigImportError("Replacement config value must be one line")
             field_schema = get_field_definition(key, raw_value)
-            normalized_value = self._normalize_value_for_storage(raw_value, field_schema)
-            normalized_values[key] = normalized_value
-            items.append({"key": key, "value": normalized_value})
-
-        issues = self._collect_issues(
-            items=items,
-            mask_token="__DSA_RESTORE_LITERAL_MASK__",
-        )
-        errors = [
-            issue
-            for issue in issues
-            if issue["severity"] == "error"
-            and not is_sensitive_config_key(str(issue.get("key", "")))
-        ]
-        if errors:
-            raise ConfigValidationError(issues=errors)
-        return {key: normalized_values[key] for key in sorted(normalized_values)}
+            normalized_values[key] = SystemConfigService._normalize_value_for_storage(
+                raw_value,
+                field_schema,
+            )
+        return normalized_values
 
     def compensate_env_subset_atomically(
         self,
@@ -1123,6 +1107,23 @@ class SystemConfigService:
             raise ConfigReceiptStateError(
                 "Configuration restore receipt finalization mismatch"
             )
+
+    def discard_env_subset_receipt_after_commit(
+        self,
+        receipt: _ConfigRestoreReceipt,
+    ) -> None:
+        """Idempotently discard private undo state after a durable DB commit."""
+        with self._restore_receipt_lock:
+            if not isinstance(receipt, _ConfigRestoreReceipt):
+                return
+            state = self._restore_receipts.get(receipt._handle)
+            if (
+                state is not None
+                and state.receipt is receipt
+                and state.owner_pid == os.getpid()
+                and state.canonical_path == self._manager.env_path
+            ):
+                self._restore_receipts.pop(receipt._handle, None)
 
     def _prepare_restore_receipt(
         self,
@@ -2830,18 +2831,6 @@ class SystemConfigService:
             sensitive_keys=set(),
             mask_token=mask_token,
         )
-
-    @classmethod
-    def parse_env_content_values(cls, content: str) -> Dict[str, str]:
-        """Parse logical dotenv values and fail if an assignment was discarded."""
-        if not content.replace("\ufeff", "").strip():
-            return {}
-        updates = cls._parse_imported_env_content(content)
-        values = {item["key"]: item["value"] for item in updates}
-        missing_assignments = cls._scan_imported_assignment_keys(content) - set(values)
-        if missing_assignments:
-            raise ConfigImportError("Invalid .env assignment content")
-        return values
 
     @staticmethod
     def _parse_imported_env_content(content: str) -> List[Dict[str, str]]:

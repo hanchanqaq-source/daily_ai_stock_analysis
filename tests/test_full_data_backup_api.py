@@ -68,7 +68,6 @@ class _BackupServiceStub:
         self.preview_error: BaseException | None = None
         self.restore_error: BaseException | None = None
         self.export_error: BaseException | None = None
-        self.restore_warnings: list[str] = []
 
     def export_backup(self) -> dict:
         if self.export_error:
@@ -97,6 +96,7 @@ class _BackupServiceStub:
         assert preview_token == "preview-token-123"
         return {
             "success": True,
+            "warnings": ["Configuration receipt cleanup required a safe post-commit retry."],
             "incoming_digest": "a" * 64,
             "destination_digest_before": "b" * 64,
             "destination_digest_after": "c" * 64,
@@ -110,7 +110,6 @@ class _BackupServiceStub:
                 "destination_digest": "b" * 64,
             },
             "restart_required": True,
-            "warnings": list(self.restore_warnings),
         }
 
 
@@ -178,6 +177,9 @@ def test_restore_returns_recovery_metadata_digests_and_restart_requirement() -> 
     assert response.status_code == 200
     payload = response.json()
     assert payload["success"] is True
+    assert payload["warnings"] == [
+        "Configuration receipt cleanup required a safe post-commit retry."
+    ]
     assert payload["incoming_digest"] == "a" * 64
     assert payload["destination_digest_before"] == "b" * 64
     assert payload["destination_digest_after"] == "c" * 64
@@ -188,25 +190,7 @@ def test_restore_returns_recovery_metadata_digests_and_restart_requirement() -> 
         "destination_digest": "b" * 64,
     }
     assert payload["restart_required"] is True
-    assert payload["warnings"] == []
     assert "/private/recovery" not in response.text
-
-
-def test_restore_returns_truthful_committed_warning_in_success_response() -> None:
-    document = _backup_document()
-    service = _BackupServiceStub(document)
-    service.restore_warnings = [
-        "Configuration receipt finalization failed after committed restore."
-    ]
-
-    response = _client(service).post(
-        "/api/v1/system/full-data-backup/restore",
-        json={"backup": document, "preview_token": "preview-token-123"},
-    )
-
-    assert response.status_code == 200
-    assert response.json()["success"] is True
-    assert response.json()["warnings"] == service.restore_warnings
 
 
 def test_validation_and_conflict_errors_are_stable_and_do_not_echo_backup_content() -> None:

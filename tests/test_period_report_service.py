@@ -602,6 +602,41 @@ class CanonicalPeriodReportPersistenceTestCase(unittest.TestCase):
         different_window = first_service.generate("week_to_date", as_of=date(2026, 7, 31))
         self.assertNotEqual(different_window["report_id"], first["report_id"])
 
+    def test_next_week_repeat_upserts_legacy_and_canonical_identity_for_same_window(self) -> None:
+        self._seed_history(101, created_at=datetime(2026, 7, 29, 9, 0))
+        service = PeriodReportService(
+            history_service=HistoryService(self.db),
+            db_manager=self.db,
+            now_provider=lambda: datetime(2026, 7, 30, 12, 0),
+        )
+
+        first = service.generate("next_week", as_of=date(2026, 7, 30))
+        legacy_id = first["outlook"]["snapshot_id"]
+        canonical_id = first["report_id"]
+        with self.db.get_session() as session:
+            first_legacy = session.get(AnalysisHistory, legacy_id)
+            first_query_id = first_legacy.query_id
+
+        self._seed_history(201, created_at=datetime(2026, 7, 30, 9, 0))
+        replacement = service.generate("next_week", as_of=date(2026, 7, 30))
+
+        self.assertEqual(replacement["outlook"]["snapshot_id"], legacy_id)
+        self.assertEqual(replacement["report_id"], canonical_id)
+        self.assertEqual(replacement["outlook"]["source_record_ids"], [101, 201])
+        with self.db.get_session() as session:
+            legacy_rows = (
+                session.query(AnalysisHistory)
+                .filter(AnalysisHistory.report_type == PERIOD_OUTLOOK_REPORT_TYPE)
+                .all()
+            )
+            self.assertEqual(len(legacy_rows), 1)
+            self.assertEqual(legacy_rows[0].id, legacy_id)
+            self.assertEqual(legacy_rows[0].query_id, first_query_id)
+            self.assertEqual(
+                json.loads(legacy_rows[0].context_snapshot)["source_record_ids"],
+                [101, 201],
+            )
+
     def test_legacy_outlook_is_read_only_fallback_for_stored_reads(self) -> None:
         legacy_id = 901
         legacy_snapshot = {

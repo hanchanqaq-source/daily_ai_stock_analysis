@@ -5,19 +5,14 @@
 [`../_ai-dev/PROJECT_STATUS.md`](../_ai-dev/PROJECT_STATUS.md)。本文件不建立第二套
 当前状态真源。
 
-## 2026-08-04 Work20｜v3.29.3 候选完整备份恢复与周期报告持久化
-
-- 固定基线：`v3.29.2` / `main@41fd6a6c76c3e3b56211ef5fb4483d869122b568`。
-- 当前阶段：Task1–6、Task7 本地全量门禁和最终安全复审完成；台账提交、Draft PR 和
-  固定 Head CI 进行中。已复审实现 Head 为 `dd7dc21…`。
-- 产品目标：用户在卸载前通过软件导出完整非敏感数据到安装目录外，重装后通过软件
-  预览并恢复；不迁移数据库目录。
-- 已实现：周期报告正式持久化/重启读取、白名单完整备份、严格校验、恢复前保护副本、
-  事务恢复、配置 CAS 补偿，以及完整/配置专用/股票账本专用三个清晰入口。
-- 停止门：Work20 完成上限为 Draft Hold；Ready、合并、Tag、Release 和 v3.29.3 发布
-  必须由后续独立授权。
-
 ## 当前路线入口
+
+Work20 is the active Draft-only extension from locked `v3.29.2`
+`main@41fd6a6c…`. It adds complete non-secret formal-data backup/restore and
+canonical period-report persistence. Local verification has passed; push,
+Draft PR creation, exact remote Head, and Actions evidence are pending the
+controller. Judge remains `DRAFT_HOLD`; there is no Ready, merge, Tag, or
+Release authorization. Locked Work18/19/19-A history is unchanged.
 
 Work10 已完成 `v3.29.1` 发布；Work11 真机安装闭环裁决 `PASSED_WITH_RESIDUALS`。
 Work12 的个股正式历史缺失由 Work13 PR #20 修复。Work14 已在其固定 Head 上完成
@@ -40,6 +35,7 @@ Work15 已将 PR #20/#21 依序合入主线；PR #21 最终 Run `30825436318` su
 | R6｜正式数据迁移 | 完成（无数据，跳过迁移） | Work6 `NO_FORMAL_DATA_FOUND`；旧项目和数据库从未建立 |
 | R7｜主线与正式发布 | 完成 | `v3.29.1` annotated Tag/正式 Release；Run `30786838156` 5/5 success、7 assets |
 | R7-Hotfix 验收 | Work16 完成 / Draft Hold | PR #22 固定 Head CI 与 Windows 双层筹码探针通过；禁止自行 Ready、合并或发布 |
+| Work20｜Complete backup and period persistence | Local verification / Draft Hold | Remote Draft PR and exact fixed-Head CI pending controller; no merge, Tag, or Release |
 
 ## Work 1｜官方稳定版干净底座建立（历史）
 

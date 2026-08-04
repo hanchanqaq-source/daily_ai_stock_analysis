@@ -16,12 +16,15 @@ from contextlib import contextmanager
 import hashlib
 import json
 import logging
+import os
 import threading
 import time
 from datetime import datetime, date, timedelta, timezone
+from pathlib import Path
 from typing import Optional, List, Dict, Any, TYPE_CHECKING, Tuple, Callable, TypeVar, Union
 
 import pandas as pd
+from dotenv import dotenv_values
 from sqlalchemy import (
     create_engine,
     Column,
@@ -55,6 +58,7 @@ from sqlalchemy.orm import (
 )
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.inspection import inspect as sqlalchemy_inspect
+from sqlalchemy.engine import make_url
 
 from src.agent.provider_trace import PROVIDER_TRACE_RETENTION_LIMIT
 from src.config import get_config
@@ -96,6 +100,15 @@ class DatabaseSchemaMigration(Base):
     version = Column(String(64), primary_key=True)
     description = Column(String(255), nullable=False)
     applied_at = Column(DateTime, default=datetime.now, nullable=False, index=True)
+
+
+class FullDataRestoreCommitMarker(Base):
+    """Durable marker committed atomically with one full-data restore."""
+
+    __tablename__ = "full_data_restore_commits"
+
+    tx_id = Column(String(64), primary_key=True)
+    committed_at = Column(DateTime, default=utc_naive_now, nullable=False)
 
 
 class StockDaily(Base):
@@ -1252,6 +1265,12 @@ class DatabaseManager(metaclass=_DatabaseManagerMeta):
         created_engine = None
 
         try:
+            recovered = self._recover_full_data_restore_before_runtime_config(db_url)
+            if recovered:
+                from src.config import Config, setup_env
+
+                Config.reset_instance()
+                setup_env(override=True)
             config = get_config()
             if db_url is None:
                 db_url = config.get_db_url()
@@ -1310,6 +1329,101 @@ class DatabaseManager(metaclass=_DatabaseManagerMeta):
             self._SessionLocal = None
             self.__class__._instance = None
             raise
+
+    def _recover_full_data_restore_before_runtime_config(
+        self,
+        requested_db_url: Optional[str],
+    ) -> bool:
+        """Recover a pending journal before Config or the final engine is exposed."""
+        if requested_db_url is None:
+            if "DATABASE_PATH" in os.environ:
+                raw_database_path = os.environ["DATABASE_PATH"]
+            else:
+                env_file = os.getenv("ENV_FILE")
+                env_path = (
+                    Path(env_file)
+                    if env_file
+                    else Path(__file__).parent.parent / ".env"
+                )
+                try:
+                    raw_values = dotenv_values(env_path, interpolate=False)
+                except Exception as exc:
+                    raise RuntimeError(
+                        "Unable to inspect ENV_FILE for pending restore recovery."
+                    ) from exc
+                raw_database_path = raw_values.get(
+                    "DATABASE_PATH",
+                    "./data/stock_analysis.db",
+                )
+                if raw_database_path is None:
+                    raw_database_path = "./data/stock_analysis.db"
+            database_path = Path(str(raw_database_path)).expanduser().absolute()
+            bootstrap_url = f"sqlite:///{database_path}"
+        else:
+            bootstrap_url = str(requested_db_url)
+        if not bootstrap_url.startswith("sqlite:"):
+            return False
+
+        database = str(make_url(bootstrap_url).database or "").strip()
+        if not database or database.lower() == ":memory:":
+            return False
+        database_path = Path(database).expanduser().resolve()
+        journal_path = (
+            database_path.parent
+            / f"{database_path.stem}_restore_recovery"
+            / ".pp02-full-data-restore-transaction.json"
+        )
+        if not journal_path.exists():
+            return False
+
+        bootstrap_engine = create_engine(bootstrap_url, echo=False, pool_pre_ping=True)
+
+        self._engine = bootstrap_engine
+        self._is_sqlite_engine = True
+        self._sqlite_file_db = True
+        self._SessionLocal = sessionmaker(
+            bind=bootstrap_engine,
+            autocommit=False,
+            autoflush=False,
+        )
+        try:
+            restore_journal = self._build_full_data_restore_journal()
+            if restore_journal is None:  # pragma: no cover - file SQLite invariant
+                return False
+            with restore_journal.transaction_lock():
+                restore_journal.preflight()
+                return restore_journal.recover_pending()
+        finally:
+            bootstrap_engine.dispose()
+            self._engine = None
+            self._SessionLocal = None
+
+    def _build_full_data_restore_journal(self):
+        """Build the startup recovery boundary without exposing a DB session."""
+        if not self._sqlite_file_db:
+            return None
+        from src.services.full_data_backup_service import (
+            BACKUP_CONFIG_ALLOWLIST,
+            DEFAULT_APPLICATION_VERSION,
+            FullDataBackupService,
+        )
+        from src.services.full_data_restore_journal import FullDataRestoreJournal
+        from src.services.system_config_service import SystemConfigService
+
+        application_version = (
+            str(
+                os.getenv("PP02_APPLICATION_VERSION", DEFAULT_APPLICATION_VERSION)
+            ).strip()
+            or DEFAULT_APPLICATION_VERSION
+        )
+        return FullDataRestoreJournal(
+            db_manager=self,
+            config_service=SystemConfigService(),
+            application_version=application_version,
+            database_schema_version=CURRENT_SCHEMA_VERSION,
+            managed_keys=set(BACKUP_CONFIG_ALLOWLIST),
+            value_validator=FullDataBackupService._validate_config_value,
+        )
 
     def _initialize_base_schema_transaction(self) -> None:
         """Create, verify, and mark the base schema as one database transaction."""
@@ -2343,27 +2457,42 @@ class DatabaseManager(metaclass=_DatabaseManagerMeta):
         )
 
         def _write(session: Session) -> int:
-            history = AnalysisHistory(
-                query_id=query_id,
-                code="PERIOD",
-                name="下周展望",
-                report_type="period_outlook",
-                sentiment_score=None,
-                operation_advice="仅供参考",
-                trend_prediction=overall_tendency,
-                analysis_summary=summary,
-                raw_result=self._safe_json_dumps(
-                    {
-                        "snapshot_version": snapshot.get("snapshot_version"),
-                        "overall_tendency": overall_tendency,
-                        "source_record_ids": snapshot.get("source_record_ids") or [],
-                    }
-                ),
-                news_content=None,
-                context_snapshot=self._safe_json_dumps(snapshot),
-                created_at=created_at,
+            history = None
+            candidates = session.execute(
+                select(AnalysisHistory)
+                .where(AnalysisHistory.report_type == "period_outlook")
+                .order_by(AnalysisHistory.id.desc())
+            ).scalars().all()
+            for candidate in candidates:
+                try:
+                    candidate_snapshot = json.loads(candidate.context_snapshot or "{}")
+                except (TypeError, ValueError, json.JSONDecodeError):
+                    continue
+                if candidate_snapshot.get("target_period") == target_period:
+                    history = candidate
+                    break
+            if history is None:
+                history = AnalysisHistory(
+                    query_id=query_id,
+                    code="PERIOD",
+                    name="下周展望",
+                    report_type="period_outlook",
+                )
+                session.add(history)
+            history.sentiment_score = None
+            history.operation_advice = "仅供参考"
+            history.trend_prediction = overall_tendency
+            history.analysis_summary = summary
+            history.raw_result = self._safe_json_dumps(
+                {
+                    "snapshot_version": snapshot.get("snapshot_version"),
+                    "overall_tendency": overall_tendency,
+                    "source_record_ids": snapshot.get("source_record_ids") or [],
+                }
             )
-            session.add(history)
+            history.news_content = None
+            history.context_snapshot = self._safe_json_dumps(snapshot)
+            history.created_at = created_at
             session.flush()
             return int(history.id or 0)
 

@@ -166,6 +166,7 @@ def restore_full_data_backup(
         recovery = restored["recovery"]
         return FullDataBackupRestoreResponse(
             success=restored["success"],
+            warnings=restored.get("warnings", []),
             incoming_digest=restored["incoming_digest"],
             destination_digest_before=restored["destination_digest_before"],
             destination_digest_after=restored["destination_digest_after"],
@@ -177,7 +178,6 @@ def restore_full_data_backup(
                 "destination_digest": recovery["destination_digest"],
             },
             restart_required=restored["restart_required"],
-            warnings=restored.get("warnings", []),
         )
     except _full_data_backup_errors()[0]:
         raise _validation_error()

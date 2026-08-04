@@ -31,8 +31,30 @@ type RestoreWireResponse = {
     digest: string;
     destination_digest: string;
   };
+  warnings?: string[];
   restart_required: boolean;
 };
+
+function transformExportResponse(
+  content: unknown,
+  _headers: unknown,
+  status?: number,
+): unknown {
+  if (status === undefined || (status >= 200 && status < 300)) {
+    return content;
+  }
+  if (typeof content !== 'string') {
+    return content;
+  }
+  try {
+    const parsed: unknown = JSON.parse(content);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export const fullDataBackupApi = {
   async exportBackup(): Promise<FullDataBackupExportResponse> {
@@ -40,7 +62,7 @@ export const fullDataBackupApi = {
       '/api/v1/system/full-data-backup/export',
       {
         responseType: 'text',
-        transformResponse: [(content: string) => content],
+        transformResponse: [transformExportResponse],
       },
     );
     const disposition = String(response.headers['content-disposition'] || '');
@@ -97,6 +119,7 @@ export const fullDataBackupApi = {
         digest: data.recovery.digest,
         destinationDigest: data.recovery.destination_digest,
       },
+      warnings: data.warnings || [],
       restartRequired: data.restart_required,
     };
   },

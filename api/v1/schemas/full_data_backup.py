@@ -65,6 +65,7 @@ class FullDataBackupRestoreResponse(BaseModel):
     """Evidence returned after an atomic restore completes."""
 
     success: bool
+    warnings: List[str] = Field(default_factory=list)
     incoming_digest: str
     destination_digest_before: str
     destination_digest_after: str
@@ -72,4 +73,3 @@ class FullDataBackupRestoreResponse(BaseModel):
     recovery_filename: str
     recovery: FullDataBackupRecoveryResponse
     restart_required: bool
-    warnings: List[str] = Field(default_factory=list)

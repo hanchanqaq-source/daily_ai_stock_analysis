@@ -7,14 +7,18 @@ import hashlib
 import json
 import os
 import sqlite3
+from contextlib import ExitStack
 from datetime import date, datetime
 from pathlib import Path
 
 import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 
+from api.v1.endpoints import full_data_backup
 from src.config import Config
-from src.core.config_manager import ConfigManager
+from src.core.config_manager import ConfigManager, ConfigManagerVersionConflict
 from src.services import full_data_backup_service as backup_module
 from src.services.full_data_backup_service import (
     FullDataBackupConflictError,
@@ -22,10 +26,15 @@ from src.services.full_data_backup_service import (
     FullDataBackupService,
     FullDataBackupValidationError,
 )
+from src.services.full_data_restore_journal import FullDataRestoreJournal
 from src.services.system_config_service import SystemConfigService
 from src.storage import (
     AnalysisHistory,
+    AgentProviderTurn,
+    ConversationMessage,
+    ConversationSummary,
     DatabaseManager,
+    FullDataRestoreCommitMarker,
     PeriodReportRecord,
     PortfolioAccount,
     PortfolioCashLedger,
@@ -40,14 +49,69 @@ from src.storage import (
 APPLICATION_VERSION = "test-app-7.4.1"
 
 
+def _stored_period_report_content() -> str:
+    return json.dumps(
+        {
+            "report_id": 303,
+            "status": "ready",
+            "period": "previous_week",
+            "report_kind": "historical",
+            "start_date": "2026-07-20",
+            "end_date": "2026-07-24",
+            "generated_at": "2026-08-01T11:00:00",
+            "source_record_count": 2,
+            "stock_summaries": [
+                {
+                    "stock_code": "600519",
+                    "stock_name": "Moutai",
+                    "asset_type": "stock",
+                    "record_count": 1,
+                    "latest_record_id": 101,
+                    "latest_created_at": "2026-07-23T09:00:00",
+                    "latest_trend": None,
+                    "latest_summary": "fixed stock content summary",
+                    "direction_counts": {
+                        "bullish": 0, "neutral": 0, "bearish": 0, "unknown": 1,
+                    },
+                    "source_record_ids": [101],
+                }
+            ],
+            "etf_summaries": [],
+            "market_reviews": [
+                {
+                    "record_id": 202,
+                    "region": None,
+                    "created_at": "2026-07-24T10:00:00",
+                    "summary": "fixed market content summary",
+                    "trend_prediction": None,
+                }
+            ],
+            "outlook": None,
+            "matched_outlook": None,
+            "disclaimer": None,
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def _restore_process_environment(snapshot: dict[str, str]) -> None:
+    os.environ.clear()
+    os.environ.update(snapshot)
+
+
 @pytest.fixture(autouse=True)
 def _reset_singletons():
-    original_environment = os.environ.copy()
-    yield
-    DatabaseManager.reset_instance()
-    Config.reset_instance()
-    os.environ.clear()
-    os.environ.update(original_environment)
+    original_environment = dict(os.environ)
+    cleanup_stack = ExitStack()
+    cleanup_stack.callback(_restore_process_environment, original_environment)
+    cleanup_stack.callback(Config.reset_instance)
+    cleanup_stack.callback(DatabaseManager.reset_instance)
+    try:
+        yield
+    finally:
+        cleanup_stack.close()
 
 
 def _write_env(path: Path, db_path: Path, *settings: str) -> None:
@@ -101,7 +165,7 @@ def _seed_source(db: DatabaseManager) -> None:
                     report_kind="historical",
                     start_date=date(2026, 7, 20),
                     end_date=date(2026, 7, 24),
-                    content_json='{"title":"fixed persisted period report"}',
+                    content_json=_stored_period_report_content(),
                     source_record_ids_json="[101,202]",
                     status="ready",
                     generated_at=datetime(2026, 8, 1, 11, 0, 0),
@@ -109,7 +173,7 @@ def _seed_source(db: DatabaseManager) -> None:
                 ),
                 PortfolioAccount(
                     id=401,
-                    owner_id="source-owner-is-not-backed-up",
+                    owner_id="source-owner-is-backed-up",
                     name="Fixed synthetic account",
                     market="cn",
                     base_currency="CNY",
@@ -153,6 +217,30 @@ def _seed_source(db: DatabaseManager) -> None:
                     cash_dividend_per_share=1.0,
                     note="fixed corporate event",
                     created_at=datetime(2026, 8, 1, 12, 3, 0),
+                ),
+                ConversationMessage(
+                    id=405,
+                    session_id="fixed-visible-session",
+                    role="user",
+                    content="fixed visible user content",
+                    created_at=datetime(2026, 8, 1, 12, 4, 0),
+                ),
+                ConversationMessage(
+                    id=406,
+                    session_id="fixed-visible-session",
+                    role="assistant",
+                    content="fixed visible assistant content",
+                    created_at=datetime(2026, 8, 1, 12, 5, 0),
+                ),
+                ConversationSummary(
+                    id=407,
+                    session_id="fixed-visible-session",
+                    summary="fixed visible summary content",
+                    covered_message_id=406,
+                    source_message_count=2,
+                    estimated_tokens=10,
+                    created_at=datetime(2026, 8, 1, 12, 6, 0),
+                    updated_at=datetime(2026, 8, 1, 12, 6, 0),
                 ),
             )
         )
@@ -238,7 +326,7 @@ def _prepare_source_and_destination(tmp_path: Path, monkeypatch, *, seed_destina
     _write_env(
         source_env,
         source_db_path,
-        'STOCK_LIST="600519,AAPL"',
+        "STOCK_LIST=600519,AAPL",
         "OPENAI_API_KEY=source-secret-is-excluded",
     )
     source_db, _, source_service = _open_install(
@@ -303,11 +391,10 @@ def _assert_fixed_source_state(service: FullDataBackupService) -> None:
         (202, "market-fixed-202", "fixed market content summary"),
     ]
     assert [row["id"] for row in data["tables"]["period_reports"]] == [303]
-    assert data["tables"]["period_reports"][0]["content_json"] == (
-        '{"title":"fixed persisted period report"}'
-    )
+    assert data["tables"]["period_reports"][0]["content_json"] == _stored_period_report_content()
     assert data["tables"]["period_reports"][0]["source_record_ids_json"] == "[101,202]"
     assert [row["id"] for row in data["tables"]["portfolio_accounts"]] == [401]
+    assert data["tables"]["portfolio_accounts"][0]["owner_id"] == "source-owner-is-backed-up"
     assert [row["id"] for row in data["tables"]["portfolio_cash_ledger"]] == [402]
     assert data["tables"]["portfolio_cash_ledger"][0]["note"] == "fixed cash event"
     assert [row["id"] for row in data["tables"]["portfolio_trades"]] == [403]
@@ -317,6 +404,8 @@ def _assert_fixed_source_state(service: FullDataBackupService) -> None:
     assert data["tables"]["portfolio_corporate_actions"][0]["note"] == (
         "fixed corporate event"
     )
+    assert [row["id"] for row in data["tables"]["conversation_messages"]] == [405, 406]
+    assert data["tables"]["conversation_summaries"][0]["id"] == 407
     assert data["configuration"]["values"] == {"STOCK_LIST": "600519,AAPL"}
 
 
@@ -365,7 +454,7 @@ def test_clean_install_restore_writes_recovery_before_replace_and_survives_resta
     _assert_fixed_source_state(restarted_service)
 
 
-def test_restore_recreates_dynamic_monkey_llm_values_and_removes_stale_safe_channel_fields(
+def test_restore_roundtrips_storage_canonical_json_configuration(
     tmp_path,
     monkeypatch,
 ) -> None:
@@ -374,53 +463,28 @@ def test_restore_recreates_dynamic_monkey_llm_values_and_removes_stale_safe_chan
         monkeypatch,
         seed_destination=False,
     )
-    service = install["service"]
     backup = install["backup"]
-    incoming_values = backup["data"]["configuration"]["values"]
-    incoming_values.update(
-        {
-            "LLM_CHANNELS": "monkey",
-            "LLM_MONKEY_PROTOCOL": "openai",
-            "LLM_MONKEY_BASE_URL": "https://llm.example.com/v1",
-            "LLM_MONKEY_MODELS": "monkey-chat,monkey-reasoner",
-            "LLM_MONKEY_ENABLED": "true",
-        }
+    backup["data"]["configuration"]["values"][
+        "AGENT_EVENT_ALERT_RULES_JSON"
+    ] = (
+        '[{"stock_code":"600519","alert_type":"price_cross",'
+        '"direction":"above","price":1800}]'
     )
-    backup["manifest"]["categories"]["configuration"]["row_count"] = len(incoming_values)
-    backup["integrity"]["value"] = service.canonical_sha256(backup)
-    install["env_path"].write_text(
-        install["env_path"].read_text(encoding="utf-8")
-        + "LLM_CHANNELS=stale\n"
-        + "LLM_STALE_PROTOCOL=openai\n"
-        + "LLM_STALE_BASE_URL=https://stale.example.com/v1\n"
-        + "LLM_STALE_MODELS=stale-chat\n"
-        + "LLM_STALE_ENABLED=true\n"
-        + "LLM_STALE_API_KEY=destination-secret-must-survive\n",
-        encoding="utf-8",
+    backup["manifest"]["categories"]["configuration"]["row_count"] += 1
+    backup["integrity"]["value"] = install["service"].canonical_sha256(backup)
+    preview = install["service"].preview_restore(backup)
+
+    install["service"].restore_backup(
+        backup,
+        preview_token=preview["preview_token"],
     )
 
-    preview = service.preview_restore(backup)
-    result = service.restore_backup(backup, preview_token=preview["preview_token"])
-
-    config_map = ConfigManager(env_path=install["env_path"]).read_config_map()
-    assert {key: config_map[key] for key in incoming_values} == incoming_values
-    for key in (
-        "LLM_STALE_PROTOCOL",
-        "LLM_STALE_BASE_URL",
-        "LLM_STALE_MODELS",
-        "LLM_STALE_ENABLED",
-    ):
-        assert key not in config_map
-    assert config_map["LLM_STALE_API_KEY"] == "destination-secret-must-survive"
-    expected_state_digest = service._state_digest(
-        backup["data"]["tables"],
-        backup["data"]["configuration"],
-    )
-    assert result["destination_digest_after"] == expected_state_digest
-    assert service.current_state_digest() == expected_state_digest
+    assert ConfigManager(env_path=install["env_path"]).read_config_map()[
+        "AGENT_EVENT_ALERT_RULES_JSON"
+    ] == backup["data"]["configuration"]["values"]["AGENT_EVENT_ALERT_RULES_JSON"]
 
 
-def test_post_publish_keyboard_interrupt_rolls_back_and_compensates_before_propagating(
+def test_recovery_artifact_durable_publish_failure_is_safe_through_api(
     tmp_path,
     monkeypatch,
 ) -> None:
@@ -430,47 +494,55 @@ def test_post_publish_keyboard_interrupt_rolls_back_and_compensates_before_propa
         seed_destination=True,
     )
     service = install["service"]
-    manager = install["config"]._manager
-    original_publish = manager._publish_staged_bytes
-    interruption = KeyboardInterrupt("injected interrupt after config publication")
-    interrupt_pending = True
-    before = service.export_backup()
-    before_digest = service.current_state_digest()
     before_database_digest = _sqlite_logical_digest(install["db_path"])
-    before_config_bytes = install["env_path"].read_bytes()
-    baseline_receipts = len(SystemConfigService._restore_receipts)
+    before_configuration = install["env_path"].read_bytes()
 
-    def publish_then_interrupt_once(staged_path):
-        nonlocal interrupt_pending
-        original_publish(staged_path)
-        if interrupt_pending:
-            interrupt_pending = False
-            raise interruption
+    app = FastAPI()
+    app.include_router(
+        full_data_backup.router,
+        prefix="/api/v1/system/full-data-backup",
+    )
+    app.dependency_overrides[full_data_backup.get_full_data_backup_service] = (
+        lambda: service
+    )
+    client = TestClient(app, raise_server_exceptions=False)
+    preview_response = client.post(
+        "/api/v1/system/full-data-backup/preview",
+        json=install["backup"],
+    )
+    assert preview_response.status_code == 200
 
-    monkeypatch.setattr(manager, "_publish_staged_bytes", publish_then_interrupt_once)
-    preview = service.preview_restore(install["backup"])
+    def reject_durable_publication(_staged_path, _destination) -> None:
+        raise OSError("private recovery publication detail")
 
-    with pytest.raises(KeyboardInterrupt) as caught:
-        service.restore_backup(
-            install["backup"],
-            preview_token=preview["preview_token"],
-        )
+    monkeypatch.setattr(
+        backup_module,
+        "durable_replace",
+        reject_durable_publication,
+        raising=False,
+    )
+    response = client.post(
+        "/api/v1/system/full-data-backup/restore",
+        json={
+            "backup": install["backup"],
+            "preview_token": preview_response.json()["preview_token"],
+        },
+    )
 
-    assert caught.value is interruption
-    assert caught.value.__context__ is None
-    assert caught.value.__cause__ is None
-    assert service.current_state_digest() == before_digest
+    assert response.status_code == 500
+    assert response.json() == {
+        "detail": {
+            "error": "internal_error",
+            "message": "Full-data backup operation failed",
+        }
+    }
+    assert "private recovery publication detail" not in response.text
     assert _sqlite_logical_digest(install["db_path"]) == before_database_digest
-    assert install["env_path"].read_bytes() == before_config_bytes
-    assert len(SystemConfigService._restore_receipts) == baseline_receipts
-    recovery_paths = list(service.recovery_directory.glob("*.json"))
-    assert len(recovery_paths) == 1
-    recovery = json.loads(recovery_paths[0].read_text(encoding="utf-8"))
-    service.validate_backup(recovery)
-    assert recovery["data"] == before["data"]
+    assert install["env_path"].read_bytes() == before_configuration
+    assert not list(service.recovery_directory.glob("*.json"))
 
 
-def test_restore_surfaces_post_commit_receipt_finalization_failure_without_leak(
+def test_restore_reports_truthful_success_when_post_commit_receipt_finalize_needs_cleanup(
     tmp_path,
     monkeypatch,
 ) -> None:
@@ -500,12 +572,217 @@ def test_restore_surfaces_post_commit_receipt_finalization_failure_without_leak(
     )
 
     assert result["success"] is True
-    assert result["warnings"] == ["Configuration receipt finalization failed after committed restore."]
+    assert result["warnings"] == [
+        "Configuration receipt cleanup required a safe post-commit retry."
+    ]
     assert len(SystemConfigService._restore_receipts) == baseline_receipts
     _assert_fixed_source_state(service)
 
 
-def test_commit_then_raise_keeps_incoming_config_and_returns_truthful_committed_result(
+@pytest.mark.parametrize("exception_type", (KeyboardInterrupt, SystemExit))
+def test_post_commit_base_exception_preserves_committed_restore_and_propagates(
+    tmp_path,
+    monkeypatch,
+    exception_type,
+) -> None:
+    monkeypatch.setenv("PP02_APPLICATION_VERSION", APPLICATION_VERSION)
+    install = _prepare_source_and_destination(
+        tmp_path,
+        monkeypatch,
+        seed_destination=True,
+    )
+    baseline_receipts = len(SystemConfigService._restore_receipts)
+
+    def interrupt_after_commit(phase: str) -> None:
+        if phase == "after_db_commit":
+            raise exception_type("injected post-commit interruption")
+
+    service = FullDataBackupService(
+        db_manager=install["db"],
+        config_service=install["config"],
+        application_version=APPLICATION_VERSION,
+        crash_test_hook=interrupt_after_commit,
+    )
+    preview = service.preview_restore(install["backup"])
+
+    with pytest.raises(exception_type, match="post-commit interruption"):
+        service.restore_backup(
+            install["backup"],
+            preview_token=preview["preview_token"],
+        )
+
+    _assert_fixed_source_state(service)
+    assert service.export_configuration_values() == {"STOCK_LIST": "600519,AAPL"}
+    assert len(SystemConfigService._restore_receipts) == baseline_receipts
+    journal_path = (
+        service.recovery_directory / ".pp02-full-data-restore-transaction.json"
+    )
+    assert journal_path.is_file()
+    with install["db"].get_session() as session:
+        assert session.query(FullDataRestoreCommitMarker).count() == 1
+
+    _, _, restarted_service = _open_install(
+        monkeypatch,
+        install["env_path"],
+        install["db_path"],
+    )
+    _assert_fixed_source_state(restarted_service)
+    assert restarted_service.export_configuration_values() == {
+        "STOCK_LIST": "600519,AAPL"
+    }
+    assert not journal_path.exists()
+    with restarted_service.db.get_session() as session:
+        assert session.query(FullDataRestoreCommitMarker).count() == 0
+
+
+@pytest.mark.parametrize("exception_type", (KeyboardInterrupt, SystemExit))
+def test_commit_result_exception_uses_durable_marker_before_compensation(
+    tmp_path,
+    monkeypatch,
+    exception_type,
+) -> None:
+    monkeypatch.setenv("PP02_APPLICATION_VERSION", APPLICATION_VERSION)
+    install = _prepare_source_and_destination(
+        tmp_path,
+        monkeypatch,
+        seed_destination=True,
+    )
+    service = install["service"]
+    preview = service.preview_restore(install["backup"])
+    baseline_receipts = len(SystemConfigService._restore_receipts)
+    original_get_session = install["db"].get_session
+    restore_session = original_get_session()
+    original_commit = restore_session.commit
+
+    def commit_then_interrupt() -> None:
+        original_commit()
+        raise exception_type("injected uncertain commit result")
+
+    monkeypatch.setattr(restore_session, "commit", commit_then_interrupt)
+    monkeypatch.setattr(install["db"], "get_session", lambda: restore_session)
+
+    with pytest.raises(exception_type, match="uncertain commit result"):
+        service.restore_backup(
+            install["backup"],
+            preview_token=preview["preview_token"],
+        )
+
+    monkeypatch.setattr(install["db"], "get_session", original_get_session)
+    _assert_fixed_source_state(service)
+    assert service.export_configuration_values() == {"STOCK_LIST": "600519,AAPL"}
+    assert len(SystemConfigService._restore_receipts) == baseline_receipts
+    journal_path = (
+        service.recovery_directory / ".pp02-full-data-restore-transaction.json"
+    )
+    assert journal_path.is_file()
+    with original_get_session() as session:
+        assert session.query(FullDataRestoreCommitMarker).count() == 1
+
+
+def test_uncertain_commit_marker_query_failure_preserves_incoming_and_evidence(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("PP02_APPLICATION_VERSION", APPLICATION_VERSION)
+    install = _prepare_source_and_destination(
+        tmp_path,
+        monkeypatch,
+        seed_destination=True,
+    )
+    service = install["service"]
+    preview = service.preview_restore(install["backup"])
+    baseline_receipts = len(SystemConfigService._restore_receipts)
+    original_get_session = install["db"].get_session
+    restore_session = original_get_session()
+    original_commit = restore_session.commit
+
+    def commit_then_interrupt() -> None:
+        original_commit()
+        raise KeyboardInterrupt("injected uncertain commit with unreadable marker")
+
+    def fail_marker_query(_self, _tx_id: str) -> bool:
+        raise RuntimeError("injected independent marker query failure")
+
+    monkeypatch.setattr(restore_session, "commit", commit_then_interrupt)
+    monkeypatch.setattr(install["db"], "get_session", lambda: restore_session)
+    monkeypatch.setattr(
+        FullDataRestoreJournal,
+        "is_committed",
+        fail_marker_query,
+        raising=False,
+    )
+
+    with pytest.raises(KeyboardInterrupt, match="unreadable marker"):
+        service.restore_backup(
+            install["backup"],
+            preview_token=preview["preview_token"],
+        )
+
+    monkeypatch.setattr(install["db"], "get_session", original_get_session)
+    _assert_fixed_source_state(service)
+    assert service.export_configuration_values() == {"STOCK_LIST": "600519,AAPL"}
+    assert len(SystemConfigService._restore_receipts) == baseline_receipts
+    journal_path = (
+        service.recovery_directory / ".pp02-full-data-restore-transaction.json"
+    )
+    assert journal_path.is_file()
+    with original_get_session() as session:
+        assert session.query(FullDataRestoreCommitMarker).count() == 1
+
+
+@pytest.mark.parametrize(
+    ("interruption_point", "exception_type"),
+    (
+        ("_verify_configuration", KeyboardInterrupt),
+        ("_replace_tables", SystemExit),
+        ("_verify_restored_tables", KeyboardInterrupt),
+    ),
+)
+def test_process_interruption_after_config_apply_rolls_back_and_propagates(
+    tmp_path,
+    monkeypatch,
+    interruption_point,
+    exception_type,
+) -> None:
+    install = _prepare_source_and_destination(
+        tmp_path,
+        monkeypatch,
+        seed_destination=True,
+    )
+    service = install["service"]
+    before_database = _sqlite_logical_digest(install["db_path"])
+    before_config = install["env_path"].read_bytes()
+    before_state = service.current_state_digest()
+    baseline_receipts = len(SystemConfigService._restore_receipts)
+    original = getattr(service, interruption_point)
+    calls = 0
+
+    def interrupt_once(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise exception_type(f"injected {interruption_point} interruption")
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(service, interruption_point, interrupt_once)
+    preview = service.preview_restore(install["backup"])
+
+    with pytest.raises(exception_type, match=interruption_point):
+        service.restore_backup(
+            install["backup"],
+            preview_token=preview["preview_token"],
+        )
+
+    assert _sqlite_logical_digest(install["db_path"]) == before_database
+    assert install["env_path"].read_bytes() == before_config
+    assert service.current_state_digest() == before_state
+    assert len(SystemConfigService._restore_receipts) == baseline_receipts
+    assert not (
+        service.recovery_directory / ".pp02-full-data-restore-transaction.json"
+    ).exists()
+
+
+def test_process_interruption_compensation_preserves_concurrent_config_writer(
     tmp_path,
     monkeypatch,
 ) -> None:
@@ -515,36 +792,125 @@ def test_commit_then_raise_keeps_incoming_config_and_returns_truthful_committed_
         seed_destination=True,
     )
     service = install["service"]
+    before_database = _sqlite_logical_digest(install["db_path"])
+    baseline_receipts = len(SystemConfigService._restore_receipts)
+
+    def write_concurrently_then_interrupt(_session, _tables):
+        writer_manager = ConfigManager(env_path=install["env_path"])
+        SystemConfigService(manager=writer_manager).update(
+            config_version=writer_manager.get_config_version(),
+            items=[{"key": "MAX_WORKERS", "value": "7"}],
+            reload_now=False,
+        )
+        raise KeyboardInterrupt("injected interruption after concurrent config edit")
+
+    monkeypatch.setattr(service, "_verify_restored_tables", write_concurrently_then_interrupt)
     preview = service.preview_restore(install["backup"])
-    original_get_session = service.db.get_session
-    injected = False
 
-    def get_session_with_commit_then_raise():
-        nonlocal injected
-        session = original_get_session()
-        if not injected:
-            injected = True
-            original_commit = session.commit
+    with pytest.raises(KeyboardInterrupt, match="concurrent config edit"):
+        service.restore_backup(
+            install["backup"],
+            preview_token=preview["preview_token"],
+        )
 
-            def commit_then_raise():
-                original_commit()
-                raise RuntimeError("injected error after real database commit")
+    assert _sqlite_logical_digest(install["db_path"]) == before_database
+    config_map = ConfigManager(env_path=install["env_path"]).read_config_map()
+    assert config_map["STOCK_LIST"] == "000001"
+    assert config_map["MAX_WORKERS"] == "7"
+    assert config_map["OPENAI_API_KEY"] == "destination-secret-must-survive"
+    assert len(SystemConfigService._restore_receipts) == baseline_receipts
 
-            session.commit = commit_then_raise
-        return session
 
-    monkeypatch.setattr(service.db, "get_session", get_session_with_commit_then_raise)
-
-    result = service.restore_backup(
-        install["backup"],
-        preview_token=preview["preview_token"],
+def test_compensation_recheck_conflict_preserves_second_writer_without_receipt_leak(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    install = _prepare_source_and_destination(
+        tmp_path,
+        monkeypatch,
+        seed_destination=True,
     )
+    service = install["service"]
+    baseline_receipts = len(SystemConfigService._restore_receipts)
 
-    assert result["success"] is True
-    assert result["warnings"] == ["Database commit completed although commit finalization raised an error."]
-    assert service.current_state_digest() == result["destination_digest_after"]
-    assert service.export_configuration_values() == install["backup"]["data"]["configuration"]["values"]
-    _assert_fixed_source_state(service)
+    def fail_after_config_apply(_session, _tables):
+        raise RuntimeError("force compensation")
+
+    def second_writer_then_recheck_conflict(**_kwargs):
+        writer = ConfigManager(env_path=install["env_path"])
+        SystemConfigService(manager=writer).update(
+            config_version=writer.get_config_version(),
+            items=[{"key": "MAX_WORKERS", "value": "9"}],
+            reload_now=False,
+        )
+        raise ConfigManagerVersionConflict(writer.get_config_version())
+
+    monkeypatch.setattr(service, "_replace_tables", fail_after_config_apply)
+    monkeypatch.setattr(
+        install["config"]._manager,
+        "compensate_managed_assignments_atomically",
+        second_writer_then_recheck_conflict,
+    )
+    preview = service.preview_restore(install["backup"])
+
+    with pytest.raises(FullDataBackupConflictError):
+        service.restore_backup(
+            install["backup"],
+            preview_token=preview["preview_token"],
+        )
+
+    current = ConfigManager(env_path=install["env_path"]).read_config_map()
+    assert current["MAX_WORKERS"] == "9"
+    assert len(SystemConfigService._restore_receipts) == baseline_receipts
+
+
+def test_post_publish_keyboard_interrupt_rolls_back_restore_and_config(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    install = _prepare_source_and_destination(
+        tmp_path,
+        monkeypatch,
+        seed_destination=True,
+    )
+    service = install["service"]
+    manager = install["config"]._manager
+    original_publish = manager._publish_staged_bytes
+    before_database = _sqlite_logical_digest(install["db_path"])
+    before_state = service.current_state_digest()
+    before_config = install["env_path"].read_bytes()
+    baseline_receipts = len(SystemConfigService._restore_receipts)
+    publish_count = 0
+
+    def publish_then_interrupt(staged_path):
+        nonlocal publish_count
+        original_publish(staged_path)
+        publish_count += 1
+        raise KeyboardInterrupt("injected restore interruption after publication")
+
+    monkeypatch.setattr(manager, "_publish_staged_bytes", publish_then_interrupt)
+    preview = service.preview_restore(install["backup"])
+
+    with pytest.raises(
+        KeyboardInterrupt,
+        match="injected restore interruption after publication",
+    ):
+        service.restore_backup(
+            install["backup"],
+            preview_token=preview["preview_token"],
+        )
+
+    assert publish_count >= 2
+    assert install["env_path"].read_bytes() == before_config
+    assert _sqlite_logical_digest(install["db_path"]) == before_database
+    assert service.current_state_digest() == before_state
+    assert len(SystemConfigService._restore_receipts) == baseline_receipts
+    recovery_paths = list(service.recovery_directory.glob("*.json"))
+    assert len(recovery_paths) == 1
+    assert not (
+        service.recovery_directory / ".pp02-full-data-restore-transaction.json"
+    ).exists()
+    service.validate_backup(json.loads(recovery_paths[0].read_text(encoding="utf-8")))
 
 
 def test_restore_uses_validated_immutable_snapshot_when_caller_mutates_during_recovery(
@@ -626,6 +992,47 @@ def test_restore_clears_derived_portfolio_caches_with_foreign_keys_enabled(
         }
 
 
+def test_restore_purges_excluded_provider_turns_before_conversation_replacement(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    install = _prepare_source_and_destination(
+        tmp_path,
+        monkeypatch,
+        seed_destination=False,
+    )
+    with install["db"].get_session() as session:
+        session.add(
+            AgentProviderTurn(
+                id=999,
+                session_id="fixed-visible-session",
+                run_id="target-collision",
+                provider="synthetic-provider",
+                model="synthetic-model",
+                anchor_user_message_id=405,
+                anchor_assistant_message_id=406,
+                messages_json='[{"provider_trace":"target-only"}]',
+                contains_reasoning=True,
+                contains_tool_calls=False,
+                contains_thinking_blocks=False,
+                must_roundtrip=True,
+                estimated_tokens=1,
+                created_at=datetime(2026, 8, 2, 12, 0, 0),
+            )
+        )
+        session.commit()
+    preview = install["service"].preview_restore(install["backup"])
+
+    install["service"].restore_backup(
+        install["backup"],
+        preview_token=preview["preview_token"],
+    )
+
+    with install["db"].get_session() as session:
+        assert session.query(AgentProviderTurn).count() == 0
+        assert session.get(ConversationMessage, 405).content == "fixed visible user content"
+
+
 @pytest.mark.parametrize(
     "mutation",
     (
@@ -689,7 +1096,7 @@ def test_restore_rejects_stale_destination_and_stale_input_without_side_effects(
         )
 
     assert service.current_state_digest() == changed_destination_digest
-    assert not service.recovery_directory.exists()
+    assert not list(service.recovery_directory.glob("*.json"))
 
     input_preview = service.preview_restore(install["backup"])
     changed_input = copy.deepcopy(install["backup"])
@@ -706,7 +1113,7 @@ def test_restore_rejects_stale_destination_and_stale_input_without_side_effects(
         )
 
     assert service.current_state_digest() == before_input_rejection
-    assert not service.recovery_directory.exists()
+    assert not list(service.recovery_directory.glob("*.json"))
 
     configuration_preview = service.preview_restore(install["backup"])
     install["env_path"].write_text(
@@ -725,7 +1132,7 @@ def test_restore_rejects_stale_destination_and_stale_input_without_side_effects(
         )
 
     assert service.current_state_digest() == changed_configuration_digest
-    assert not service.recovery_directory.exists()
+    assert not list(service.recovery_directory.glob("*.json"))
 
 
 @pytest.mark.parametrize("ttl", (float("nan"), float("inf"), float("-inf")))

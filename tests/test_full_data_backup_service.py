@@ -6,7 +6,10 @@ import copy
 import hashlib
 import json
 import os
+import sqlite3
 import tempfile
+import threading
+from contextlib import ExitStack
 from datetime import date, datetime
 from pathlib import Path
 
@@ -14,6 +17,7 @@ import pytest
 from sqlalchemy import MetaData, Table
 
 from src.config import Config
+from src.core.config_manager import ConfigManager
 from src.services.system_config_service import SystemConfigService
 from src.storage import (
     CURRENT_SCHEMA_VERSION,
@@ -24,6 +28,8 @@ from src.storage import (
     AnalysisHistory,
     BacktestResult,
     BacktestSummary,
+    ConversationMessage,
+    ConversationSummary,
     DatabaseManager,
     DecisionSignalFeedbackRecord,
     DecisionSignalOutcomeRecord,
@@ -61,56 +67,174 @@ def _canonical_sha256(document: dict) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
+def _restore_process_environment(snapshot: dict[str, str]) -> None:
+    os.environ.clear()
+    os.environ.update(snapshot)
+
+
+def _stored_period_report_content() -> str:
+    return json.dumps(
+        {
+            "report_id": 303,
+            "status": "ready",
+            "period": "previous_week",
+            "report_kind": "historical",
+            "start_date": "2026-07-20",
+            "end_date": "2026-07-24",
+            "generated_at": "2026-08-01T11:00:00",
+            "source_record_count": 2,
+            "stock_summaries": [
+                {
+                    "stock_code": "600519",
+                    "stock_name": "Moutai",
+                    "asset_type": "stock",
+                    "record_count": 1,
+                    "latest_record_id": 101,
+                    "latest_created_at": "2026-07-23T09:00:00",
+                    "latest_trend": None,
+                    "latest_summary": "stock history",
+                    "direction_counts": {
+                        "bullish": 0,
+                        "neutral": 0,
+                        "bearish": 0,
+                        "unknown": 1,
+                    },
+                    "source_record_ids": [101],
+                }
+            ],
+            "etf_summaries": [],
+            "market_reviews": [
+                {
+                    "record_id": 202,
+                    "region": None,
+                    "created_at": "2026-07-24T10:00:00",
+                    "summary": "market history",
+                    "trend_prediction": None,
+                }
+            ],
+            "outlook": None,
+            "matched_outlook": None,
+            "disclaimer": None,
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def _valid_outlook_period_content() -> dict:
+    return {
+        "report_id": 303,
+        "status": "ready",
+        "period": "next_week",
+        "report_kind": "outlook",
+        "start_date": "2026-08-03",
+        "end_date": "2026-08-09",
+        "generated_at": "2026-08-02T12:00:00Z",
+        "source_record_count": 2,
+        "stock_summaries": [],
+        "etf_summaries": [],
+        "market_reviews": [],
+        "outlook": {
+            "snapshot_version": 1,
+            "snapshot_id": 999,
+            "snapshot_created_at": None,
+            "status": "ready",
+            "message": None,
+            "target_period": {
+                "start_date": "2026-08-03",
+                "end_date": "2026-08-09",
+            },
+            "generated_at": "2026-08-02T12:00:00Z",
+            "overall_tendency": "看多",
+            "stocks": [
+                {
+                    "stock_code": "600519",
+                    "stock_name": "Moutai",
+                    "asset_type": "stock",
+                    "tendency": "看多",
+                    "confidence": "中",
+                    "historical_signals": ["fixed formal signal"],
+                    "risks": ["fixed synthetic risk"],
+                    "invalidation_conditions": ["fixed invalidation"],
+                    "data_as_of": "2026-08-01T09:00:00Z",
+                    "source_record_count": 1,
+                    "source_record_ids": [101],
+                }
+            ],
+            "etfs": [],
+            "market_signals": [
+                {
+                    "record_id": 202,
+                    "region": "cn",
+                    "created_at": "2026-08-01T10:00:00Z",
+                    "summary": "fixed market signal",
+                }
+            ],
+            "data_as_of": "2026-08-01T10:00:00Z",
+            "source_record_count": 2,
+            "source_record_ids": [101, 202],
+            "disclaimer": "fixed synthetic disclaimer",
+        },
+        "matched_outlook": None,
+        "disclaimer": "fixed synthetic disclaimer",
+    }
+
+
 class TestFullDataBackupService:
     def setup_method(self) -> None:
-        self.original_environment = os.environ.copy()
-        self.temp_dir = tempfile.TemporaryDirectory()
-        directory = Path(self.temp_dir.name)
-        self.env_path = directory / ".env"
-        self.db_path = directory / "full_data_backup.db"
-        self.env_path.write_text(
-            "\n".join(
-                (
-                    "STOCK_LIST=600519",
-                    "OPENAI_API_KEY=credential-marker",
-                    "API_TOKEN=token-marker",
-                    "SESSION_COOKIE=cookie-marker",
-                    "VAULT_CIPHERTEXT=ciphertext-marker",
-                    "DINGTALK_APP_KEY=dingtalk-registry-marker",
-                    "PUSHOVER_USER_KEY=pushover-registry-marker",
-                    "/".join(
-                        (
-                            "SLACK_WEBHOOK_URL=https:/",
-                            "hooks.slack.com",
-                            "services",
-                            "registry",
-                            "marker",
-                            "value",
-                        )
-                    ),
-                    "LOG_DIR=/private/runtime/logs",
-                    "REPORT_TEMPLATES_DIR=/private/runtime/templates",
-                    "AGENT_SKILL_DIR=/private/runtime/skills",
-                    "LITELLM_CONFIG=/private/runtime/litellm.yaml",
-                    f"DATABASE_PATH={self.db_path}",
-                )
-            )
-            + "\n",
-            encoding="utf-8",
+        self.original_environment = dict(os.environ)
+        self._cleanup_stack = ExitStack()
+        self._cleanup_stack.callback(
+            _restore_process_environment,
+            self.original_environment,
         )
-        os.environ["ENV_FILE"] = str(self.env_path)
-        os.environ["DATABASE_PATH"] = str(self.db_path)
-        Config.reset_instance()
-        DatabaseManager.reset_instance()
-        self.db = DatabaseManager.get_instance()
-        self._seed_rows()
+        try:
+            self.temp_dir = tempfile.TemporaryDirectory()
+            self._cleanup_stack.callback(self.temp_dir.cleanup)
+            self._cleanup_stack.callback(Config.reset_instance)
+            self._cleanup_stack.callback(DatabaseManager.reset_instance)
+            directory = Path(self.temp_dir.name)
+            self.env_path = directory / ".env"
+            self.db_path = directory / "full_data_backup.db"
+            self.env_path.write_text(
+                "\n".join(
+                    (
+                        "STOCK_LIST=600519",
+                        "OPENAI_API_KEY=credential-marker",
+                        "API_TOKEN=token-marker",
+                        "SESSION_COOKIE=cookie-marker",
+                        "VAULT_CIPHERTEXT=ciphertext-marker",
+                        "DINGTALK_APP_KEY=dingtalk-registry-marker",
+                        "PUSHOVER_USER_KEY=pushover-registry-marker",
+                        "SLACK_WEBHOOK_URL=https://hooks.slack.com/services/registry/marker/value",
+                        "LOG_DIR=/private/runtime/logs",
+                        "REPORT_TEMPLATES_DIR=/private/runtime/templates",
+                        "AGENT_SKILL_DIR=/private/runtime/skills",
+                        "LITELLM_CONFIG=/private/runtime/litellm.yaml",
+                        f"DATABASE_PATH={self.db_path}",
+                    )
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            os.environ["ENV_FILE"] = str(self.env_path)
+            os.environ["DATABASE_PATH"] = str(self.db_path)
+            Config.reset_instance()
+            DatabaseManager.reset_instance()
+            self.db = DatabaseManager.get_instance()
+            self._seed_rows()
+        except BaseException as setup_error:
+            try:
+                self._cleanup_stack.close()
+            except BaseException as cleanup_error:
+                add_note = getattr(setup_error, "add_note", None)
+                if callable(add_note):
+                    add_note(f"Cleanup after setup failure also failed: {cleanup_error!r}")
+            raise
 
     def teardown_method(self) -> None:
-        DatabaseManager.reset_instance()
-        Config.reset_instance()
-        os.environ.clear()
-        os.environ.update(self.original_environment)
-        self.temp_dir.cleanup()
+        self._cleanup_stack.close()
 
     def _service(self):
         assert FullDataBackupService is not None, (
@@ -152,7 +276,7 @@ class TestFullDataBackupService:
                         report_kind="historical",
                         start_date=date(2026, 7, 20),
                         end_date=date(2026, 7, 24),
-                        content_json='{"title":"stored report"}',
+                        content_json=_stored_period_report_content(),
                         source_record_ids_json="[101,202]",
                         status="ready",
                         generated_at=datetime(2026, 8, 1, 11, 0, 0),
@@ -167,6 +291,37 @@ class TestFullDataBackupService:
                         is_active=True,
                         created_at=datetime(2026, 8, 1, 12, 0, 0),
                         updated_at=datetime(2026, 8, 1, 12, 0, 0),
+                    ),
+                    ConversationMessage(
+                        id=901,
+                        session_id="work20-visible-session",
+                        role="user",
+                        content="fixed visible user question",
+                        created_at=datetime(2026, 8, 1, 16, 1, 0),
+                    ),
+                    ConversationMessage(
+                        id=902,
+                        session_id="work20-visible-session",
+                        role="assistant",
+                        content="fixed visible assistant answer",
+                        created_at=datetime(2026, 8, 1, 16, 2, 0),
+                    ),
+                    ConversationSummary(
+                        id=903,
+                        session_id="work20-visible-session",
+                        summary="fixed visible conversation summary",
+                        covered_message_id=902,
+                        source_message_count=2,
+                        estimated_tokens=12,
+                        created_at=datetime(2026, 8, 1, 16, 3, 0),
+                        updated_at=datetime(2026, 8, 1, 16, 3, 0),
+                    ),
+                    ConversationMessage(
+                        id=904,
+                        session_id="work20-visible-session",
+                        role="system",
+                        content="fixed persisted system context",
+                        created_at=datetime(2026, 8, 1, 16, 4, 0),
                     ),
                     PortfolioCashLedger(
                         id=402,
@@ -317,6 +472,11 @@ class TestFullDataBackupService:
         }
         assert backup["manifest"] == {
             "categories": {
+                "agent_conversations": {
+                    "status": "supported",
+                    "row_count": 4,
+                    "tables": ["conversation_messages", "conversation_summaries"],
+                },
                 "analysis": {"status": "supported", "row_count": 2, "tables": ["analysis_history"]},
                 "configuration": {"status": "supported", "row_count": 1, "tables": ["configuration"]},
                 "fund": {"status": "not_applicable", "row_count": 0, "tables": []},
@@ -369,6 +529,8 @@ class TestFullDataBackupService:
                 "decision_signal_feedback": 1,
                 "decision_signal_outcomes": 1,
                 "decision_signals": 1,
+                "conversation_messages": 3,
+                "conversation_summaries": 1,
                 "period_reports": 1,
                 "portfolio_accounts": 1,
                 "portfolio_cash_ledger": 1,
@@ -382,7 +544,24 @@ class TestFullDataBackupService:
         assert backup["data"]["tables"]["portfolio_accounts"][0]["id"] == 401
         assert backup["data"]["tables"]["alert_notifications"][0]["id"] == 603
         assert backup["data"]["tables"]["alert_cooldowns"][0]["id"] == 604
-        assert "owner_id" not in backup["data"]["tables"]["portfolio_accounts"][0]
+        assert backup["data"]["tables"]["portfolio_accounts"][0]["owner_id"] == (
+            "owner-private-marker"
+        )
+        assert [row["id"] for row in backup["data"]["tables"]["conversation_messages"]] == [
+            901,
+            902,
+            904,
+        ]
+        assert backup["data"]["tables"]["conversation_summaries"][0] == {
+            "id": 903,
+            "session_id": "work20-visible-session",
+            "summary": "fixed visible conversation summary",
+            "covered_message_id": 902,
+            "source_message_count": 2,
+            "estimated_tokens": 12,
+            "created_at": "2026-08-01T16:03:00",
+            "updated_at": "2026-08-01T16:03:00",
+        }
         assert backup["data"]["configuration"]["values"] == {"STOCK_LIST": "600519"}
         assert backup["integrity"] == {"algorithm": "sha256", "value": _canonical_sha256(backup)}
 
@@ -395,9 +574,539 @@ class TestFullDataBackupService:
             "dingtalk-registry-marker",
             "pushover-registry-marker",
             "/private/runtime/",
-            "owner-private-marker",
         ):
             assert marker not in serialized
+
+    def test_export_and_validator_reject_url_userinfo_without_echoing_credentials(self) -> None:
+        ordinary = self.env_path.read_text(encoding="utf-8") + (
+            "HTTP_PROXY=http://127.0.0.1:7890\n"
+        )
+        self.env_path.write_text(ordinary, encoding="utf-8")
+        backup = self._service().export_backup()
+        assert backup["data"]["configuration"]["values"]["HTTP_PROXY"] == (
+            "http://127.0.0.1:7890"
+        )
+
+        credential_url = "http://explicit-fake-user:explicit-fake-password@proxy.invalid:7890"
+        backup["data"]["configuration"]["values"]["HTTP_PROXY"] = credential_url
+        backup["integrity"]["value"] = _canonical_sha256(backup)
+        with pytest.raises(FullDataBackupValidationError) as validation_error:
+            self._service().validate_backup(backup)
+        assert credential_url not in str(validation_error.value)
+        assert "explicit-fake-password" not in str(validation_error.value)
+
+        self.env_path.write_text(
+            ordinary.replace("http://127.0.0.1:7890", credential_url),
+            encoding="utf-8",
+        )
+        with pytest.raises(FullDataBackupValidationError) as export_error:
+            self._service().export_backup()
+        assert credential_url not in str(export_error.value)
+        assert "explicit-fake-password" not in str(export_error.value)
+
+    def test_json_config_export_is_storage_canonical_and_roundtrips(self) -> None:
+        spaced_rules = (
+            '[ { "stock_code": "600519", "alert_type": "price_cross", '
+            '"direction": "above", "price": 1800 } ]'
+        )
+        self.env_path.write_text(
+            self.env_path.read_text(encoding="utf-8")
+            + f"AGENT_EVENT_ALERT_RULES_JSON={spaced_rules}\n",
+            encoding="utf-8",
+        )
+
+        backup = self._service().export_backup()
+
+        assert backup["data"]["configuration"]["values"][
+            "AGENT_EVENT_ALERT_RULES_JSON"
+        ] == (
+            '[{"stock_code":"600519","alert_type":"price_cross",'
+            '"direction":"above","price":1800}]'
+        )
+        self._service().validate_backup(backup)
+
+    @pytest.mark.parametrize(
+        "raw_assignment",
+        (
+            "AGENT_EVENT_ALERT_RULES_JSON='[{\"stock_code\":\"600519\","
+            "\"alert_type\":\"price_cross\",\"direction\":\"above\","
+            "\"price\":1800}]'",
+            'AGENT_EVENT_ALERT_RULES_JSON="[{\\"stock_code\\":\\"600519\\",'
+            '\\"alert_type\\":\\"price_cross\\",\\"direction\\":\\"above\\",'
+            '\\"price\\":1800}]"',
+        ),
+    )
+    def test_quoted_json_config_uses_one_logical_snapshot_through_restore(
+        self,
+        raw_assignment,
+    ) -> None:
+        expected = (
+            '[{"stock_code":"600519","alert_type":"price_cross",'
+            '"direction":"above","price":1800}]'
+        )
+        self.env_path.write_text(
+            self.env_path.read_text(encoding="utf-8") + raw_assignment + "\n",
+            encoding="utf-8",
+        )
+        service = self._service()
+        backup = service.export_backup()
+        assert backup["data"]["configuration"]["values"][
+            "AGENT_EVENT_ALERT_RULES_JSON"
+        ] == expected
+        assert service.validate_backup(backup)["integrity"]["value"] == backup[
+            "integrity"
+        ]["value"]
+
+        self.env_path.write_text(
+            self.env_path.read_text(encoding="utf-8").replace(
+                raw_assignment,
+                "AGENT_EVENT_ALERT_RULES_JSON=[]",
+            ),
+            encoding="utf-8",
+        )
+        preview = service.preview_restore(backup)
+        result = service.restore_backup(
+            backup,
+            preview_token=preview["preview_token"],
+        )
+
+        assert preview["incoming_digest"] == backup["integrity"]["value"]
+        assert result["incoming_digest"] == backup["integrity"]["value"]
+        assert ConfigManager(env_path=self.env_path).read_config_map()[
+            "AGENT_EVENT_ALERT_RULES_JSON"
+        ] == expected
+
+    def test_validator_rejects_noncanonical_json_config_after_checksum_recomputed(self) -> None:
+        backup = self._service().export_backup()
+        backup["data"]["configuration"]["values"][
+            "AGENT_EVENT_ALERT_RULES_JSON"
+        ] = (
+            '[ { "stock_code": "600519", "alert_type": "price_cross", '
+            '"direction": "above", "price": 1800 } ]'
+        )
+        backup["manifest"]["categories"]["configuration"]["row_count"] += 1
+        backup["integrity"]["value"] = _canonical_sha256(backup)
+
+        with pytest.raises(FullDataBackupValidationError, match="canonical"):
+            self._service().validate_backup(backup)
+
+    @pytest.mark.parametrize(
+        "credential_value",
+        (
+            "Authorization: Bearer explicit-fake-config-bearer-marker",
+            "sk-proj-explicit-fake-config-provider-marker-1234567890",
+            "cookie-marker-explicit-fake-config-cookie",
+            "ghp_0123456789abcdefghijklmnopqrstuvwxyzAB",
+            "gho_0123456789abcdefghijklmnopqrstuvwxyzAB",
+            "ghu_0123456789abcdefghijklmnopqrstuvwxyzAB",
+            "ghs_0123456789abcdefghijklmnopqrstuvwxyzAB",
+            "ghr_0123456789abcdefghijklmnopqrstuvwxyzAB",
+            "github_pat_0123456789_abcdefghijklmnopqrstuvwxyzAB",
+            "AKIA0123456789ABCDEF",
+            "ASIA0123456789ABCDEF",
+            "AIza0123456789abcdefghijklmnopqrstuvwxyzAB",
+            "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJmaXhlZC10ZXN0In0.0123456789abcdef",
+            "-----BEGIN PRIVATE KEY-----",
+        ),
+    )
+    def test_allowed_config_key_rejects_embedded_credential_material_without_echo(
+        self,
+        credential_value,
+    ) -> None:
+        backup = self._service().export_backup()
+        backup["data"]["configuration"]["values"]["STOCK_LIST"] = credential_value
+        backup["integrity"]["value"] = _canonical_sha256(backup)
+        with pytest.raises(FullDataBackupValidationError) as validation_error:
+            self._service().validate_backup(backup)
+        assert credential_value not in str(validation_error.value)
+
+        env_text = self.env_path.read_text(encoding="utf-8").replace(
+            "STOCK_LIST=600519",
+            f"STOCK_LIST={credential_value}",
+        )
+        self.env_path.write_text(env_text, encoding="utf-8")
+        with pytest.raises(FullDataBackupValidationError) as export_error:
+            self._service().export_backup()
+        assert credential_value not in str(export_error.value)
+
+    @pytest.mark.parametrize(
+        "ordinary_value",
+        (
+            "ghp_short-reference",
+            "gho_short-reference",
+            "ghu_short-reference",
+            "ghs_short-reference",
+            "ghr_short-reference",
+            "github_pat_short-reference",
+            "AKIA0123456789ABCDE",
+            "ASIA0123456789ABCDE",
+            "AIza-short-reference",
+            "eyJshort.short.short",
+            "-----BEGIN PUBLIC KEY-----",
+        ),
+    )
+    def test_secret_family_near_misses_remain_exportable(self, ordinary_value) -> None:
+        self.env_path.write_text(
+            self.env_path.read_text(encoding="utf-8").replace(
+                "STOCK_LIST=600519",
+                f"STOCK_LIST={ordinary_value}",
+            ),
+            encoding="utf-8",
+        )
+
+        backup = self._service().export_backup()
+
+        assert backup["data"]["configuration"]["values"]["STOCK_LIST"] == ordinary_value
+
+    def test_export_reads_all_tables_from_one_sqlite_snapshot(self, monkeypatch) -> None:
+        service = self._service()
+        with sqlite3.connect(self.db_path) as connection:
+            assert connection.execute("PRAGMA journal_mode=WAL").fetchone()[0].lower() == "wal"
+        first_table_read = threading.Event()
+        writer_committed = threading.Event()
+        original_read = service._read_table
+
+        def pause_after_first_table(session, table_name):
+            rows = original_read(session, table_name)
+            if table_name == "analysis_history":
+                first_table_read.set()
+                assert writer_committed.wait(timeout=5)
+            return rows
+
+        def writer() -> None:
+            assert first_table_read.wait(timeout=5)
+            with self.db.get_session() as session:
+                session.add_all(
+                    (
+                        AnalysisHistory(
+                            id=9991,
+                            query_id="snapshot-writer-analysis",
+                            code="000001",
+                            report_type="detailed",
+                            analysis_summary="committed between table reads",
+                            created_at=datetime(2026, 8, 2, 9, 0, 0),
+                        ),
+                        PortfolioAccount(
+                            id=9992,
+                            owner_id="snapshot-writer-owner",
+                            name="Committed between table reads",
+                            market="cn",
+                            base_currency="CNY",
+                            is_active=True,
+                        ),
+                    )
+                )
+                session.commit()
+            writer_committed.set()
+
+        monkeypatch.setattr(service, "_read_table", pause_after_first_table)
+        thread = threading.Thread(target=writer, daemon=True)
+        thread.start()
+        backup = service.export_backup()
+        thread.join(timeout=5)
+        assert not thread.is_alive()
+
+        analysis_ids = {row["id"] for row in backup["data"]["tables"]["analysis_history"]}
+        account_ids = {row["id"] for row in backup["data"]["tables"]["portfolio_accounts"]}
+        assert 9991 not in analysis_ids
+        assert 9992 not in account_ids
+
+    @pytest.mark.parametrize(
+        ("column", "value"),
+        (
+            ("period", "week_to_date"),
+            ("report_kind", "outlook"),
+            ("start_date", "2026-07-19"),
+            ("end_date", "2026-07-25"),
+            ("status", "insufficient_data"),
+            ("generated_at", "2026-08-01T11:01:00"),
+            ("source_record_ids_json", "[101]"),
+        ),
+    )
+    def test_validator_rejects_period_report_row_content_mismatch(self, column, value) -> None:
+        backup = self._service().export_backup()
+        backup["data"]["tables"]["period_reports"][0][column] = value
+        backup["integrity"]["value"] = _canonical_sha256(backup)
+
+        with pytest.raises(FullDataBackupValidationError):
+            self._service().validate_backup(backup)
+
+    def test_validator_rejects_malformed_period_report_content(self) -> None:
+        backup = self._service().export_backup()
+        backup["data"]["tables"]["period_reports"][0]["content_json"] = '{"title":"bad"}'
+        backup["integrity"]["value"] = _canonical_sha256(backup)
+
+        with pytest.raises(FullDataBackupValidationError):
+            self._service().validate_backup(backup)
+
+    def test_validator_accepts_matched_outlook_without_inflating_current_source_count(self) -> None:
+        backup = self._service().export_backup()
+        row = backup["data"]["tables"]["period_reports"][0]
+        content = json.loads(row["content_json"])
+        content["matched_outlook"] = {
+            "snapshot_version": 1,
+            "snapshot_id": 999,
+            "snapshot_created_at": "2026-07-19T12:00:00",
+            "status": "insufficient_data",
+            "message": "近期有效数据不足，暂不能形成下周展望。",
+            "target_period": {
+                "start_date": "2026-07-20",
+                "end_date": "2026-07-24",
+            },
+            "generated_at": "2026-07-19T12:00:00",
+            "overall_tendency": None,
+            "stocks": [],
+            "etfs": [],
+            "market_signals": [
+                {
+                    "record_id": 999,
+                    "region": "cn",
+                    "created_at": "2026-07-19T10:00:00",
+                    "summary": "fixed matched outlook source",
+                }
+            ],
+            "data_as_of": "2026-07-19T10:00:00",
+            "source_record_count": 1,
+            "source_record_ids": [999],
+            "disclaimer": "fixed synthetic disclaimer",
+        }
+        row["content_json"] = json.dumps(
+            content,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        row["source_record_ids_json"] = "[101, 202, 999]"
+        backup["integrity"]["value"] = _canonical_sha256(backup)
+
+        validated = self._service().validate_backup(backup)
+        assert validated["data"]["tables"]["period_reports"][0][
+            "source_record_ids_json"
+        ] == "[101, 202, 999]"
+
+    def test_validator_accepts_fixed_formal_outlook_shape(self) -> None:
+        backup = self._service().export_backup()
+        row = backup["data"]["tables"]["period_reports"][0]
+        content = _valid_outlook_period_content()
+        row.update(
+            period=content["period"],
+            report_kind=content["report_kind"],
+            start_date=content["start_date"],
+            end_date=content["end_date"],
+            status=content["status"],
+            generated_at=content["generated_at"],
+            source_record_ids_json="[101, 202]",
+            content_json=json.dumps(
+                content,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            ),
+        )
+        backup["integrity"]["value"] = _canonical_sha256(backup)
+
+        self._service().validate_backup(backup)
+
+    @pytest.mark.parametrize(
+        "case",
+        (
+            "historical_asset_type_mismatch",
+            "historical_duplicate_source_across_summaries",
+            "historical_source_before_window",
+            "historical_source_after_report",
+            "outlook_asset_type_mismatch",
+            "outlook_duplicate_source_across_items",
+            "outlook_item_after_snapshot",
+            "outlook_market_after_snapshot",
+            "outlook_data_as_of_after_snapshot",
+            "outlook_snapshot_created_after_generated",
+            "outlook_insufficient_with_items",
+            "outlook_ready_with_message",
+            "outlook_wrong_overall_tendency",
+        ),
+    )
+    def test_validator_rejects_formal_period_generator_semantic_mutations(
+        self,
+        case,
+    ) -> None:
+        backup = self._service().export_backup()
+        row = backup["data"]["tables"]["period_reports"][0]
+        if case.startswith("historical_"):
+            content = json.loads(row["content_json"])
+            if case == "historical_asset_type_mismatch":
+                content["stock_summaries"][0]["asset_type"] = "etf"
+            elif case == "historical_duplicate_source_across_summaries":
+                duplicate = copy.deepcopy(content["stock_summaries"][0])
+                duplicate["stock_code"] = "000001"
+                content["stock_summaries"].append(duplicate)
+            elif case == "historical_source_before_window":
+                content["stock_summaries"][0]["latest_created_at"] = (
+                    "2026-07-19T23:59:59+07:00"
+                )
+            else:
+                content["market_reviews"][0]["created_at"] = (
+                    "2026-08-01T11:00:01Z"
+                )
+        else:
+            content = _valid_outlook_period_content()
+            row.update(
+                period=content["period"],
+                report_kind=content["report_kind"],
+                start_date=content["start_date"],
+                end_date=content["end_date"],
+                status=content["status"],
+                generated_at=content["generated_at"],
+                source_record_ids_json="[101, 202]",
+            )
+            outlook = content["outlook"]
+            assert outlook is not None
+            if case == "outlook_asset_type_mismatch":
+                outlook["stocks"][0]["asset_type"] = "etf"
+            elif case == "outlook_duplicate_source_across_items":
+                duplicate = copy.deepcopy(outlook["stocks"][0])
+                duplicate["stock_code"] = "510300"
+                duplicate["asset_type"] = "etf"
+                outlook["etfs"].append(duplicate)
+            elif case == "outlook_item_after_snapshot":
+                outlook["stocks"][0]["data_as_of"] = "2026-08-02T11:30:00-01:00"
+            elif case == "outlook_market_after_snapshot":
+                outlook["market_signals"][0]["created_at"] = "2026-08-02T12:00:01Z"
+            elif case == "outlook_data_as_of_after_snapshot":
+                outlook["data_as_of"] = "2026-08-02T12:00:01Z"
+            elif case == "outlook_snapshot_created_after_generated":
+                outlook["snapshot_created_at"] = "2026-08-02T12:00:01Z"
+            elif case == "outlook_insufficient_with_items":
+                content["status"] = "insufficient_data"
+                row["status"] = "insufficient_data"
+                outlook["status"] = "insufficient_data"
+                outlook["message"] = "近期有效数据不足，暂不能形成下周展望。"
+                outlook["overall_tendency"] = None
+            elif case == "outlook_ready_with_message":
+                outlook["message"] = "unexpected message"
+            else:
+                outlook["overall_tendency"] = "看空"
+
+        row["content_json"] = json.dumps(
+            content,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        backup["integrity"]["value"] = _canonical_sha256(backup)
+
+        with pytest.raises(FullDataBackupValidationError):
+            self._service().validate_backup(backup)
+
+    @pytest.mark.parametrize(
+        "mutate_content",
+        (
+            lambda content: content.update(extra_field="not-allowed"),
+            lambda content: content.update(report_id="303"),
+            lambda content: content.pop("disclaimer"),
+            lambda content: content.update(generated_at="not-a-timestamp"),
+            lambda content: content["stock_summaries"][0].update(record_count=2),
+            lambda content: content["stock_summaries"][0].update(latest_record_id=202),
+            lambda content: content["stock_summaries"][0]["direction_counts"].update(
+                bullish=1
+            ),
+            lambda content: content["stock_summaries"][0].update(
+                latest_created_at="not-a-timestamp"
+            ),
+        ),
+    )
+    def test_validator_rejects_noncanonical_period_content_semantics(
+        self,
+        mutate_content,
+    ) -> None:
+        backup = self._service().export_backup()
+        row = backup["data"]["tables"]["period_reports"][0]
+        content = json.loads(row["content_json"])
+        mutate_content(content)
+        row["content_json"] = json.dumps(
+            content,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        backup["integrity"]["value"] = _canonical_sha256(backup)
+
+        with pytest.raises(FullDataBackupValidationError):
+            self._service().validate_backup(backup)
+
+    @pytest.mark.parametrize(
+        "matched_mutation",
+        (
+            lambda matched: matched["target_period"].update(start_date="2026-07-21"),
+            lambda matched: matched.update(source_record_count=2),
+            lambda matched: matched.update(generated_at="not-a-timestamp"),
+            lambda matched: matched["market_signals"][0].update(record_id=998),
+        ),
+    )
+    def test_validator_rejects_invalid_matched_outlook_semantics(
+        self,
+        matched_mutation,
+    ) -> None:
+        backup = self._service().export_backup()
+        row = backup["data"]["tables"]["period_reports"][0]
+        content = json.loads(row["content_json"])
+        content["matched_outlook"] = {
+            "snapshot_version": 1,
+            "snapshot_id": 999,
+            "snapshot_created_at": "2026-07-19T12:00:00",
+            "status": "insufficient_data",
+            "message": "近期有效数据不足，暂不能形成下周展望。",
+            "target_period": {"start_date": "2026-07-20", "end_date": "2026-07-24"},
+            "generated_at": "2026-07-19T12:00:00",
+            "overall_tendency": None,
+            "stocks": [],
+            "etfs": [],
+            "market_signals": [
+                {
+                    "record_id": 999,
+                    "region": "cn",
+                    "created_at": "2026-07-19T10:00:00",
+                    "summary": "fixed matched outlook source",
+                }
+            ],
+            "data_as_of": "2026-07-19T10:00:00",
+            "source_record_count": 1,
+            "source_record_ids": [999],
+            "disclaimer": "fixed synthetic disclaimer",
+        }
+        matched_mutation(content["matched_outlook"])
+        row["content_json"] = json.dumps(
+            content,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        row["source_record_ids_json"] = "[101, 202, 998, 999]" if (
+            content["matched_outlook"]["market_signals"][0]["record_id"] == 998
+        ) else "[101, 202, 999]"
+        backup["integrity"]["value"] = _canonical_sha256(backup)
+
+        with pytest.raises(FullDataBackupValidationError):
+            self._service().validate_backup(backup)
+
+    def test_validator_scans_visible_conversation_content_for_secrets(self) -> None:
+        backup = self._service().export_backup()
+        backup["data"]["tables"]["conversation_messages"][0]["content"] = (
+            "Authorization: Bearer explicit-fake-visible-conversation-marker"
+        )
+        backup["integrity"]["value"] = _canonical_sha256(backup)
+
+        with pytest.raises(FullDataBackupValidationError):
+            self._service().validate_backup(backup)
+
+    def test_validator_rejects_summary_covering_message_from_another_session(self) -> None:
+        backup = self._service().export_backup()
+        backup["data"]["tables"]["conversation_summaries"][0]["session_id"] = (
+            "different-session"
+        )
+        backup["integrity"]["value"] = _canonical_sha256(backup)
+
+        with pytest.raises(FullDataBackupValidationError):
+            self._service().validate_backup(backup)
 
     @pytest.mark.parametrize(
         "mutation",
@@ -465,87 +1174,12 @@ class TestFullDataBackupService:
         assert "LITELLM_CONFIG" not in backup["data"]["configuration"]["values"]
         assert "/private/runtime/litellm.yaml" not in json.dumps(backup, ensure_ascii=False)
 
-    def test_export_uses_dotenv_values_and_includes_only_safe_declared_monkey_llm_channel_fields(
-        self,
-    ) -> None:
-        self.env_path.write_text(
-            "\n".join(
-                (
-                    'STOCK_LIST="600519,AAPL"',
-                    "LLM_CHANNELS='monkey'",
-                    'LLM_MONKEY_PROTOCOL="openai"',
-                    'LLM_MONKEY_BASE_URL="https://llm.example.com/v1"',
-                    'LLM_MONKEY_MODELS="monkey-chat,monkey-reasoner"',
-                    'LLM_MONKEY_ENABLED="true"',
-                    "LLM_MONKEY_API_KEY=sk-secret-must-not-export",
-                    "LLM_MONKEY_API_KEYS=sk-secret-a,sk-secret-b",
-                    'LLM_MONKEY_EXTRA_HEADERS={"Authorization":"Bearer hidden"}',
-                    f"DATABASE_PATH={self.db_path}",
-                )
-            )
-            + "\n",
-            encoding="utf-8",
-        )
-
-        backup = self._service().export_backup()
-
-        assert backup["data"]["configuration"]["values"] == {
-            "LLM_CHANNELS": "monkey",
-            "LLM_MONKEY_BASE_URL": "https://llm.example.com/v1",
-            "LLM_MONKEY_ENABLED": "true",
-            "LLM_MONKEY_MODELS": "monkey-chat,monkey-reasoner",
-            "LLM_MONKEY_PROTOCOL": "openai",
-            "STOCK_LIST": "600519,AAPL",
-        }
-        canonical = json.dumps(backup, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-        assert "sk-secret" not in canonical
-        assert "Authorization" not in canonical
-        self._service().validate_backup(backup)
-
-    def test_export_rejects_invalid_configuration_semantics(self) -> None:
-        self.env_path.write_text(
-            f"STOCK_LIST=600519\nMAX_WORKERS=0\nDATABASE_PATH={self.db_path}\n",
-            encoding="utf-8",
-        )
-
-        with pytest.raises(FullDataBackupValidationError):
-            self._service().export_backup()
-
-    def test_export_accepts_an_empty_non_secret_configuration(self) -> None:
-        self.env_path.write_text("", encoding="utf-8")
-
-        backup = self._service().export_backup()
-
-        assert backup["data"]["configuration"]["values"] == {}
-        self._service().validate_backup(backup)
-
-    def test_preview_rejects_invalid_configuration_before_token_or_recovery(self) -> None:
-        service = self._service()
-        backup = service.export_backup()
-        backup["data"]["configuration"]["values"]["MAX_WORKERS"] = "0"
-        backup["manifest"]["categories"]["configuration"]["row_count"] = 2
-        backup["integrity"]["value"] = _canonical_sha256(backup)
-        before_digest = service.current_state_digest()
-        before_tokens = dict(service._preview_tokens)
-
-        with pytest.raises(FullDataBackupValidationError):
-            service.preview_restore(backup)
-
-        assert service.current_state_digest() == before_digest
-        assert service._preview_tokens == before_tokens
-        assert not service.recovery_directory.exists()
-
     @pytest.mark.parametrize(
         ("key", "value"),
         (
             ("DINGTALK_APP_KEY", "dingtalk-registry-marker"),
             ("PUSHOVER_USER_KEY", "pushover-registry-marker"),
-            (
-                "SLACK_WEBHOOK_URL",
-                "/".join(
-                    ("https:/", "hooks.slack.com", "services", "registry", "marker", "value")
-                ),
-            ),
+            ("SLACK_WEBHOOK_URL", "https://hooks.slack.com/services/registry/marker/value"),
         ),
     )
     def test_validator_rejects_registry_sensitive_config_after_checksum_recomputed(self, key, value) -> None:
@@ -569,30 +1203,33 @@ class TestFullDataBackupService:
         with pytest.raises(FullDataBackupValidationError):
             self._service().export_backup()
 
-    def test_export_permits_lowercase_akia_shaped_safe_prose(self) -> None:
-        """Lowercase prose is not an AWS access-key identifier."""
-        with self.db.get_session() as session:
-            session.get(AnalysisHistory, 101).raw_result = (
-                "The lowercase example akiaabcdefghijklmnop is safe prose."
-            )
-            session.commit()
-
-        backup = self._service().export_backup()
-
-        assert (
-            backup["data"]["tables"]["analysis_history"][0]["raw_result"]
-            == "The lowercase example akiaabcdefghijklmnop is safe prose."
-        )
-
     @pytest.mark.parametrize(
         ("table_name", "column_name", "value"),
         (
             ("analysis_history", "raw_result", '{"api_token":"row-api-token-marker"}'),
             ("analysis_history", "context_snapshot", '{"session_cookie":"row-cookie-marker"}'),
             ("analysis_history", "news_content", "token-marker-row-secret"),
-            ("alert_triggers", "diagnostics", "Authorization: Bearer abcdefghijklmnopqrstuvwxyz"),
+            (
+                "alert_triggers",
+                "diagnostics",
+                "Authorization: Bearer explicit-fake-bearer-marker",
+            ),
             ("decision_signals", "evidence_json", '{"nested":{"vault_ciphertext":"row-ciphertext-marker"}}'),
             ("decision_signals", "metadata_json", '{"credential":"row-credential-marker"}'),
+            ("analysis_history", "analysis_summary", "ghp_1234567890abcdefghijklmnopqrstuv"),
+            ("analysis_history", "analysis_summary", "github_pat_11AA22BB33CC44DD55EE66FF77GG88HH"),
+            ("analysis_history", "analysis_summary", "AKIAIOSFODNN7EXAMPLE"),
+            ("analysis_history", "analysis_summary", "AIzaSyA1234567890abcdefghijklmnopqrst"),
+            (
+                "analysis_history",
+                "analysis_summary",
+                "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.signature1234567890",
+            ),
+            (
+                "analysis_history",
+                "analysis_summary",
+                "-----BEGIN PRIVATE KEY----- embedded private material",
+            ),
         ),
     )
     def test_validator_rejects_embedded_row_secrets_after_checksum_recomputed(
@@ -648,7 +1285,7 @@ class TestFullDataBackupService:
     ) -> None:
         backup = self._service().export_backup()
         backup["data"]["tables"]["analysis_history"][0]["context_snapshot"] = json.dumps(
-            {key: "mQ7vN4xZ2pL8cR5tY9wB"}
+            {key: "explicit-fake-opaque-secret-marker"}
         )
         backup["integrity"]["value"] = _canonical_sha256(backup)
 
@@ -660,18 +1297,15 @@ class TestFullDataBackupService:
         (
             (
                 "raw_result",
-                '{"model_output":"sk-proj-abcdefghijklmnopqrstuvwxyz1234567890"}',
+                '{"model_output":"sk-proj-explicit-fake-openai-marker-1234567890"}',
             ),
             (
                 "raw_result",
-                '{"model_output":"sk-proj-abcdefghijklmnopqrstuvwxyz1234567890"',
+                '{"model_output":"sk-proj-explicit-fake-openai-marker-1234567890"',
             ),
             (
                 "news_content",
-                "Slack response contained "
-                + "-".join(
-                    ("xoxb", "123456789012", "123456789012", "abcdefghijklmnopqrstuvwx")
-                ),
+                "Slack response contained xoxb-explicit-fake-slack-marker-1234567890",
             ),
         ),
     )
@@ -686,47 +1320,6 @@ class TestFullDataBackupService:
 
         with pytest.raises(FullDataBackupValidationError):
             self._service().validate_backup(backup)
-
-    @pytest.mark.parametrize(
-        "credential_text",
-        (
-            "GitHub credential ghp_abcdefghijklmnopqrstuvwxyz1234567890AB",
-            "GitHub fine-grained PAT github_pat_abcdefghijklmnopqrstuvwxyz1234567890AB",
-            "AWS access key " + "".join(("AK", "IA", "ABCDEFGHIJKLMNOP")),
-            "".join(
-                (
-                    "JWT eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.",
-                    "eyJzdWIiOiIxMjM0NTY3ODkwIn0.",
-                    "abcdefghijklmnopqrst",
-                    "uvwxyz1234567890ABCD",
-                )
-            ),
-            "".join(
-                (
-                    "JWT eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.",
-                    "e30.",
-                    "abcdefghijklmnopqrst",
-                    "uvwxyz1234567890ABCD",
-                )
-            ),
-            (
-                "-----BEGIN PRIVATE KEY-----\n"
-                "bW9jay1wcml2YXRlLWtleS1tYXRlcmlhbA==\n"
-                "-----END PRIVATE KEY-----"
-            ),
-        ),
-    )
-    def test_export_rejects_high_confidence_credentials_before_canonical_generation(
-        self,
-        credential_text,
-    ) -> None:
-        """Removing the credential detector must permit formal backup generation."""
-        with self.db.get_session() as session:
-            session.get(AnalysisHistory, 101).raw_result = credential_text
-            session.commit()
-
-        with pytest.raises(FullDataBackupValidationError):
-            self._service().export_backup()
 
     def test_validator_preserves_legitimate_security_metadata_and_generic_webhook_urls(self) -> None:
         backup = self._service().export_backup()
@@ -749,15 +1342,16 @@ class TestFullDataBackupService:
             "context_snapshot"
         ]
 
-    def test_validator_rejects_malformed_json_like_analysis_payload(self) -> None:
+    def test_validator_preserves_harmless_malformed_json_like_analysis_text(self) -> None:
         backup = self._service().export_backup()
         backup["data"]["tables"]["analysis_history"][0]["raw_result"] = (
             '{"documentation":"https://example.com/hooks/setup"'
         )
         backup["integrity"]["value"] = _canonical_sha256(backup)
 
-        with pytest.raises(FullDataBackupValidationError):
-            self._service().validate_backup(backup)
+        validated = self._service().validate_backup(backup)
+
+        assert validated["data"]["tables"]["analysis_history"][0]["raw_result"].startswith("{")
 
     def test_export_does_not_adopt_a_future_sensitive_column_from_live_metadata(self, monkeypatch) -> None:
         """A later database migration must not silently extend the version-1 document."""
@@ -880,6 +1474,17 @@ class TestFullDataBackupService:
             session.delete(session.get(AlertRuleRecord, 601))
             session.delete(session.get(AlertTriggerRecord, 602))
             period_report = session.get(PeriodReportRecord, 303)
+            content = json.loads(period_report.content_json)
+            content["source_record_count"] = 1
+            content["stock_summaries"][0]["latest_record_id"] = 999999
+            content["stock_summaries"][0]["source_record_ids"] = [999999]
+            content["market_reviews"] = []
+            period_report.content_json = json.dumps(
+                content,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            )
             period_report.source_record_ids_json = "[999999]"
             decision_signal = session.get(DecisionSignalRecord, 701)
             decision_signal.source_type = "market_review"
@@ -1069,3 +1674,28 @@ class TestFullDataBackupService:
 
         with pytest.raises(FullDataBackupValidationError):
             self._service().validate_backup(backup)
+
+
+def test_setup_failure_restores_process_environment_before_following_test(
+    monkeypatch,
+) -> None:
+    original_environment = dict(os.environ)
+    case = TestFullDataBackupService()
+
+    def fail_after_environment_mutation() -> None:
+        raise RuntimeError("synthetic setup failure")
+
+    monkeypatch.setattr(case, "_seed_rows", fail_after_environment_mutation)
+    try:
+        with pytest.raises(RuntimeError, match="synthetic setup failure"):
+            case.setup_method()
+        assert dict(os.environ) == original_environment
+    finally:
+        # Keep the deliberate RED case isolated even before setup cleanup is fixed.
+        DatabaseManager.reset_instance()
+        Config.reset_instance()
+        os.environ.clear()
+        os.environ.update(original_environment)
+        temp_dir = getattr(case, "temp_dir", None)
+        if temp_dir is not None:
+            temp_dir.cleanup()

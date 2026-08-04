@@ -1,18 +1,22 @@
 # PP02 安全重建路线 R0–R7
 
-## 2026-08-04 Work20 full backup restore and period persistence
+## 2026-08-04 Work20 complete backup and period persistence
 
-- Base is the released `v3.29.2` main Head `41fd6a6c76c3e3b56211ef5fb4483d869122b568`.
-- Period reports now use a verified additive table and exact stored reads; same-window generation
-  preserves IDs, and legacy outlook records remain available through a read-only fallback.
-- The complete backup is an allow-listed `pp02.full-data.backup` v1 JSON document with canonical
-  SHA-256, explicit inclusions/exclusions, one-use preview, pre-restore recovery artifact,
-  transactional database replacement and CAS-based configuration compensation.
-- PP02 has no formal fund model; the manifest records funds as `not_applicable` with zero rows.
-- Tasks 1–6, the local Task 7 gates and the final scoped security re-review are complete at
-  reviewed implementation Head `dd7dc21a665e450b6427c522657e7fcfa95e4162`; all four Important
-  findings are closed with no new Critical/Important. Draft PR and fixed-Head CI evidence remain pending.
-  Ready, merge, Tag, Release, v3.29.3 publication and database-directory migration are forbidden.
+- Work20 starts from locked `v3.29.2` `main@41fd6a6c…`; Work18, Work19, and
+  Work19-A completion history is not revised.
+- Complete backup is a canonical, SHA-256-bound, closed allow-list for formal
+  analysis, stock portfolio events, saved period reports, structured records,
+  and non-sensitive configuration. Configuration-only and portfolio-only backup
+  flows remain separate. Fund is `not_applicable`.
+- Restore requires a fresh preview and explicit confirmation, writes a recovery
+  artifact before replacement, preserves concurrent writers, rolls back failed
+  replacement, clears derived portfolio caches, and requires restart.
+- Period reports use a canonical persisted table, survive restart, and can be
+  loaded without generation. The v3.29.2 migration preserves existing analysis
+  history and rolls back failed schema verification.
+- Local verification passed. The controller owns push, one Draft PR,
+  and exact fixed-Head Actions evidence. Work20 stays `DRAFT_HOLD`; no Ready,
+  merge, Tag, or Release has occurred or is authorized.
 
 ## 2026-08-03 Work16 Windows frozen chip runtime closure
 

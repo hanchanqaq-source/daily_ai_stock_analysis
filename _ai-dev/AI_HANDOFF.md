@@ -1,28 +1,58 @@
-# PP02 新聊天交接
+# PP02 handoff
 
-## 当前接管入口｜WORK-020 / 完整备份恢复与周期报告持久化
+## Current takeover entry | WORK-020
+
+| Item | Current fact |
+| --- | --- |
+| State | `WORK20_LOCAL_VERIFICATION_PASS_REMOTE_PENDING_DRAFT_HOLD` |
+| Base | `main@41fd6a6c76c3e3b56211ef5fb4483d869122b568` (`v3.29.2`) |
+| Local branch | `agent/pp02-work20-full-backup-period-persistence-pr` |
+| Goal | Complete non-secret formal-data backup/restore and persisted period reports |
+| Local implementation Head | `ae310d1e7fd22fc7139d1ebb63f1bd1d3a0f416c` before Task 7 closeout |
+| Local evidence commit | `42e8f75d435b9d90ad5764f538cb20e9e48c1e9f`; local verification complete |
+| Draft PR | Pending controller; no number or URL exists in this phase |
+| Fixed-Head CI | Pending controller push and Draft PR |
+| Judge | `DRAFT_HOLD` |
+| Prohibited | Ready, merge, `main`, Tag, Release, real credentials/data |
+
+Continue from local Task 7 evidence commit
+`42e8f75d435b9d90ad5764f538cb20e9e48c1e9f`. Local verification is complete;
+the only next actions are for the controller to push the intended remote branch,
+create one Draft PR to `main`, then run and record all applicable blocking
+Actions jobs for that exact remote Head. Do not infer a PR number, Run ID, URL,
+or CI result from historical Work items.
+
+Work20 distinguishes complete, configuration-only, and portfolio-event-only
+backups. Complete backup is format v1 canonical JSON with a manifest and
+SHA-256, excludes credentials/drafts/runtime paths, records fund as
+`not_applicable`, requires preview/confirm, writes a recovery artifact before
+replacement, rolls back pre-commit failures, and requires restart. Period
+reports are stored and can be loaded without generation.
+
+Work18, Work19, and Work19-A history is locked. This Work20 append does not
+change their accepted results, merge/tag/release evidence, or authorization
+boundaries.
+
+---
+
+## Historical takeover entry | WORK-016 / Windows frozen chip dependency closure
 
 | 项目 | 当前值 |
 | --- | --- |
-| 当前状态 | `WORK20_LOCAL_PASS_REMOTE_EVIDENCE_PENDING` |
-| 当前 Work | `WORK-020｜完整备份恢复与周期报告持久化` |
-| 固定 Base | `main@41fd6a6c76c3e3b56211ef5fb4483d869122b568`（v3.29.2） |
-| 当前分支 | `agent/pp02-work20-full-backup-period-persistence` |
-| 当前 PR | 待建立单个 Draft PR |
-| 已复审实现 Head | `dd7dc21a665e450b6427c522657e7fcfa95e4162`（保留 Task4 安全链及 Task5/6 双父合并历史） |
-| 周期报告 | 正式表持久化、同区间 ID 稳定、重启读取、旧 outlook 只读兼容 |
-| 完整备份 | `pp02.full-data.backup` v1；白名单、SHA-256、预览、保护副本、事务恢复与配置补偿 |
-| 本地证据 | Backend 完整门禁 `5220 passed / 499 subtests`；最终专项 `410 passed`；Web `109 passed`，Lint/Build 通过 |
-| 安全复审 | 整分支审查的 4 项 Important 已关闭；最终 scoped re-review 无新 Critical/Important |
-| 下一动作 | 提交 Task7 台账，Push、Draft PR、固定 Head 完整 CI 后 Judge |
-| 授权边界 | 禁止 Ready/合并/Tag/Release/v3.29.3、真实数据、数据库目录迁移及无关修复 |
-
-Work20 承接 Work18、Work19 与 Work19-A 已锁定事实，不重做发布或 Windows 真机验收。
-本 Work 只建立“软件内完整备份保存到安装目录外、卸载重装后正式恢复”的产品闭环，
-不迁移数据库目录。当前实现已完成 Task1–6、本地完整门禁和最终 scoped 安全复审，但远端 Draft PR 与固定 Head CI
-尚未取得，因此仍为 Active Work，不得按完成状态交接。
-
-以下 Work14–Work16 内容保留为历史，不代表当前活动项。
+| 当前状态 | `WORK16_PASS_DRAFT_HOLD` |
+| 当前 Work | `WORK-016｜Windows 冻结筹码依赖收口` |
+| 固定 Base | `main@568e26adf0e6393a7a0da1be57369535735cd05a` |
+| Work15 结果 | PR #20/#21 均已合并；最终裁决 `PASS — MAINLINE_CLOSED` |
+| 当前分支 | `agent/pp02-work16-windows-chip-runtime` |
+| 当前 PR | [Draft PR #22](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/22) |
+| 未发布候选 | `3.29.1` / `217,003,814` bytes / SHA-256 `DAD0CE0CCF8FC34F7318CD4E4F0CC37347C68A1A03E98D0CA7B048E393B18B33` / `NotSigned` |
+| 正式历史闭环 | `600519` history ID `2`；task/query/trace `1c4ae649232d40eaae7dcb6bb1b6981f` |
+| Work16 证据 | Head `016e3408…` / Run `30831393819`：7 success、1 path-skipped；Windows 双层冻结筹码门通过 |
+| Work14 最终裁决 | `PASS_WITH_DEGRADATIONS — DRAFT_HOLD`；证据 Run `30821021196` success |
+| Work12 现场 | 原安装已恢复，端口 8000 `health=ok`；数据库和日志仍在 |
+| 根因 | `mini-racer 0.14.1` 已安装且 wheel 含 DLL/ICU，但 PyInstaller 未收集、健康探针未加载 V8 |
+| 下一动作 | 无；保持 PR #22 Draft，等待新的单独授权 |
+| 授权边界 | 禁止 Ready/合并/Tag/Release、依赖变更、新闻、签名及新增 Windows 真机动作 |
 
 Work14 只从 PR #20 固定 Head 构建未发布验收候选，没有安装、Tag 或发布该候选。
 正式 `600519` API 任务完成并生成可重读历史；候选后端停机重启、再由 Work12 原安装

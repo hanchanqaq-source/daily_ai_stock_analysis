@@ -1,43 +1,54 @@
-# WORK-020｜完整备份恢复与周期报告持久化
+# WORK-020 | Complete backup and period-report persistence
 
-## Work20｜授权与执行合同
+## Work20 authorization and execution contract
 
 ```text
 WORK_ID=WORK-020
-WORK_STATE=ACTIVE_TASK7
+WORK_STATE=LOCAL_VERIFICATION_PASS_REMOTE_PENDING_DRAFT_HOLD
 BASE=41fd6a6c76c3e3b56211ef5fb4483d869122b568
-BRANCH=agent/pp02-work20-full-backup-period-persistence
-DRAFT_PR=PENDING
-PRODUCT_GOAL=SOFTWARE_NATIVE_COMPLETE_EXPORT_CLEAN_REINSTALL_FORMAL_RESTORE
-DATABASE_DIRECTORY_MIGRATION=FORBIDDEN
-CURRENT_GATE=TASK7_DOCUMENTATION_COMMIT_THEN_DRAFT_PR_FIXED_HEAD_CI
-REVIEWED_IMPLEMENTATION_HEAD=dd7dc21a665e450b6427c522657e7fcfa95e4162
-LOCAL_SECURITY_REVIEW=PASS_ALL_4_IMPORTANT_CLOSED
+BRANCH=agent/pp02-work20-full-backup-period-persistence-pr
+DRAFT_PR=PENDING_CONTROLLER
+REMOTE_FIXED_HEAD=PENDING_CONTROLLER
+REMOTE_CI=PENDING_CONTROLLER
+JUDGE=DRAFT_HOLD
 ```
 
-### 授权范围
+### Scope
 
-- 正式持久化周期报告，保存报告 ID、区间、类型、完整内容、来源历史 ID、状态和时间。
-- 建立一个非敏感、版本化、完整性校验的完整数据备份格式和正式 API/UI 入口。
-- 在写入前生成当前状态保护副本；数据库事务替换，配置 CAS 补偿；拒绝损坏、缺项、
-  不兼容、过期预览和中断，不破坏原数据。
-- 允许独立分支 Commit、Push、单个 Draft PR、范围内测试/修复和固定 Head CI。
+- Add one strict, versioned, canonical complete-data backup for allow-listed
+  formal PP02 state and non-sensitive configuration.
+- Keep complete, configuration-only, and portfolio-event-only backup purposes
+  visibly distinct.
+- Require validation and a fresh preview before atomic replacement; write a
+  recovery artifact first, preserve concurrent writers, roll back failures, and
+  require service restart after success.
+- Persist generated period reports in a canonical table, reload stored reports
+  without generation, and migrate a v3.29.2 database without changing existing
+  analysis-history rows.
+- Document compatibility, exclusions, fund `not_applicable`, recovery, and
+  uninstall/external-storage guidance.
 
-### 验收与非目标
+### Acceptance and stop gates
 
-1. v3.29.2 原历史 ID/Query ID 和内容不变；迁移失败完整回滚。
-2. 周期报告同区间同 ID、不同区间新 ID，重启后直接读取且不重新生成。
-3. 完整导出覆盖正式股票历史、市场历史、组合事件、周期报告、支持的结构化记录和
-   非敏感配置；PP02 基金项固定 `not_applicable/0`。
-4. 凭据、Token、Cookie、vault 密文、运行路径、缓存、日志、草稿和调度状态排除。
-5. 干净环境恢复后 ID、Query ID、摘要、事件和报告一致，再次重启仍可读。
-6. 不迁移数据库目录；不处理行情/新闻临时失败、MiniRacer、`stocks.index.json`、签名、
-   依赖或其他无关事项。
-7. 不 Ready、合并、Tag、Release 或发布 v3.29.3；不使用真实凭据、账户或交易数据。
+1. Work20/related Python and affected Web suites pass, followed by the complete
+   backend gate, Web lint/build, AI asset check, changed-Python compile, and
+   `git diff --check`.
+2. Canonical format/manifest/SHA, secret rejection, clean-install restore,
+   restart persistence, recovery-before-replace, rollback, concurrent writer,
+   migration, stored-report read, and user-visible distinction contracts have
+   direct automated evidence.
+3. Fixtures/diff contain no real credential, token, cookie, or ciphertext; only
+   explicit synthetic markers are allowed. Final diff contains only Work20 and
+   its named documentation/evidence files.
+4. This phase may create a local evidence commit. The controller owns push,
+   Draft PR creation, and exact fixed-Head Actions verification.
+5. Do not Ready, merge, write `main`, tag, release, use real user data, or claim
+   remote CI before controller evidence exists. Final Judge remains
+   `DRAFT_HOLD`.
 
 ---
 
-# 历史任务合同｜WORK-016 / Windows 冻结筹码依赖收口
+# Historical contract | WORK-016 / Windows frozen chip dependency closure
 
 ## Work16｜授权与执行合同
 

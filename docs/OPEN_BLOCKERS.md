@@ -1,16 +1,23 @@
 # PP02 当前阻塞
 
-## WORK-020 当前验收门
+## WORK-020 current gates
 
-| 项目 | 当前事实 |
+| Item | Current fact |
 | --- | --- |
-| 活动阻塞 | 无 |
-| 已完成 | 周期报告迁移/持久化、完整备份格式、安全校验、保护副本、事务恢复、API/UI、本地全量门禁与最终安全复审；4 项 Important 全部关闭 |
-| 待完成验收 | 单个 Draft PR、固定 Head 完整 CI 与最终 Judge；Task7 本地全量门禁已通过 |
-| 明确非阻塞残留 | Windows 真机卸载重装闭环未在本 Work 新增执行；签名、行情/新闻失败和数据库目录迁移不在范围 |
-| 授权外 | Ready、合并、main、Tag、Release、v3.29.3、真实凭据/账户/交易数据 |
+| Local product blocker | None; all required local gates passed |
+| Base / branch | `main@41fd6a6c…` / `agent/pp02-work20-full-backup-period-persistence-pr` |
+| Related Python | `405/405` passed after scoped Work20 fixture-isolation fixes |
+| External publication | Pending controller push and one Draft PR |
+| Fixed-Head Actions | Pending; no Run ID, job result, or remote Head recorded yet |
+| Authorization outside Work20 | Ready, merge, `main`, Tag, Release, real credentials/data |
 
-以下 WORK-016 门仅保留为历史。
+The missing Draft PR and fixed-Head Actions results are mandatory external
+acceptance gates, not local code failures. Work20 therefore remains
+`DRAFT_HOLD`. If any remaining full local gate fails, Work20 is blocked and the
+gate must be diagnosed within scope; the gate must not be weakened. Locked
+Work18/19/19-A blocker history is unchanged.
+
+---
 
 ## WORK-016 当前门
 

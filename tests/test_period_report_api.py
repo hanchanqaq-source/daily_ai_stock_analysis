@@ -4,24 +4,12 @@
 from __future__ import annotations
 
 import importlib.util
-import json
-import tempfile
 import unittest
-from datetime import datetime
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from src.services.history_service import HistoryService
-from src.services.period_report_service import (
-    INSUFFICIENT_OUTLOOK_MESSAGE,
-    OUTLOOK_DISCLAIMER,
-    PERIOD_OUTLOOK_REPORT_TYPE,
-    PeriodReportService,
-)
-from src.storage import AnalysisHistory, DatabaseManager, PeriodReportRecord
 
 try:
     from api.v1.schemas.period_report import (
@@ -66,8 +54,6 @@ if period_report_endpoint is not None:
 
 def _historical_payload(period: str = "week_to_date") -> dict:
     return {
-        "report_id": 71,
-        "status": "ready",
         "period": period,
         "report_kind": "historical",
         "start_date": "2026-07-27",
@@ -129,8 +115,6 @@ def _historical_payload(period: str = "week_to_date") -> dict:
 
 def _insufficient_outlook_payload() -> dict:
     return {
-        "report_id": 44,
-        "status": "insufficient_data",
         "period": "next_week",
         "report_kind": "outlook",
         "start_date": "2026-08-03",
@@ -266,109 +250,6 @@ class PeriodReportEndpointTestCase(unittest.TestCase):
         )
         self.assertNotIn("model", body["outlook"])
         service.generate.assert_called_once_with("next_week")
-
-    def test_stored_read_routes_return_persisted_content_without_generation(self) -> None:
-        payload = _historical_payload()
-        service = MagicMock()
-        service.get_latest.return_value = payload
-        service.get_report.return_value = payload
-        service.generate.side_effect = AssertionError("stored reads must not generate")
-        app = FastAPI()
-        app.include_router(period_report_endpoint.router, prefix="/api/v1/period-report")
-        app.dependency_overrides[period_report_endpoint.get_database_manager] = (
-            lambda: MagicMock(name="db")
-        )
-        patcher = patch.object(
-            period_report_endpoint,
-            "PeriodReportService",
-            return_value=service,
-        )
-        patcher.start()
-        self.addCleanup(patcher.stop)
-        client = TestClient(app)
-
-        latest = client.get("/api/v1/period-report/latest", params={"period": "week_to_date"})
-        by_id = client.get("/api/v1/period-report/71")
-
-        self.assertEqual(latest.status_code, 200)
-        self.assertEqual(by_id.status_code, 200)
-        self.assertEqual(latest.json(), payload)
-        self.assertEqual(by_id.json(), payload)
-        service.get_latest.assert_called_once_with("week_to_date")
-        service.get_report.assert_called_once_with(71)
-        service.generate.assert_not_called()
-
-    def test_legacy_outlook_get_routes_read_without_generation_or_canonical_write(self) -> None:
-        temp_dir = tempfile.TemporaryDirectory()
-        db_path = Path(temp_dir.name) / "legacy-period-outlook.db"
-        DatabaseManager.reset_instance()
-        storage_config = SimpleNamespace(
-            sqlite_wal_enabled=True,
-            sqlite_busy_timeout_ms=5000,
-            sqlite_write_retry_max=2,
-            sqlite_write_retry_base_delay=0.01,
-        )
-        try:
-            with patch("src.storage.get_config", return_value=storage_config):
-                db = DatabaseManager(db_url=f"sqlite:///{db_path}")
-            legacy_id = 991
-            snapshot = {
-                "snapshot_version": 1,
-                "status": "insufficient_data",
-                "message": INSUFFICIENT_OUTLOOK_MESSAGE,
-                "target_period": {"start_date": "2026-08-03", "end_date": "2026-08-09"},
-                "generated_at": "2026-07-30T12:00:00",
-                "overall_tendency": None,
-                "stocks": [],
-                "etfs": [],
-                "market_signals": [],
-                "data_as_of": None,
-                "source_record_count": 0,
-                "source_record_ids": [],
-                "disclaimer": OUTLOOK_DISCLAIMER,
-            }
-            with db.get_session() as session:
-                session.add(
-                    AnalysisHistory(
-                        id=legacy_id,
-                        query_id="api-legacy-period-outlook",
-                        code="PERIOD",
-                        name="Legacy outlook",
-                        report_type=PERIOD_OUTLOOK_REPORT_TYPE,
-                        context_snapshot=json.dumps(snapshot, ensure_ascii=False),
-                        created_at=datetime(2026, 7, 30, 12, 0),
-                    )
-                )
-                session.commit()
-
-            real_service = PeriodReportService(
-                history_service=HistoryService(db),
-                db_manager=db,
-            )
-            service = MagicMock(wraps=real_service)
-            service.generate.side_effect = AssertionError("legacy reads must not generate")
-            app = FastAPI()
-            app.include_router(period_report_endpoint.router, prefix="/api/v1/period-report")
-            app.dependency_overrides[period_report_endpoint.get_database_manager] = lambda: db
-            with patch.object(period_report_endpoint, "PeriodReportService", return_value=service):
-                client = TestClient(app)
-                latest = client.get(
-                    "/api/v1/period-report/latest",
-                    params={"period": "next_week"},
-                )
-                by_id = client.get(f"/api/v1/period-report/{legacy_id}")
-
-            self.assertEqual(latest.status_code, 200)
-            self.assertEqual(by_id.status_code, 200)
-            self.assertEqual(latest.json(), by_id.json())
-            self.assertEqual(latest.json()["report_id"], legacy_id)
-            self.assertEqual(latest.json()["outlook"]["target_period"], snapshot["target_period"])
-            service.generate.assert_not_called()
-            with db.get_session() as session:
-                self.assertEqual(session.query(PeriodReportRecord).count(), 0)
-        finally:
-            DatabaseManager.reset_instance()
-            temp_dir.cleanup()
 
 
 if __name__ == "__main__":

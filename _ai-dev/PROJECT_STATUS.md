@@ -9,18 +9,18 @@ CHAT_ROLE=AUTO_TAKEOVER
 WORK_ID=WORK-020
 ROLE_LOCK=SUPERSEDED_BY_PP02-WORK-HANDOFF-002
 WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
-WORK_STATE=ACTIVE_LOCAL_PASS_DRAFT_PENDING
-EXECUTION_LOCK=HELD_BY_WORK_020
+WORK_STATE=LOCAL_VERIFICATION_PASS_REMOTE_PENDING_DRAFT_HOLD
+EXECUTION_LOCK=WAITING_CONTROLLER_REMOTE_PHASE
 APPLICATION_BASE_VERSION=3.29.2
 CURRENT_RELEASE_VERSION=3.29.2
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
 ACTIVE_BASE=41fd6a6c76c3e3b56211ef5fb4483d869122b568
-ACTIVE_BRANCH=agent/pp02-work20-full-backup-period-persistence
-ACTIVE_PR=PENDING_DRAFT
-CURRENT_STAGE=Work20 / Task7 documentation, full verification, Draft PR and fixed-Head CI
-CURRENT_WORK=WORK-020 — persist complete period reports and provide complete non-secret backup/restore
-ACTIVE_GOAL=software-native full export outside the install directory, clean reinstall restore, and exact restart reads
+ACTIVE_BRANCH=agent/pp02-work20-full-backup-period-persistence-pr
+ACTIVE_PR=PENDING_CONTROLLER_DRAFT_CREATION
+CURRENT_STAGE=Work20 local verification complete; controller publication pending
+CURRENT_WORK=WORK-020 — complete non-secret formal-data backup/restore and persisted period reports
+ACTIVE_GOAL=controller push, Draft PR creation, and exact-Head CI only
 PRODUCT_PR=20_MERGED
 PRODUCT_FIXED_HEAD=e11946f528c9cb64beeec8b626ada457c02b0034
 PRODUCT_MERGE_COMMIT=25de369f8e12438a1ec1f3511c68256c471243e4
@@ -49,44 +49,37 @@ WORK16_WINDOWS_JOB=91746056804_SUCCESS
 WORK16_CHIP_PROBE=PASS_3_MARKERS_DIRECT_REBUILD_FINAL_ZIP
 WORK16_REVIEW=PASS_NO_CRITICAL_OR_IMPORTANT
 WORK16_JUDGE=PASS_DRAFT_HOLD
-WORK20_IMPLEMENTATION_HEAD=dd7dc21a665e450b6427c522657e7fcfa95e4162
-WORK20_FINAL_HEAD=PENDING_TASK7_EVIDENCE_COMMIT
-WORK20_LOCAL_BACKEND=PASS_5220_FULL_GATE_499_SUBTESTS
-WORK20_SCOPED_REGRESSION=PASS_410
-WORK20_LOCAL_WEB=PASS_109_TARGETED_LINT_BUILD
-WORK20_SECURITY_REVIEW=PASS_ALL_4_IMPORTANT_CLOSED_NO_NEW_CRITICAL_OR_IMPORTANT
-WORK20_DRAFT_PR=PENDING
-WORK20_FIXED_HEAD_CI=PENDING
-CURRENT_STATUS=WORK20_LOCAL_PASS_REMOTE_EVIDENCE_PENDING
-ACTIVE_BLOCKER=NONE
-NEXT_WORK=NONE_UNTIL_WORK20_JUDGE
-NEXT_ACTION=COMMIT_TASK7_DOCUMENTATION_THEN_PUSH_DRAFT_PR_AND_FIXED_HEAD_CI
-AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/TAG/RELEASE/DATABASE_DIRECTORY_MIGRATION/REAL_DATA
+WORK20_LOCAL_IMPLEMENTATION_HEAD=ae310d1e7fd22fc7139d1ebb63f1bd1d3a0f416c
+WORK20_EVIDENCE_COMMIT=42e8f75d435b9d90ad5764f538cb20e9e48c1e9f
+WORK20_DRAFT_PR=PENDING_CONTROLLER
+WORK20_REMOTE_CI=PENDING_CONTROLLER_FIXED_HEAD
+WORK20_JUDGE=DRAFT_HOLD
+CURRENT_STATUS=WORK20_LOCAL_VERIFICATION_PASS_REMOTE_PENDING_DRAFT_HOLD
+ACTIVE_BLOCKER=REMOTE_DRAFT_PR_AND_FIXED_HEAD_CI_PENDING_CONTROLLER
+NEXT_WORK=NONE
+NEXT_ACTION=CONTROLLER_PUSH_THEN_DRAFT_PR_THEN_EXACT_HEAD_CI
+AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/TAG/RELEASE
 LAST_UPDATED=2026-08-04
 ```
 
-## 2026-08-04 Work20 / 完整备份恢复与周期报告持久化
+## 2026-08-04 Work20 / complete backup and persisted period reports
 
-- 固定 Base 为正式 `v3.29.2` 主线 `41fd6a6c76c3e3b56211ef5fb4483d869122b568`；
-  Work18 发布、Work19 Windows 验收失败和 Work19-A 完整恢复能力失败结论不回退。
-- 新增正式 `period_reports` 表。建表、结构验证和迁移标记在同一事务内完成；原
-  v3.29.2 历史 ID、Query ID 和记录保持不变。同一类型与区间重复生成保留报告 ID，
-  不同区间新建 ID；读取 API 只返回已存内容，兼容旧 `period_outlook` 只读回退。
-- 完整备份格式固定为 `pp02.full-data.backup` v1，使用显式表/列/配置白名单、规范化
-  SHA-256 和严格业务语义校验。PP02 无基金正式模型，清单明确记录
-  `fund=not_applicable/0`；凭据、Token、Cookie、vault 密文、运行路径、日志、草稿、
-  调度状态和派生缓存不进入备份。
-- 恢复必须先预览；预览令牌一次性、短时有效且绑定输入与目标摘要。写入前先在数据库
-  同目录的专用恢复目录原子保存当前非敏感完整备份；数据库替换在单一事务内执行，
-  配置使用跨进程锁、内容哈希 CAS、不透明一次性收据和三方补偿，不覆盖并发用户修改。
-- Task4 最终核心备份/恢复 `99 passed`；配置与 API 回归 `281 passed`。Task5/6 合并后
-  后端联合 `389 passed`；Web 受影响套件 `109 passed`，Lint 与 Production Build 通过。
-  Task7 本地完整后端门禁 `5220 passed / 4 deselected / 499 subtests passed`；最终安全
-  审查提出的 4 项 Important 已在 `dd7dc21…` 全部关闭，最新专项联合回归 `410 passed`，
-  scoped re-review 未发现新的 Critical/Important。Draft PR 与固定 Head CI 尚待完成，
-  当前不得宣称 Work20 完成。
-- 禁止 Ready、合并、Tag、Release、发布 v3.29.3、数据库目录迁移、真实凭据/账号/
-  交易数据，以及新闻、MiniRacer、签名或其他无关修复。
+- Work20 is based on the locked `v3.29.2` main commit
+  `41fd6a6c76c3e3b56211ef5fb4483d869122b568`. Work18, Work19, and Work19-A
+  history remains locked and is not revised by this append-only checkpoint.
+- The implementation adds a strict complete-data backup format, explicit
+  preview/confirm restore, a pre-replacement recovery artifact, coordinated
+  SQLite/config rollback, and persisted/reloadable period reports.
+- Complete backup is distinct from the existing configuration-only and
+  portfolio-event-only tools. Credentials, cookies, tokens, vault ciphertext,
+  drafts, logs, caches, and runtime paths remain excluded. Fund is recorded as
+  `not_applicable`.
+- Local verification is complete at evidence commit
+  `42e8f75d435b9d90ad5764f538cb20e9e48c1e9f`. The Draft PR, remote fixed
+  Head, Actions Run, and job results are pending the controller and must not be
+  invented or backfilled from a different Head.
+- Judge remains `DRAFT_HOLD`. Work20 has not been pushed, made Ready, merged,
+  tagged, or released by this local phase.
 
 ## 2026-08-03 Work16 / Windows 冻结筹码依赖收口
 

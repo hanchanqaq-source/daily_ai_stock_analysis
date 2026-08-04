@@ -1,57 +1,171 @@
-# 完整数据备份与恢复
+# Complete data backup and restore
 
-本功能用于在卸载或重装“AI 每日股票分析”前，把软件中的正式非敏感用户数据导出到
-安装目录之外，并在重装后通过软件自身入口恢复。它不移动数据库目录，也不代替凭据备份。
+PP02 provides three different backup tools. They are intentionally separate and
+are not interchangeable.
 
-## 三种备份入口
+| Tool | What it contains | What it is for |
+| --- | --- | --- |
+| Complete data backup | Allow-listed formal analysis history, stock portfolio events, saved period reports, saved conversations, structured user records, and non-sensitive saved configuration | Moving or recovering the supported PP02 formal state |
+| Configuration-only backup | Non-sensitive saved `.env` configuration only | Moving settings without histories or portfolio/report data |
+| Portfolio-only backup | Stock portfolio accounts, trades, cash events, and corporate-action events only | Moving the stock portfolio event ledger without other PP02 data |
 
-| 入口 | 用途 | 包含 | 不包含 |
-| --- | --- | --- | --- |
-| 完整数据备份与恢复 | 卸载、重装或迁移后的正式数据恢复 | 分析/市场历史、股票组合事件、周期报告、支持的回测/告警/决策记录、非敏感配置 | 凭据、Token、Cookie、vault 密文、运行路径、缓存、日志、草稿、调度状态 |
-| 配置备份（仅非敏感配置） | 只迁移设置 | 已登记且非敏感的 `.env` 设置 | 所有正式历史、组合账本和周期报告 |
-| 股票组合账本备份 | 只迁移股票账户与事件 | 账户、交易、资金、公司行动 | 分析历史、周期报告、配置及派生持仓缓存 |
+Use the complete backup when the goal is application recovery. A
+configuration-only or portfolio-only file cannot restore the complete formal
+state.
 
-PP02 不包含基金业务或基金正式表，因此完整备份清单会显示基金记录
-`not_applicable`、行数 `0`。这表示“不适用”，不是已经备份了空基金数据。
+## Complete backup contents
 
-## 卸载前导出
+The complete backup uses an explicit allow-list. Version 1 includes:
 
-1. 打开“设置”。
-2. 在“完整数据备份与恢复”中选择“导出完整数据备份”。
-3. 把下载的 `pp02-full-data-backup-*.json` 保存到安装目录之外，例如个人文档目录、
-   外接硬盘或已妥善保护的云盘。
-4. 保留文件原样；不要用会自动改写 JSON 键名、日期或数字的工具重新保存。
-5. 确认外部文件存在后，再卸载软件。
+- analysis history;
+- stock portfolio accounts (including their owner identity), trades,
+  cash-ledger events, and corporate-action events;
+- persisted period reports;
+- persisted conversation messages and summaries, including system, user, and
+  assistant messages;
+- structured records for backtests, alerts, decision signals, outcomes,
+  feedback, and saved skill-opinion samples; and
+- non-sensitive registered configuration keys.
 
-导出文件格式为 `pp02.full-data.backup`、版本 `1`。文件包含清单、每张表的行数、
-明确排除项和可复算的 SHA-256 完整性值。
+Fund data is not part of PP02. The manifest records the fund category as
+`not_applicable` with zero rows rather than silently treating it as supported.
 
-## 重装后恢复
+The following content is deliberately excluded:
 
-1. 完成安装并启动软件。
-2. 打开“设置”中的“完整数据备份与恢复”。
-3. 选择原备份 JSON。软件先执行只读校验和恢复预览，不立即写入。
-4. 检查来源/目标行数和警告；确认后再点击“确认恢复并替换当前完整数据”。
-5. 恢复完成后按页面提示重启软件，再检查历史、周期报告和股票组合事件。
+- credentials, API keys, tokens, passwords, cookies, secure-vault ciphertext,
+  and other credential-like material;
+- unsaved Web drafts;
+- database, environment-file, log, report-template, skill, and LiteLLM runtime
+  paths;
+- logs, provider traces (including agent-provider turns), scheduler runtime state, schema bookkeeping, and
+  price/news/fundamental caches; and
+- derived portfolio positions, lots, and daily snapshots. These are rebuilt
+  from the restored stock event ledger.
 
-预览令牌一次性使用，默认短时有效，并同时绑定备份摘要和当前目标数据摘要。备份文件、
-当前数据或配置在预览后发生变化时，必须重新预览。
+The validator rejects unknown root fields, sections, tables, columns, versions,
+invalid references (including a conversation summary that covers a message in
+another session), invalid domains, non-canonical numeric/date values, and
+credential-like material even if a caller recomputes the checksum. Allowed
+configuration values are scanned as content as well as by key: URL user-info,
+tokens, cookies, passwords, and credential markers are rejected without
+echoing the rejected value. Typed configuration is exported in the same
+canonical representation used by settings persistence. For example, JSON
+configuration is compact and key-sorted; a non-canonical representation is
+rejected on import rather than changing meaning during restore.
 
-## 失败与回滚保护
+## File format and integrity
 
-- 损坏、缺项、未知字段、版本不兼容、哈希不一致或业务语义无效的备份会在写入前拒绝。
-- 真正恢复前，软件先在当前数据库旁的专用恢复目录原子写入一份当前非敏感完整备份。
-  页面只显示安全文件名和摘要，不暴露本机完整路径。
-- 正式表替换在一个数据库事务中完成；失败或中断会回滚。
-- 非敏感配置使用跨进程写锁和内容哈希 CAS；回滚采用三方合并，不覆盖恢复期间发生的
-  用户并发修改。
-- 组合派生持仓缓存不进入备份；恢复成功后会清空并由正式事件账本重新计算。
+An exported file is canonical UTF-8 JSON followed by one newline. Its filename
+has the form `pp02-full-data-backup-YYYYMMDDTHHMMSSZ.json`.
 
-## 安全边界
+The root contract is closed and contains:
 
-完整备份不是凭据备份。API Key、密码、Webhook、Token、Cookie、Windows
-`safeStorage`/DPAPI vault 密文和其他敏感配置均被排除。恢复后如需使用外部模型或通知
-服务，应通过软件的安全凭据入口重新配置。
+- `format`: `pp02.full-data.backup`;
+- `format_version`: `1`;
+- `metadata`: PP02 identity, application version, database schema version, and
+  UTC creation time;
+- `manifest`: category status, exact table names, per-category and per-table
+  row counts, and the exclusion list;
+- `data`: the allow-listed table rows and non-sensitive configuration; and
+- `integrity`: algorithm `sha256` and the digest.
 
-备份仍可能包含用户的股票代码、历史分析内容、组合事件和备注，应按个人数据文件保护，
-不要公开上传或提交到 Git 仓库。
+All exported database tables are read inside one explicit SQLite snapshot, so
+a writer committing while an export is in progress cannot produce a document
+whose tables describe different points in time. The SHA-256 value is calculated over canonical JSON with only
+`integrity.value` omitted. Editing the file, changing a row, adding a field, or
+changing the manifest invalidates it. Integrity is a corruption/tampering
+check; it is not encryption. Store the JSON with the same care as any local
+analysis archive.
+
+## Export before uninstall or replacement
+
+Export the complete backup and copy it to storage outside the application data
+directory before uninstalling, deleting a portable installation, replacing a
+machine, or removing a container volume. Examples include an encrypted external
+drive or an access-controlled backup folder.
+
+Do not rely on the recovery file created during restore as the only migration
+copy: it is stored beside the active SQLite database and can be removed with the
+installation or data volume.
+
+## Restore procedure
+
+1. Install and start a compatible PP02 version.
+2. Open Settings and choose **Complete data backup and restore**.
+3. Select the JSON file. PP02 validates the format, version, manifest, rows,
+   references, compatibility metadata, and SHA-256 before issuing a short-lived
+   preview.
+4. Review incoming and current row counts, exclusions, warnings, and the restart
+   notice. No data is replaced during preview.
+5. Confirm the restore explicitly. The preview is single-use and tied to both
+   the exact input digest and current destination state. If it expires, the file
+   changes, the destination changes, or the result is ambiguous, create a fresh
+   preview.
+6. After success, record the displayed recovery filename and digests, then
+   restart the service. Reload the settings, portfolio, history, and period
+   report pages after restart.
+
+Restore replaces the supported allow-listed state; it does not merge two
+archives. Current credentials remain local and are not supplied by the backup.
+Because agent-provider turns are excluded provider traces, restore also removes
+existing destination turns before replacing formal conversations. This prevents
+an old destination trace from becoming attached to an incoming message that
+reuses the same identifier.
+
+## Recovery artifact and rollback
+
+Immediately before replacement, PP02 writes a canonical recovery backup of the
+current destination into a dedicated `<database-stem>_restore_recovery`
+directory beside the active SQLite database. The response exposes only the safe
+filename and SHA-256/destination digests, not the local absolute path.
+
+Database replacement and managed configuration replacement are coordinated.
+Validation and stale-preview conflicts write nothing. If a pre-commit restore
+step fails or is interrupted, including by process-level Python interruption,
+database changes are rolled back and the prior managed configuration is
+compensated before the interruption propagates. Concurrent configuration
+writers are not overwritten. Derived portfolio caches are cleared so they can
+be rebuilt from the restored event ledger. A failure to finalize the internal
+configuration receipt after the durable database commit does not falsely report
+the restore as failed: cleanup is retried safely and success is returned with a
+sanitized warning if the retry path was needed.
+
+Restore also writes a small, mode-`0600`, fsynced transaction journal before
+publishing managed configuration and commits a transaction marker with the
+restored SQLite rows. On the next startup, before repositories, schedulers, or
+runtime configuration are exposed, PP02 reconciles an interrupted restore by
+comparing the journal with the database marker. Without a marker it rolls back
+only values still owned by the interrupted restore; with a marker it completes
+only values still at their prior state. A concurrent third value is preserved.
+The journal contains only allow-listed non-sensitive managed values and digests,
+never database rows, credentials, full environment-file bytes, or absolute
+paths. Corrupt or incompatible journals fail startup closed without mutating the
+database, configuration, or journal.
+
+For a manual rollback, keep the application stopped, preserve the failed state
+for diagnosis, and restore the recovery artifact through the same preview and
+confirm workflow. Restart again after the rollback. Do not edit the JSON or
+copy individual SQLite rows by hand.
+
+## Compatibility and limitations
+
+- Version 1 requires the exact PP02 project identity. The backup application
+  version and database schema version must each exactly equal the corresponding
+  version of the running restore target. Cross-version restore, whether older
+  or newer, is rejected before any replacement is attempted.
+- Only file-backed SQLite restore is supported. A non-SQLite or in-memory
+  destination is rejected.
+- A restart is always required after successful restore so runtime singletons,
+  schedules, and readers reopen the recovered state.
+- Persisted period-report content is validated as the complete formal API
+  response and cross-checked against its database identity, window, kind,
+  status, generated time, and recursive source-history references.
+- Credentials and secure-vault data must be configured separately on the target
+  installation.
+- Unsaved drafts, logs, caches, runtime paths, provider traces, and scheduler
+  runtime state cannot be recovered from this file.
+- Complete backup does not add fund support. The manifest must continue to show
+  fund as `not_applicable`.
+- The feature has deterministic local automated coverage with synthetic data.
+  It does not substitute for keeping an external, access-controlled backup or
+  for testing the recovery procedure for a particular deployment.

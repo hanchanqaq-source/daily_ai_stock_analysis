@@ -35,6 +35,7 @@ export type FullDataBackupRestoreResponse = {
     digest: string;
     destinationDigest: string;
   };
+  warnings: string[];
   restartRequired: boolean;
 };
 

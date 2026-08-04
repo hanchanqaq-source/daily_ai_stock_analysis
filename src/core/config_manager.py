@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import errno
 import hashlib
+import io
 import logging
 import os
 import re
@@ -21,6 +22,8 @@ else:  # pragma: no branch - selected once per platform
     import fcntl
 
 from dotenv import dotenv_values
+
+from src.core.durable_file import durable_replace, durable_unlink
 
 _ASSIGNMENT_PATTERN = re.compile(
     r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$"
@@ -58,15 +61,6 @@ class ConfigManagerPublicationUncertain(RuntimeError):
         super().__init__("Configuration publication outcome is uncertain")
         self.receipt = receipt
         self.current_version = current_version
-
-
-class ConfigManagerPublicationInterrupted(BaseException):
-    """Carry an opaque receipt without converting a process-control interruption."""
-
-    def __init__(self, receipt: Any, interruption: BaseException):
-        super().__init__("Configuration publication interrupted")
-        self.receipt = receipt
-        self.interruption = interruption
 
 
 @dataclass(frozen=True)
@@ -225,8 +219,18 @@ class ConfigManager:
 
     def read_config_map(self) -> Dict[str, str]:
         """Read key-value mapping from `.env` file."""
-        with self._lock:
+        with self._transaction_lock():
             return self._read_config_map(normalize_values=True)
+
+    def snapshot_config_map(self) -> Tuple[Dict[str, str], str, Optional[str]]:
+        """Parse one locked raw generation into logical values and metadata."""
+        with self._transaction_lock():
+            snapshot = self._read_raw_snapshot_unlocked()
+            return (
+                self._config_map_from_bytes(snapshot.content),
+                snapshot.version,
+                snapshot.updated_at,
+            )
 
     def _read_config_map(self, *, normalize_values: bool) -> Dict[str, str]:
         """Read key-value mapping from `.env` file."""
@@ -260,7 +264,7 @@ class ConfigManager:
 
     def get_config_version(self) -> str:
         """Return deterministic version string based on file state."""
-        with self._lock:
+        with self._transaction_lock():
             return self._get_config_version_unlocked()
 
     def _get_config_version_unlocked(self) -> str:
@@ -269,7 +273,7 @@ class ConfigManager:
 
     def get_updated_at(self) -> Optional[str]:
         """Return `.env` last update time in ISO8601 format."""
-        with self._lock:
+        with self._transaction_lock():
             return self._get_updated_at_unlocked()
 
     def _get_updated_at_unlocked(self) -> Optional[str]:
@@ -344,8 +348,8 @@ class ConfigManager:
         return self.render_without_matching_keys(lambda key: key in normalized)
 
     def render_without_matching_keys(self, should_exclude: Callable[[str], bool]) -> str:
-        """Render one thread-consistent snapshot without requiring a writable lock file."""
-        with self._lock:
+        """Render one locked `.env` snapshot while excluding matching assignments."""
+        with self._transaction_lock():
             snapshot = self._read_raw_snapshot_unlocked()
             entries = [
                 entry
@@ -362,8 +366,8 @@ class ConfigManager:
         self,
         should_exclude: Callable[[str], bool],
     ) -> Tuple[str, str, Optional[str]]:
-        """Capture sanitized content and metadata without writing an advisory lock."""
-        with self._lock:
+        """Capture sanitized content and its metadata from one locked file state."""
+        with self._transaction_lock():
             snapshot = self._read_raw_snapshot_unlocked()
             entries = [
                 entry
@@ -423,17 +427,7 @@ class ConfigManager:
                 except BaseException as publish_exc:
                     try:
                         published = self._read_raw_snapshot_unlocked()
-                    except BaseException as classification_exc:
-                        if not isinstance(classification_exc, Exception):
-                            raise ConfigManagerPublicationInterrupted(
-                                receipt=receipt,
-                                interruption=classification_exc,
-                            ) from classification_exc
-                        if not isinstance(publish_exc, Exception):
-                            raise ConfigManagerPublicationInterrupted(
-                                receipt=receipt,
-                                interruption=publish_exc,
-                            ) from publish_exc
+                    except BaseException:
                         raise ConfigManagerPublicationUncertain(
                             receipt=receipt,
                             current_version=None,
@@ -444,19 +438,16 @@ class ConfigManager:
                         and published.content == next_content
                     ):
                         if not isinstance(publish_exc, Exception):
-                            raise ConfigManagerPublicationInterrupted(
+                            self._restore_prior_after_interruption(
+                                previous=previous,
                                 receipt=receipt,
-                                interruption=publish_exc,
-                            ) from publish_exc
+                                discard_receipt=discard_receipt,
+                            )
+                            raise
                         return receipt
                     if self._same_raw_snapshot(previous, published):
                         discard_receipt(receipt)
                         raise
-                    if not isinstance(publish_exc, Exception):
-                        raise ConfigManagerPublicationInterrupted(
-                            receipt=receipt,
-                            interruption=publish_exc,
-                        ) from publish_exc
                     raise ConfigManagerPublicationUncertain(
                         receipt=receipt,
                         current_version=published.version,
@@ -465,6 +456,58 @@ class ConfigManager:
             finally:
                 if staged_path.exists():
                     staged_path.unlink()
+
+    def _restore_prior_after_interruption(
+        self,
+        *,
+        previous: _RawConfigSnapshot,
+        receipt: Any,
+        discard_receipt: Callable[[Any], None],
+    ) -> None:
+        """Restore and verify the prior generation before propagating an interrupt."""
+        rollback_error: Optional[BaseException] = None
+        staged_path: Optional[Path] = None
+        try:
+            if previous.exists:
+                staged_path = self._stage_atomic_bytes(previous.content)
+                try:
+                    self._publish_staged_bytes(staged_path)
+                except BaseException as exc:
+                    rollback_error = exc
+            elif self._env_path.exists():
+                try:
+                    durable_unlink(self._env_path)
+                except BaseException as exc:
+                    rollback_error = exc
+        except BaseException as exc:
+            rollback_error = exc
+        finally:
+            if staged_path is not None and staged_path.exists():
+                try:
+                    staged_path.unlink()
+                except BaseException as exc:
+                    if rollback_error is None:
+                        rollback_error = exc
+
+        try:
+            restored = self._read_raw_snapshot_unlocked()
+        except BaseException as exc:
+            raise ConfigManagerPublicationUncertain(
+                receipt=receipt,
+                current_version=None,
+            ) from exc
+        if not self._same_raw_snapshot(previous, restored):
+            raise ConfigManagerPublicationUncertain(
+                receipt=receipt,
+                current_version=restored.version,
+            ) from rollback_error
+        try:
+            discard_receipt(receipt)
+        except BaseException as exc:
+            raise ConfigManagerPublicationUncertain(
+                receipt=receipt,
+                current_version=restored.version,
+            ) from exc
 
     def compensate_managed_assignments_atomically(
         self,
@@ -506,15 +549,88 @@ class ConfigManager:
                 if staged_path is not None:
                     self._publish_staged_bytes(staged_path)
                 elif self._env_path.exists():
-                    self._env_path.unlink()
+                    durable_unlink(self._env_path)
                 return target_version, concurrent_edit
             finally:
                 if staged_path is not None and staged_path.exists():
                     staged_path.unlink()
 
+    def reconcile_managed_values_atomically(
+        self,
+        *,
+        prior_values: Dict[str, str],
+        incoming_values: Dict[str, str],
+        managed_keys: Set[str],
+        committed: bool,
+        max_attempts: int = 3,
+    ) -> str:
+        """Resolve a durable restore intent with a bounded three-way CAS."""
+        normalized_keys = {str(key).upper() for key in managed_keys}
+        prior = {str(key).upper(): str(value) for key, value in prior_values.items()}
+        incoming = {
+            str(key).upper(): str(value) for key, value in incoming_values.items()
+        }
+        source = prior if committed else incoming
+        desired = incoming if committed else prior
+        missing = object()
+        last_conflict: Optional[ConfigManagerVersionConflict] = None
+        for _attempt in range(max(1, int(max_attempts))):
+            try:
+                with self._transaction_lock():
+                    current = self._read_raw_snapshot_unlocked()
+                    current_values = self._config_map_from_bytes(current.content)
+                    replacements: Dict[str, str] = {}
+                    for key in normalized_keys:
+                        current_value = current_values.get(key, missing)
+                        source_value = source.get(key, missing)
+                        desired_value = desired.get(key, missing)
+                        target_value = (
+                            desired_value
+                            if current_value == source_value
+                            else current_value
+                        )
+                        if target_value is not missing:
+                            replacements[key] = str(target_value)
+                    next_content = self._replace_managed_content(
+                        current.content,
+                        normalized_keys,
+                        replacements,
+                    )
+                    if current.exists and next_content == current.content:
+                        return current.version
+                    staged_path = self._stage_atomic_bytes(next_content)
+                    try:
+                        rechecked = self._read_raw_snapshot_unlocked()
+                        if not self._same_raw_snapshot(current, rechecked):
+                            raise ConfigManagerVersionConflict(rechecked.version)
+                        self._publish_staged_bytes(staged_path)
+                        return self._raw_generation(True, next_content)
+                    finally:
+                        if staged_path.exists():
+                            staged_path.unlink()
+            except ConfigManagerVersionConflict as exc:
+                last_conflict = exc
+        assert last_conflict is not None
+        raise last_conflict
+
+    @staticmethod
+    def _config_map_from_bytes(content: bytes) -> Dict[str, str]:
+        parsed = dotenv_values(
+            stream=io.StringIO(content.decode("utf-8")),
+            interpolate=False,
+        )
+        return {
+            str(key).upper(): unescape_compose_sensitive_env_value(
+                str(key),
+                "" if value is None else str(value),
+            )
+            for key, value in parsed.items()
+            if key is not None
+        }
+
     def get_assignment_keys(self) -> Set[str]:
         """Return assignment names without parsing their values."""
-        with self._lock:
+        with self._transaction_lock():
             return {
                 entry.key.upper()
                 for entry in self._read_entries()
@@ -756,7 +872,18 @@ class ConfigManager:
 
     def _publish_staged_bytes(self, staged_path: Path) -> None:
         """Publish one already-flushed generation with no later receipt work."""
-        os.replace(staged_path, self._env_path)
+        durable_replace(staged_path, self._env_path)
+
+    @staticmethod
+    def _fsync_parent_directory(directory: Path) -> None:
+        try:
+            descriptor = os.open(directory, os.O_RDONLY)
+        except OSError:
+            return
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
 
     def _rewrite_in_place(self, content: str) -> None:
         """Rewrite `.env` content in place when rename is unsupported by mount type."""

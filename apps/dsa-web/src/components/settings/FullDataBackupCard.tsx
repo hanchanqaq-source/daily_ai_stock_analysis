@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { createParsedApiError, getParsedApiError, type ParsedApiError } from '../../api/error';
 import { fullDataBackupApi } from '../../api/fullDataBackup';
 import { useUiLanguage } from '../../contexts/UiLanguageContext';
+import type { UiTextKey } from '../../i18n/uiText';
 import type {
   FullDataBackupDocument,
   FullDataBackupPreviewResponse,
@@ -17,6 +18,129 @@ function RowCounts({ counts }: { counts: Record<string, number> }) {
       {Object.entries(counts).map(([table, count]) => (
         <p key={table}>{table}：{count}</p>
       ))}
+    </div>
+  );
+}
+
+type ManifestCategory = {
+  name: string;
+  status: 'supported' | 'not_applicable';
+  rowCount: number;
+};
+
+const MANIFEST_CATEGORY_LABEL_KEYS: Record<string, UiTextKey> = {
+  agent_conversations: 'settings.fullBackupManifestCategoryAgentConversations',
+  analysis: 'settings.fullBackupManifestCategoryAnalysis',
+  configuration: 'settings.fullBackupManifestCategoryConfiguration',
+  fund: 'settings.fullBackupManifestCategoryFund',
+  period_reports: 'settings.fullBackupManifestCategoryPeriodReports',
+  portfolio_events: 'settings.fullBackupManifestCategoryPortfolioEvents',
+  structured_user_records: 'settings.fullBackupManifestCategoryStructuredRecords',
+};
+
+const MANIFEST_EXCLUSION_LABEL_KEYS: Record<string, UiTextKey> = {
+  derived_portfolio_caches: 'settings.fullBackupManifestExclusionDerivedPortfolio',
+  price_news_fundamental_caches: 'settings.fullBackupManifestExclusionMarketCaches',
+  scheduler_runtime_state: 'settings.fullBackupManifestExclusionSchedulerState',
+  provider_traces: 'settings.fullBackupManifestExclusionProviderTraces',
+  logs: 'settings.fullBackupManifestExclusionLogs',
+  drafts: 'settings.fullBackupManifestExclusionDrafts',
+  schema_bookkeeping: 'settings.fullBackupManifestExclusionSchemaBookkeeping',
+  credentials_tokens_cookies_vault_ciphertext: 'settings.fullBackupManifestExclusionCredentials',
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function readManifestCategories(manifest: Record<string, unknown>): ManifestCategory[] {
+  const categories = manifest.categories;
+  if (!isRecord(categories)) {
+    return [];
+  }
+  return Object.entries(categories).flatMap(([name, candidate]) => {
+    if (!isRecord(candidate)) {
+      return [];
+    }
+    const status = candidate.status;
+    const rowCount = candidate.row_count;
+    if (
+      (status !== 'supported' && status !== 'not_applicable')
+      || typeof rowCount !== 'number'
+      || !Number.isSafeInteger(rowCount)
+      || rowCount < 0
+    ) {
+      return [];
+    }
+    return [{ name, status, rowCount }];
+  });
+}
+
+function readManifestExclusions(manifest: Record<string, unknown>): string[] {
+  if (!Array.isArray(manifest.excluded)) {
+    return [];
+  }
+  return manifest.excluded.filter(
+    (value): value is string => typeof value === 'string' && value.trim().length > 0,
+  );
+}
+
+function getOwnLabelKey(
+  labels: Record<string, UiTextKey>,
+  name: string,
+): UiTextKey | undefined {
+  return Object.hasOwn(labels, name) ? labels[name] : undefined;
+}
+
+function ManifestSummary({ manifest }: { manifest: Record<string, unknown> }) {
+  const { t } = useUiLanguage();
+  const categories = readManifestCategories(manifest);
+  const exclusions = readManifestExclusions(manifest);
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <p className="mb-1 text-xs font-medium text-foreground">
+          {t('settings.fullBackupManifestCategories')}
+        </p>
+        <ul className="space-y-1 text-xs text-secondary-text">
+          {categories.map(({ name, status, rowCount }) => {
+            const labelKey = getOwnLabelKey(MANIFEST_CATEGORY_LABEL_KEYS, name);
+            const label = labelKey ? t(labelKey) : name;
+            const statusLabel = t(
+              status === 'supported'
+                ? 'settings.fullBackupManifestStatusSupported'
+                : 'settings.fullBackupManifestStatusNotApplicable',
+            );
+            return (
+              <li key={name}>
+                {t(
+                  rowCount === 1
+                    ? 'settings.fullBackupManifestCategoryRowOne'
+                    : 'settings.fullBackupManifestCategoryRowMany',
+                  { label, name, status: statusLabel, count: rowCount },
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+      <div>
+        <p className="mb-1 text-xs font-medium text-foreground">
+          {t('settings.fullBackupManifestExclusions')}
+        </p>
+        <ul className="space-y-1 text-xs text-secondary-text">
+          {exclusions.map((name, index) => {
+            const labelKey = getOwnLabelKey(MANIFEST_EXCLUSION_LABEL_KEYS, name);
+            const label = labelKey ? t(labelKey) : name;
+            return (
+              <li key={`${name}-${index}`}>
+                {t('settings.fullBackupManifestExclusionRow', { label, name })}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </div>
   );
 }
@@ -170,6 +294,7 @@ const FullDataBackupCard = () => {
         {preview ? (
           <section aria-label={t('settings.fullBackupPreview')} className="space-y-3 rounded-xl border border-amber-400/30 bg-amber-500/5 p-4">
             <h3 className="text-sm font-semibold text-foreground">{t('settings.fullBackupPreview')}</h3>
+            <ManifestSummary manifest={preview.manifest} />
             <div>
               <p className="mb-1 text-xs font-medium text-foreground">{t('settings.fullBackupIncomingCounts')}</p>
               <RowCounts counts={preview.incomingTableRowCounts} />
@@ -207,6 +332,18 @@ const FullDataBackupCard = () => {
             <p>{t('settings.fullBackupRecoveryFile')}：{result.recovery.filename}</p>
             <p className="font-medium text-foreground">{t('settings.fullBackupRestoredCounts')}</p>
             <RowCounts counts={result.restoredTableRowCounts} />
+            {result.warnings?.length > 0 ? (
+              <div>
+                <p className="font-medium text-amber-700 dark:text-amber-300">
+                  {t('settings.fullBackupRestoreWarnings')}
+                </p>
+                {result.warnings.map((warning, index) => (
+                  <p key={`${warning}-${index}`} className="text-amber-700 dark:text-amber-300">
+                    {warning}
+                  </p>
+                ))}
+              </div>
+            ) : null}
             {result.restartRequired ? <p>{t('settings.fullBackupRestartResult')}</p> : null}
           </div>
         ) : null}

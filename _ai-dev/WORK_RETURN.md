@@ -1,28 +1,49 @@
-# WORK-020｜完整备份恢复与周期报告持久化（执行中）
+# WORK-020 | Local closeout return
 
-## Work20｜Task7 前本地回传快照
+## Work20 current evidence
 
-> Work20 尚未结束。本节记录已验证本地事实；Draft PR、固定 Head 和 CI Run 必须在
-> 远端结果取得后写入 PR 元数据与最终回报，不以未运行冒充通过。
+```text
+BASE=41fd6a6c76c3e3b56211ef5fb4483d869122b568
+LOCAL_BRANCH=agent/pp02-work20-full-backup-period-persistence-pr
+LOCAL_IMPLEMENTATION_HEAD=ae310d1e7fd22fc7139d1ebb63f1bd1d3a0f416c
+LOCAL_EVIDENCE_COMMIT=42e8f75d435b9d90ad5764f538cb20e9e48c1e9f
+RELATED_PYTHON=PASS_405_OF_405
+FULL_BACKEND_GATE=PASS_5222_4_DESELECTED_499_SUBTESTS
+WEB_AFFECTED=PASS_117_OF_117
+WEB_LINT_BUILD=PASS
+AI_ASSETS_PY_COMPILE_DIFF_CHECK=PASS
+LOCAL_VERIFICATION=COMPLETE
+DRAFT_PR=PENDING_CONTROLLER
+REMOTE_FIXED_HEAD=PENDING_CONTROLLER
+REMOTE_CI=PENDING_CONTROLLER
+JUDGE=DRAFT_HOLD
+```
 
-- Plan：完成。只读审计证明无需迁移数据库目录；采用白名单版本化 JSON、正式
-  `period_reports` 表、恢复前保护副本、数据库事务与配置 CAS 补偿。
-- Build：Task1–6 完成。已复审实现 Head
-  `dd7dc21a665e450b6427c522657e7fcfa95e4162`，保留 Task4 安全链和 Task5/6 API/UI
-  历史的普通双父 merge。
-- Test：Task4 核心 `99 passed`，配置/API `281 passed`；合并后后端联合
-  `389 passed`；完整后端门禁 `5220 passed / 4 deselected / 499 subtests passed`；
-  Web 受影响套件 `109 passed`，Lint 与 Production Build 通过；最终安全修复专项联合
-  回归 `410 passed`，整分支审查提出的 4 项 Important 已全部关闭，最终 scoped
-  re-review 无新 Critical/Important。
-- CI：尚未 Push，Draft PR 和固定 Head CI 均未运行。
-- Judge：`IN_PROGRESS — LOCAL_PASS — REMOTE_EVIDENCE_PENDING`。
-- 未解决风险：尚无 Windows 安装—卸载—重装真机闭环证据；本 Work 明确不处理签名、
-  行情/新闻失败、数据库目录迁移或发布。PP02 无基金正式表，基金清单为不适用而非备份 0 条。
+- Complete backup exports canonical format v1 with a closed allow-list,
+  manifest row counts and categories, and SHA-256 integrity. It excludes
+  credentials, tokens, cookies, vault ciphertext, unsaved drafts, runtime paths,
+  logs, traces, and caches; fund is explicitly `not_applicable`.
+- Restore requires a fresh, one-use preview bound to the input and destination,
+  writes a recovery artifact before replacement, coordinates SQLite and managed
+  configuration, preserves concurrent writers, rolls back failures, clears
+  derived portfolio caches, and requires restart.
+- Period reports are now persisted and reloadable without generation. The
+  v3.29.2 migration is idempotent and preserves existing history rows.
+- The first related aggregate exposed Work20 fixture environment leakage into
+  four unrelated LLM validation tests. Only the two Work20 fixtures were fixed
+  to restore the original process environment; the reproduced order then passed
+  and the aggregate passed 405/405. No LLM validation behavior was changed.
+- Task 7 evidence commit is
+  `42e8f75d435b9d90ad5764f538cb20e9e48c1e9f`; local verification is complete.
+  The only next actions are controller push, Draft PR creation, and CI for the
+  exact resulting remote Head.
+- This local phase has no PR number, URL, remote Head, Actions Run, or job
+  result. Those fields remain pending controller publication and fixed-Head CI.
+  No Ready, merge, tag, or release action has occurred. Judge is `DRAFT_HOLD`.
 
 ---
 
-# 历史任务回传｜WORK-016 / Windows 冻结筹码依赖收口
+# Historical return | WORK-016 / Windows frozen chip dependency closure
 
 ## Work16｜阶段回传
 

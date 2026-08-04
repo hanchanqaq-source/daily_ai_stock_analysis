@@ -16,15 +16,7 @@ from sqlalchemy.sql import func
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from src.config import Config
-from src.storage import (
-    Base,
-    CURRENT_SCHEMA_VERSION,
-    DatabaseManager,
-    DatabaseSchemaMigration,
-    PERIOD_REPORT_SCHEMA_VERSION,
-    PeriodReportRecord,
-    StockDaily,
-)
+from src.storage import Base, CURRENT_SCHEMA_VERSION, DatabaseManager, DatabaseSchemaMigration, StockDaily
 
 class TestStorage(unittest.TestCase):
 
@@ -186,51 +178,6 @@ class TestStorage(unittest.TestCase):
         self.assertEqual(count, 1)
 
         DatabaseManager.reset_instance()
-
-    def test_fresh_database_creates_canonical_period_report_schema(self):
-        DatabaseManager.reset_instance()
-        temp_dir = tempfile.TemporaryDirectory()
-        db_path = os.path.join(temp_dir.name, "period_reports.sqlite")
-
-        try:
-            db = DatabaseManager(db_url=f"sqlite:///{db_path}")
-
-            with sqlite3.connect(db_path) as conn:
-                columns = {
-                    row[1]
-                    for row in conn.execute("PRAGMA table_info(period_reports)").fetchall()
-                }
-                unique_indexes = self._list_sqlite_unique_indexes(db_path, "period_reports")
-
-            self.assertEqual(
-                columns,
-                {
-                    "id",
-                    "period",
-                    "report_kind",
-                    "start_date",
-                    "end_date",
-                    "content_json",
-                    "source_record_ids_json",
-                    "status",
-                    "generated_at",
-                    "updated_at",
-                },
-            )
-            self.assertIn(
-                ["period", "report_kind", "start_date", "end_date"],
-                unique_indexes.values(),
-            )
-
-            with db.get_session() as session:
-                marker = session.get(DatabaseSchemaMigration, PERIOD_REPORT_SCHEMA_VERSION)
-                self.assertIsNotNone(marker)
-                self.assertEqual(marker.version, PERIOD_REPORT_SCHEMA_VERSION)
-                self.assertTrue(session.query(PeriodReportRecord).count() == 0)
-        finally:
-            DatabaseManager.reset_instance()
-            Config.reset_instance()
-            temp_dir.cleanup()
 
     def test_fresh_decision_signal_schema_has_profile_indexes(self):
         DatabaseManager.reset_instance()

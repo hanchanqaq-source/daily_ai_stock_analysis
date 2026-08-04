@@ -31,7 +31,6 @@ class PeriodReportRepository:
         generated_at: datetime,
     ) -> PeriodReportRecord:
         """Replace canonical content in-place when the period identity already exists."""
-        content_json = json.dumps(content, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         source_ids_json = json.dumps(sorted({int(value) for value in source_history_ids}))
         with self.db.get_session() as session:
             row = session.execute(
@@ -48,17 +47,26 @@ class PeriodReportRepository:
                     report_kind=report_kind,
                     start_date=start_date,
                     end_date=end_date,
-                    content_json=content_json,
+                    content_json="{}",
                     source_record_ids_json=source_ids_json,
                     status=status,
                     generated_at=generated_at,
                 )
                 session.add(row)
+                session.flush()
             else:
-                row.content_json = content_json
                 row.source_record_ids_json = source_ids_json
                 row.status = status
                 row.generated_at = generated_at
+            stored_content = dict(content)
+            stored_content["report_id"] = int(row.id)
+            stored_content["status"] = status
+            row.content_json = json.dumps(
+                stored_content,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            )
             session.commit()
             session.refresh(row)
             return row

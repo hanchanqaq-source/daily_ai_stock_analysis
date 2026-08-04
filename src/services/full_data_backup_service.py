@@ -12,12 +12,14 @@ import threading
 import time as time_module
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping, Optional, get_args
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, get_args
+from urllib.parse import urlsplit
 
 from sqlalchemy import delete, insert, select
 
 from api.v1.schemas.period_report import PeriodReportResponse
 from src.core.config_registry import get_registered_field_keys, is_sensitive_config_key
+from src.core.durable_file import durable_replace
 from src.services.alert_service import (
     SUPPORTED_ALERT_TYPES,
     SUPPORTED_SEVERITIES,
@@ -44,14 +46,13 @@ from src.services.portfolio_service import (
     VALID_MARKETS,
     VALID_SIDES,
 )
-from src.services.period_report_service import SUPPORTED_PERIODS
-from src.services.system_config_service import (
-    ConfigConflictError,
-    ConfigImportError,
-    ConfigValidationError,
-    SystemConfigService,
+from src.services.period_report_service import (
+    INSUFFICIENT_OUTLOOK_MESSAGE,
+    SUPPORTED_PERIODS,
 )
+from src.services.system_config_service import ConfigConflictError, SystemConfigService
 from src.storage import CURRENT_SCHEMA_VERSION, Base, DatabaseManager
+from src.services.full_data_restore_journal import FullDataRestoreJournal
 
 
 BACKUP_FORMAT = "pp02.full-data.backup"
@@ -70,6 +71,10 @@ TABLE_GROUPS = {
         "portfolio_corporate_actions",
     ),
     "period_reports": ("period_reports",),
+    "agent_conversations": (
+        "conversation_messages",
+        "conversation_summaries",
+    ),
     "structured_user_records": (
         "backtest_results",
         "backtest_summaries",
@@ -96,7 +101,8 @@ TABLE_COLUMN_ALLOWLIST = {
         "ideal_buy", "secondary_buy", "stop_loss", "take_profit", "created_at",
     ),
     "portfolio_accounts": (
-        "id", "name", "broker", "market", "base_currency", "is_active", "created_at", "updated_at",
+        "id", "owner_id", "name", "broker", "market", "base_currency", "is_active", "created_at",
+        "updated_at",
     ),
     "portfolio_trades": (
         "id", "account_id", "trade_uid", "symbol", "market", "currency", "trade_date", "side",
@@ -112,6 +118,13 @@ TABLE_COLUMN_ALLOWLIST = {
     "period_reports": (
         "id", "period", "report_kind", "start_date", "end_date", "content_json", "source_record_ids_json",
         "status", "generated_at", "updated_at",
+    ),
+    "conversation_messages": (
+        "id", "session_id", "role", "content", "created_at",
+    ),
+    "conversation_summaries": (
+        "id", "session_id", "summary", "covered_message_id", "source_message_count",
+        "estimated_tokens", "created_at", "updated_at",
     ),
     "backtest_results": (
         "id", "analysis_history_id", "code", "analysis_date", "eval_window_days", "engine_version",
@@ -181,6 +194,8 @@ DATETIME_COLUMNS = {
     "portfolio_cash_ledger": frozenset({"created_at"}),
     "portfolio_corporate_actions": frozenset({"created_at"}),
     "period_reports": frozenset({"generated_at", "updated_at"}),
+    "conversation_messages": frozenset({"created_at"}),
+    "conversation_summaries": frozenset({"created_at", "updated_at"}),
     "backtest_results": frozenset({"evaluated_at"}),
     "backtest_summaries": frozenset({"computed_at"}),
     "alert_rules": frozenset({"created_at", "updated_at"}),
@@ -199,6 +214,10 @@ INTEGER_COLUMNS = {
     "portfolio_cash_ledger": frozenset({"id", "account_id"}),
     "portfolio_corporate_actions": frozenset({"id", "account_id"}),
     "period_reports": frozenset({"id"}),
+    "conversation_messages": frozenset({"id"}),
+    "conversation_summaries": frozenset({
+        "id", "covered_message_id", "source_message_count", "estimated_tokens",
+    }),
     "backtest_results": frozenset({"id", "analysis_history_id", "eval_window_days", "first_hit_trading_days"}),
     "backtest_summaries": frozenset({"id", "eval_window_days", "total_evaluations", "completed_count", "insufficient_count", "long_count", "cash_count", "win_count", "loss_count", "neutral_count"}),
     "alert_rules": frozenset({"id"}),
@@ -242,6 +261,8 @@ REQUIRED_COLUMNS = {
         "id", "account_id", "symbol", "market", "currency", "effective_date", "action_type",
     }),
     "period_reports": frozenset(TABLE_COLUMN_ALLOWLIST["period_reports"]),
+    "conversation_messages": frozenset({"id", "session_id", "role", "content", "created_at"}),
+    "conversation_summaries": frozenset(TABLE_COLUMN_ALLOWLIST["conversation_summaries"]),
     "backtest_results": frozenset({
         "id", "analysis_history_id", "code", "eval_window_days", "engine_version", "eval_status",
     }),
@@ -276,9 +297,6 @@ JSON_ARRAY_COLUMNS = {
 JSON_VALUE_COLUMNS = {
     "decision_signals": frozenset({"evidence_json", "data_quality_summary_json"}),
 }
-JSON_LIKE_OBJECT_COLUMNS = {
-    "analysis_history": frozenset({"raw_result"}),
-}
 ENUM_COLUMNS = {
     "period_reports": {
         "period": frozenset(SUPPORTED_PERIODS),
@@ -287,6 +305,7 @@ ENUM_COLUMNS = {
         ),
         "status": frozenset(get_args(PeriodReportResponse.model_fields["status"].annotation)),
     },
+    "conversation_messages": {"role": frozenset({"user", "assistant", "system"})},
     "portfolio_accounts": {"market": frozenset(VALID_MARKETS)},
     "portfolio_trades": {
         "market": frozenset(VALID_MARKETS),
@@ -347,6 +366,9 @@ NON_NEGATIVE_NUMERIC_COLUMNS = {
         "ambiguous_rate", "avg_days_to_first_hit",
     }),
     "alert_notifications": frozenset({"latency_ms"}),
+    "conversation_summaries": frozenset({
+        "covered_message_id", "source_message_count", "estimated_tokens",
+    }),
 }
 RANGED_NUMERIC_COLUMNS = {
     "decision_signals": {"confidence": (0.0, 1.0), "score": (0.0, 100.0)},
@@ -364,6 +386,7 @@ UNIQUE_IDENTITIES = {
     "decision_signal_outcomes": (("signal_id", "horizon", "engine_version"),),
     "decision_signal_feedback": (("signal_id",),),
     "skill_opinion_samples": (("analysis_history_id", "skill_id", "sample_schema_version"),),
+    "conversation_summaries": (("session_id",),),
 }
 REFERENCE_COLUMNS = (
     ("portfolio_trades", "account_id", "portfolio_accounts"),
@@ -385,9 +408,7 @@ EXCLUDED_CONTENT = (
     "credentials_tokens_cookies_vault_ciphertext",
 )
 ROOT_KEYS = {"format", "format_version", "metadata", "manifest", "data", "integrity"}
-_SAFE_DYNAMIC_LLM_CONFIG_RE = re.compile(
-    r"^LLM_([A-Z0-9_]+)_(PROTOCOL|BASE_URL|MODELS|ENABLED)$"
-)
+_ASSIGNMENT_RE = re.compile(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$")
 _SENSITIVE_EMBEDDED_KEYS = frozenset({
     "ACCESS_TOKEN", "API_KEY", "API_SECRET", "API_TOKEN", "AUTHORIZATION", "AUTH_TOKEN",
     "BEARER_TOKEN", "CIPHERTEXT", "CLIENT_SECRET", "COOKIE", "COOKIES", "CREDENTIAL",
@@ -404,10 +425,6 @@ _SAFE_EMBEDDED_METADATA_SUFFIXES = frozenset({
 })
 _HIGH_CONFIDENCE_SECRET_VALUE_RE = re.compile(
     r"(?:\bBearer\s+[A-Za-z0-9._~+/=-]{8,}|"
-    r"(?<![A-Za-z0-9_])(?:gh[pousr]_[A-Za-z0-9]{36,255}|github_pat_[A-Za-z0-9_]{36,255})(?![A-Za-z0-9_])|"
-    r"(?-i:(?<![A-Z0-9])(?:AKIA|ASIA)[A-Z0-9]{16}(?![A-Z0-9]))|"
-    r"(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{2,}\.[A-Za-z0-9_-]{16,}(?![A-Za-z0-9_-])|"
-    r"-----BEGIN(?: [A-Z0-9]+)* PRIVATE KEY-----|"
     r"(?<![A-Za-z0-9_-])sk-(?:proj-)?[A-Za-z0-9_-]{20,}(?![A-Za-z0-9_-])|"
     r"(?<![A-Za-z0-9-])xox[baprs]-[A-Za-z0-9-]{20,}(?![A-Za-z0-9-])|"
     r"(?:credential|token|cookie|ciphertext)[- _]?marker(?:[-_A-Za-z0-9]*)|"
@@ -417,6 +434,17 @@ _HIGH_CONFIDENCE_SECRET_VALUE_RE = re.compile(
     r"https?://[^\s]+/api/webhooks/\d+/[A-Za-z0-9._-]{20,}|"
     r"https?://[^\s]+/robot/send\?access_token=[A-Za-z0-9_-]{20,})",
     re.IGNORECASE,
+)
+_HIGH_CONFIDENCE_TOKEN_FAMILY_RE = re.compile(
+    r"(?:"
+    r"(?<![A-Za-z0-9_])gh[pousr]_[A-Za-z0-9]{30,}(?![A-Za-z0-9])|"
+    r"(?<![A-Za-z0-9_])github_pat_[A-Za-z0-9_]{24,}(?![A-Za-z0-9_])|"
+    r"(?<![A-Z0-9])(?:AKIA|ASIA)[A-Z0-9]{16}(?![A-Z0-9])|"
+    r"(?<![A-Za-z0-9_-])AIza[A-Za-z0-9_-]{30,}(?![A-Za-z0-9_-])|"
+    r"(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\."
+    r"[A-Za-z0-9_-]{8,}(?![A-Za-z0-9_-])|"
+    r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"
+    r")"
 )
 _RUNTIME_CONFIG_KEYS = frozenset({
     "DATABASE_PATH", "ENV_FILE", "LOG_DIR", "REPORT_TEMPLATES_DIR", "AGENT_SKILL_DIR",
@@ -454,6 +482,7 @@ class FullDataBackupService:
         config_service: Optional[SystemConfigService] = None,
         application_version: Optional[str] = None,
         preview_token_ttl_seconds: float = DEFAULT_PREVIEW_TOKEN_TTL_SECONDS,
+        crash_test_hook: Optional[Callable[[str], None]] = None,
     ) -> None:
         self.db = db_manager or DatabaseManager.get_instance()
         self.config_service = config_service or SystemConfigService()
@@ -462,6 +491,7 @@ class FullDataBackupService:
             or DEFAULT_APPLICATION_VERSION
         )
         self.preview_token_ttl_seconds = float(preview_token_ttl_seconds)
+        self._crash_test_hook = crash_test_hook
         if (
             not math.isfinite(self.preview_token_ttl_seconds)
             or self.preview_token_ttl_seconds <= 0
@@ -472,8 +502,7 @@ class FullDataBackupService:
 
     def export_backup(self) -> Dict[str, Any]:
         """Return a complete, deterministic-in-content document with canonical integrity."""
-        with self.db.get_session() as session:
-            tables = {table_name: self._read_table(session, table_name) for table_name in TABLE_NAMES}
+        tables = self._read_tables_snapshot()
         configuration = self._read_sanitized_configuration()
         return self._build_backup_document(tables=tables, configuration=configuration)
 
@@ -524,22 +553,14 @@ class FullDataBackupService:
 
     def current_state_digest(self) -> str:
         """Return a stable digest of allow-listed database rows and config values."""
-        with self.db.get_session() as session:
-            tables = {
-                table_name: self._read_table(session, table_name)
-                for table_name in TABLE_NAMES
-            }
+        tables = self._read_tables_snapshot()
         return self._state_digest(tables, self._read_sanitized_configuration())
 
     def preview_restore(self, backup: Mapping[str, Any]) -> Dict[str, Any]:
         """Validate fully and issue a short-lived token bound to both states."""
         validated = self.validate_backup(backup)
         incoming_digest = self.canonical_sha256(validated)
-        with self.db.get_session() as session:
-            current_tables = {
-                table_name: self._read_table(session, table_name)
-                for table_name in TABLE_NAMES
-            }
+        current_tables = self._read_tables_snapshot()
         current_configuration = self._read_sanitized_configuration()
         destination_digest = self._state_digest(
             current_tables,
@@ -598,14 +619,38 @@ class FullDataBackupService:
         if not getattr(self.db, "_is_sqlite_engine", False):
             raise FullDataBackupRestoreError("Full-data restore requires SQLite.")
 
+        journal = FullDataRestoreJournal(
+            db_manager=self.db,
+            config_service=self.config_service,
+            application_version=self.application_version,
+            database_schema_version=CURRENT_SCHEMA_VERSION,
+            managed_keys=set(BACKUP_CONFIG_ALLOWLIST),
+            value_validator=self._validate_config_value,
+        )
+        with journal.transaction_lock():
+            return self._restore_backup_under_lock(
+                validated=validated,
+                incoming_digest=incoming_digest,
+                preview=preview,
+                journal=journal,
+            )
+
+    def _restore_backup_under_lock(
+        self,
+        *,
+        validated: Mapping[str, Any],
+        incoming_digest: str,
+        preview: Mapping[str, Any],
+        journal: FullDataRestoreJournal,
+    ) -> Dict[str, Any]:
+        """Run one restore while holding the cross-process journal lock."""
         session = self.db.get_session()
+        journal_tx_id: Optional[str] = None
         recovery: Optional[Dict[str, Any]] = None
         prior_configuration: Optional[Dict[str, Any]] = None
-        prior_tables: Optional[Dict[str, Any]] = None
         configuration_receipt = None
-        restored_digest: Optional[str] = None
-        warnings: List[str] = []
-        committed_interruption: Optional[BaseException] = None
+        database_committed = False
+        database_commit_attempted = False
         try:
             connection = session.connection()
             connection.exec_driver_sql("PRAGMA foreign_keys=ON")
@@ -621,7 +666,6 @@ class FullDataBackupService:
                 table_name: self._read_table(session, table_name)
                 for table_name in TABLE_NAMES
             }
-            prior_tables = current_tables
             prior_configuration = self._read_sanitized_configuration()
             destination_digest = self._state_digest(
                 current_tables,
@@ -640,6 +684,10 @@ class FullDataBackupService:
                 recovery_document,
                 destination_digest=destination_digest,
             )
+            journal_tx_id = journal.begin(
+                prior_values=prior_configuration["values"],
+                incoming_values=validated["data"]["configuration"]["values"],
+            )
 
             try:
                 configuration_receipt = self._replace_configuration(
@@ -650,6 +698,7 @@ class FullDataBackupService:
                 raise FullDataBackupConflictError(
                     "Destination configuration changed during restore."
                 ) from exc
+            self._run_crash_test_hook("after_config_publish")
             self._verify_configuration(validated["data"]["configuration"])
             self._replace_tables(session, validated["data"]["tables"])
             restored_tables = self._verify_restored_tables(
@@ -669,67 +718,125 @@ class FullDataBackupService:
                 raise FullDataBackupRestoreError(
                     "Restored data/config digest does not match the validated backup."
                 )
+            assert journal_tx_id is not None
+            journal.mark_committed(session, journal_tx_id)
+            database_commit_attempted = True
             session.commit()
-        except FullDataBackupConflictError:
-            session.rollback()
-            raise
+            database_committed = True
+            self._run_crash_test_hook("after_db_commit")
         except BaseException as exc:
-            session.rollback()
-            session.close()
-            database_state = "prior"
-            if prior_tables is not None:
-                database_state, observed_tables = self._classify_database_state(
-                    prior_tables=prior_tables,
-                    incoming_tables=validated["data"]["tables"],
-                )
-            if database_state == "incoming":
-                observed_configuration = self._read_sanitized_configuration()
-                restored_digest = self._state_digest(
-                    observed_tables,
-                    observed_configuration,
-                )
-                expected_digest = self._state_digest(
-                    validated["data"]["tables"],
-                    validated["data"]["configuration"],
-                )
-                if restored_digest != expected_digest:
-                    raise FullDataBackupRestoreError(
-                        "Database commit completed but destination configuration state is uncertain."
-                    ) from exc
-                if isinstance(exc, Exception):
-                    warnings.append(
-                        "Database commit completed although commit finalization raised an error."
-                    )
-                else:
-                    committed_interruption = exc
-            elif database_state != "prior":
-                raise FullDataBackupRestoreError(
-                    "Database commit outcome is uncertain; configuration was not compensated."
-                ) from exc
-            else:
-                compensation_error = None
-                if configuration_receipt is not None and prior_configuration is not None:
+            rollback_error = None
+            try:
+                session.rollback()
+            except BaseException as rollback_exc:  # pragma: no cover - driver failure
+                rollback_error = rollback_exc
+            commit_outcome_uncertain = False
+            marker_query_error = None
+            if (
+                not database_committed
+                and database_commit_attempted
+                and journal_tx_id is not None
+            ):
+                try:
+                    database_committed = journal.is_committed(journal_tx_id)
+                except BaseException as marker_exc:
+                    # Never compensate when the durable commit result cannot be
+                    # observed. The journal and incoming configuration are the
+                    # evidence startup recovery needs to settle the transaction.
+                    commit_outcome_uncertain = True
+                    marker_query_error = marker_exc
+            if database_committed or commit_outcome_uncertain:
+                if configuration_receipt is not None:
                     try:
-                        self.config_service.compensate_env_subset_atomically(
-                            receipt=configuration_receipt,
-                            reload_now=False,
+                        self.config_service.finalize_env_subset_atomically(
+                            configuration_receipt
                         )
-                        self._verify_configuration(prior_configuration)
-                    except ConfigConflictError as compensation_conflict:
-                        raise FullDataBackupConflictError(
-                            "Configuration changed after restore apply; the concurrent "
-                            "edit was not overwritten and database changes were rolled back."
-                        ) from compensation_conflict
-                    except BaseException as compensation_exc:  # pragma: no cover - catastrophic path
-                        compensation_error = compensation_exc
-                message = f"Full-data restore failed and database changes were rolled back: {exc}"
-                if compensation_error is not None:
-                    message += f"; configuration compensation also failed: {compensation_error}"
-                if not isinstance(exc, Exception):
+                    except BaseException as cleanup_exc:
+                        try:
+                            self.config_service.discard_env_subset_receipt_after_commit(
+                                configuration_receipt
+                            )
+                        except BaseException:
+                            pass
+                        add_note = getattr(exc, "add_note", None)
+                        if callable(add_note):
+                            add_note(
+                                "Committed restore receipt cleanup encountered an "
+                                f"additional failure: {cleanup_exc!r}"
+                            )
+                    configuration_receipt = None
+                add_note = getattr(exc, "add_note", None)
+                if callable(add_note):
+                    if marker_query_error is not None:
+                        add_note(
+                            "Restore commit outcome could not be confirmed; durable "
+                            "journal evidence was retained for startup recovery."
+                        )
+                    if rollback_error is not None:
+                        add_note("Session rollback after commit interruption also failed.")
+                raise
+            compensation_error = None
+            compensation_conflict = None
+            if configuration_receipt is not None and prior_configuration is not None:
+                try:
+                    self.config_service.compensate_env_subset_atomically(
+                        receipt=configuration_receipt,
+                        reload_now=False,
+                    )
+                    configuration_receipt = None
+                    self._verify_configuration(prior_configuration)
+                except ConfigConflictError as conflict_exc:
+                    compensation_conflict = conflict_exc
+                    self.config_service.discard_env_subset_receipt_after_commit(
+                        configuration_receipt
+                    )
+                    configuration_receipt = None
+                except BaseException as compensation_exc:  # pragma: no cover - catastrophic path
+                    compensation_error = compensation_exc
+                    try:
+                        self.config_service.discard_env_subset_receipt_after_commit(
+                            configuration_receipt
+                        )
+                    except BaseException:
+                        pass
+                    configuration_receipt = None
+            if journal_tx_id is not None:
+                try:
+                    current_configuration = self._read_sanitized_configuration()
+                    if (
+                        prior_configuration is not None
+                        and current_configuration["values"]
+                        == prior_configuration["values"]
+                    ):
+                        journal.cancel(journal_tx_id)
+                    else:
+                        journal.abort(journal_tx_id)
+                    journal_tx_id = None
+                except BaseException as journal_exc:
+                    if compensation_error is None:
+                        compensation_error = journal_exc
+            if not isinstance(exc, Exception):
+                add_note = getattr(exc, "add_note", None)
+                if callable(add_note):
+                    if compensation_conflict is not None:
+                        add_note(
+                            "A concurrent configuration edit was preserved while the "
+                            "database restore was rolled back."
+                        )
                     if compensation_error is not None:
-                        raise FullDataBackupRestoreError(message) from compensation_error
-                    raise
-                raise FullDataBackupRestoreError(message) from exc
+                        add_note("Configuration compensation encountered an additional failure.")
+                raise
+            if compensation_conflict is not None:
+                raise FullDataBackupConflictError(
+                    "Configuration changed after restore apply; the concurrent "
+                    "edit was not overwritten and database changes were rolled back."
+                ) from compensation_conflict
+            if isinstance(exc, FullDataBackupConflictError):
+                raise
+            message = f"Full-data restore failed and database changes were rolled back: {exc}"
+            if compensation_error is not None:
+                message += f"; configuration compensation also failed: {compensation_error}"
+            raise FullDataBackupRestoreError(message) from exc
         finally:
             session.close()
 
@@ -737,27 +844,38 @@ class FullDataBackupService:
             raise FullDataBackupRestoreError(
                 "Restore committed but configuration receipt is missing."
             )
+        warnings: List[str] = []
         try:
-            self.config_service.finalize_env_subset_atomically(
-                configuration_receipt
-            )
+            self.config_service.finalize_env_subset_atomically(configuration_receipt)
         except Exception:
             try:
-                self.config_service.finalize_env_subset_atomically(
+                self.config_service.finalize_env_subset_atomically(configuration_receipt)
+            except Exception:
+                self.config_service.discard_env_subset_receipt_after_commit(
                     configuration_receipt
                 )
-            except Exception:
-                pass
             warnings.append(
-                "Configuration receipt finalization failed after committed restore."
+                "Configuration receipt cleanup required a safe post-commit retry."
             )
         configuration_receipt = None
 
-        if committed_interruption is not None:
-            raise committed_interruption.with_traceback(committed_interruption.__traceback__)
+        assert journal_tx_id is not None
+        try:
+            journal.finish(journal_tx_id)
+        except Exception:
+            try:
+                journal.recover_pending()
+            except Exception:
+                warnings.append(
+                    "Restore transaction cleanup is pending safe startup recovery."
+                )
+            else:
+                warnings.append(
+                    "Restore transaction cleanup required a safe post-commit retry."
+                )
+        journal_tx_id = None
 
         assert recovery is not None
-        assert restored_digest is not None
         return {
             "success": True,
             "incoming_digest": incoming_digest,
@@ -772,24 +890,9 @@ class FullDataBackupService:
             "warnings": warnings,
         }
 
-    def _classify_database_state(
-        self,
-        *,
-        prior_tables: Mapping[str, Any],
-        incoming_tables: Mapping[str, Any],
-    ) -> tuple[str, Dict[str, Any]]:
-        """Classify a commit exception using a new session and logical table digests."""
-        with self.db.get_session() as fresh_session:
-            observed_tables = {
-                table_name: self._read_table(fresh_session, table_name)
-                for table_name in TABLE_NAMES
-            }
-        observed_digest = self._tables_digest(observed_tables)
-        if observed_digest == self._tables_digest(incoming_tables):
-            return "incoming", observed_tables
-        if observed_digest == self._tables_digest(prior_tables):
-            return "prior", observed_tables
-        return "unknown", observed_tables
+    def _run_crash_test_hook(self, phase: str) -> None:
+        if self._crash_test_hook is not None:
+            self._crash_test_hook(phase)
 
     def _consume_preview_token(
         self,
@@ -871,18 +974,7 @@ class FullDataBackupService:
                 file_obj.write("\n")
                 file_obj.flush()
                 os.fsync(file_obj.fileno())
-            os.replace(temporary, target)
-            try:
-                directory_descriptor = os.open(directory, os.O_RDONLY)
-            except OSError:
-                # Windows does not permit opening directories this way. The
-                # file itself was already fsynced before the atomic replace.
-                directory_descriptor = None
-            if directory_descriptor is not None:
-                try:
-                    os.fsync(directory_descriptor)
-                finally:
-                    os.close(directory_descriptor)
+            durable_replace(temporary, target)
         finally:
             if temporary.exists():
                 temporary.unlink()
@@ -904,28 +996,9 @@ class FullDataBackupService:
         return self.config_service.apply_env_subset_atomically(
             expected_version=config_version,
             values=values,
-            managed_keys=self._managed_configuration_keys(values),
+            managed_keys=set(BACKUP_CONFIG_ALLOWLIST),
             reload_now=False,
         )
-
-    def _managed_configuration_keys(self, incoming_values: Mapping[str, str]) -> set[str]:
-        exported = self.config_service.export_env()
-        content = exported.get("content") if isinstance(exported, Mapping) else None
-        if not isinstance(content, str):
-            raise FullDataBackupValidationError(
-                "Configuration export boundary returned invalid content."
-            )
-        try:
-            current_values = self.config_service.parse_env_content_values(content)
-        except ConfigImportError as exc:
-            raise FullDataBackupValidationError(
-                "Configuration export boundary returned invalid content."
-            ) from exc
-        dynamic_keys = {
-            key for key in (*current_values, *incoming_values)
-            if _SAFE_DYNAMIC_LLM_CONFIG_RE.fullmatch(key)
-        }
-        return set(BACKUP_CONFIG_ALLOWLIST) | dynamic_keys
 
     def _verify_configuration(self, configuration: Mapping[str, Any]) -> None:
         expected = dict(configuration["values"])
@@ -938,6 +1011,7 @@ class FullDataBackupService:
     def _replace_tables(self, session, tables: Mapping[str, Any]) -> None:
         for table_name in DERIVED_PORTFOLIO_TABLES:
             session.execute(delete(Base.metadata.tables[table_name]))
+        session.execute(delete(Base.metadata.tables["agent_provider_turns"]))
         for table_name in reversed(TABLE_NAMES):
             session.execute(delete(Base.metadata.tables[table_name]))
         session.flush()
@@ -1074,24 +1148,51 @@ class FullDataBackupService:
             for row in rows
         ]
 
+    def _read_tables_snapshot(self) -> Dict[str, List[Dict[str, Any]]]:
+        """Read every allow-listed table from one explicit database snapshot."""
+        session = self.db.get_session()
+        try:
+            connection = session.connection()
+            if getattr(self.db, "_is_sqlite_engine", False):
+                connection.exec_driver_sql("BEGIN")
+            return {
+                table_name: self._read_table(session, table_name)
+                for table_name in TABLE_NAMES
+            }
+        finally:
+            session.rollback()
+            session.close()
+
     def _read_sanitized_configuration(self) -> Dict[str, Any]:
-        """Use SystemConfigService.export_env() as the sole config-value boundary."""
-        exported = self.config_service.export_env()
+        """Read one locked logical config generation through the service boundary."""
+        exported = self.config_service.snapshot_non_sensitive_values(
+            allowed_keys=set(BACKUP_CONFIG_ALLOWLIST),
+        )
         if not isinstance(exported, Mapping):
             raise FullDataBackupValidationError("Configuration export boundary returned an invalid payload.")
-        content = exported.get("content")
-        if not isinstance(content, str):
-            raise FullDataBackupValidationError("Configuration export boundary returned invalid content.")
-        try:
-            parsed_values = self.config_service.parse_env_content_values(content)
-            values = self._permitted_configuration_values(parsed_values)
-            values = self.config_service.normalize_and_validate_env_subset_values(
-                values=values,
-                managed_keys=set(values),
-            )
-        except (ConfigImportError, ConfigValidationError) as exc:
+        raw_values = exported.get("values")
+        if not isinstance(raw_values, Mapping):
             raise FullDataBackupValidationError(
-                "Configuration export boundary returned invalid content."
+                "Configuration export boundary returned invalid values."
+            )
+        values: Dict[str, str] = {}
+        for raw_key, raw_value in raw_values.items():
+            key = str(raw_key).upper()
+            if key not in BACKUP_CONFIG_ALLOWLIST or not isinstance(raw_value, str):
+                raise FullDataBackupValidationError(
+                    "Configuration export boundary returned an invalid allowed value."
+                )
+            value = raw_value
+            self._validate_config_value(value)
+            values[key] = value
+        try:
+            values = self.config_service.normalize_env_subset_values(
+                values=values,
+                managed_keys=set(BACKUP_CONFIG_ALLOWLIST),
+            )
+        except Exception as exc:
+            raise FullDataBackupValidationError(
+                "Configuration export boundary returned noncanonical values."
             ) from exc
         return {
             "config_version": self._plain_scalar(exported.get("config_version"), "config_version"),
@@ -1099,39 +1200,11 @@ class FullDataBackupService:
             "values": {key: values[key] for key in sorted(values)},
         }
 
-    @staticmethod
-    def _declared_llm_channels(values: Mapping[str, str]) -> set[str]:
-        raw_channels = values.get("LLM_CHANNELS", "")
-        channels = {
-            segment.strip().upper()
-            for segment in raw_channels.split(",")
-            if segment.strip()
-        }
-        if any(not re.fullmatch(r"[A-Z0-9_]+", channel) for channel in channels):
-            raise FullDataBackupValidationError("Configuration contains an invalid LLM channel name.")
-        return channels
-
-    @classmethod
-    def _permitted_configuration_values(
-        cls,
-        values: Mapping[str, str],
-    ) -> Dict[str, str]:
-        normalized = {str(key).upper(): value for key, value in values.items()}
-        channels = cls._declared_llm_channels(normalized)
-        permitted: Dict[str, str] = {}
-        for key, value in normalized.items():
-            if key in BACKUP_CONFIG_ALLOWLIST:
-                permitted[key] = value
-                continue
-            match = _SAFE_DYNAMIC_LLM_CONFIG_RE.fullmatch(key)
-            if match and match.group(1) in channels:
-                permitted[key] = value
-        return permitted
-
     def _manifest(self, data: Mapping[str, Any]) -> Dict[str, Any]:
         tables = data["tables"]
         table_row_counts = {table_name: len(tables[table_name]) for table_name in sorted(TABLE_NAMES)}
         categories = {
+            "agent_conversations": self._category("agent_conversations", table_row_counts),
             "analysis": self._category("analysis", table_row_counts),
             "configuration": {
                 "status": "supported",
@@ -1163,7 +1236,7 @@ class FullDataBackupService:
         self._keys(manifest, {"categories", "excluded", "table_row_counts"}, "manifest")
         categories = self._object(manifest["categories"], "manifest.categories")
         expected_categories = {
-            "analysis", "configuration", "fund", "period_reports", "portfolio_events",
+            "agent_conversations", "analysis", "configuration", "fund", "period_reports", "portfolio_events",
             "structured_user_records",
         }
         self._keys(categories, expected_categories, "manifest.categories")
@@ -1297,10 +1370,6 @@ class FullDataBackupService:
             expected_type = dict
         elif column_name in JSON_ARRAY_COLUMNS.get(table_name, frozenset()):
             expected_type = list
-        elif column_name in JSON_LIKE_OBJECT_COLUMNS.get(table_name, frozenset()):
-            if not value.strip().startswith(("{", "[")):
-                return
-            expected_type = dict
         elif column_name not in JSON_VALUE_COLUMNS.get(table_name, frozenset()):
             return
         try:
@@ -1332,6 +1401,8 @@ class FullDataBackupService:
         if not isinstance(value, str):
             return
         if _HIGH_CONFIDENCE_SECRET_VALUE_RE.search(value):
+            raise FullDataBackupValidationError(f"{label} contains credential-like material.")
+        if _HIGH_CONFIDENCE_TOKEN_FAMILY_RE.search(value):
             raise FullDataBackupValidationError(f"{label} contains credential-like material.")
         stripped = value.strip()
         if not stripped.startswith(("{", "[")):
@@ -1387,9 +1458,27 @@ class FullDataBackupService:
                     raise FullDataBackupValidationError(
                         f"{table_name}.{column_name} references a missing {target_table} row."
                     )
+
     @classmethod
     def _validate_cross_field_semantics(cls, tables: Mapping[str, Any]) -> None:
+        conversation_messages = {
+            row["id"]: row for row in tables["conversation_messages"]
+        }
+        for summary in tables["conversation_summaries"]:
+            covered_message_id = summary["covered_message_id"]
+            if covered_message_id <= 0:
+                continue
+            covered_message = conversation_messages.get(covered_message_id)
+            if (
+                covered_message is None
+                or covered_message["session_id"] != summary["session_id"]
+            ):
+                raise FullDataBackupValidationError(
+                    "conversation_summaries.covered_message_id must reference an "
+                    "included message in the same session."
+                )
         for row in tables["period_reports"]:
+            cls._validate_period_report_content(row)
             if date.fromisoformat(row["start_date"]) > date.fromisoformat(row["end_date"]):
                 raise FullDataBackupValidationError("period_reports.start_date must not follow end_date.")
         for row in tables["portfolio_corporate_actions"]:
@@ -1421,6 +1510,343 @@ class FullDataBackupService:
                     "decision_signals.entry_low must not exceed entry_high."
                 )
 
+    @classmethod
+    def _validate_period_report_content(cls, row: Mapping[str, Any]) -> None:
+        try:
+            content = json.loads(row["content_json"])
+            payload = PeriodReportResponse.model_validate(content, strict=True)
+            values = payload.model_dump()
+            if content != values:
+                raise ValueError("period report content is not a closed canonical shape")
+        except Exception as exc:
+            raise FullDataBackupValidationError(
+                "period_reports.content_json must contain a complete period report."
+            ) from exc
+
+        try:
+            report_generated_at = cls._require_period_timestamp(
+                values["generated_at"],
+                "period report generated_at",
+            )
+            row_generated_at = cls._require_period_timestamp(
+                row["generated_at"],
+                "period report row generated_at",
+            )
+        except FullDataBackupValidationError:
+            raise
+        except Exception as exc:  # pragma: no cover - defensive wrapper
+            raise FullDataBackupValidationError(
+                "period report timestamps are invalid."
+            ) from exc
+        scalar_matches = (
+            values["report_id"] == row["id"],
+            values["status"] == row["status"],
+            values["period"] == row["period"],
+            values["report_kind"] == row["report_kind"],
+            values["start_date"] == row["start_date"],
+            values["end_date"] == row["end_date"],
+            # Legacy SQLite rows persist naive local wall time while the
+            # canonical payload carries the same wall value with an offset.
+            # Keep this identity comparison wall-based for existing databases;
+            # all source/snapshot ordering below is normalized to UTC.
+            cls._parse_wall_timestamp(values["generated_at"])
+            == cls._parse_wall_timestamp(row["generated_at"]),
+        )
+        if not all(scalar_matches):
+            raise FullDataBackupValidationError(
+                "period_reports row identity does not match its complete content."
+            )
+        current_source_ids = cls._validate_period_current_sources(
+            values,
+            report_generated_at=report_generated_at,
+        )
+        matched_source_ids: set[int] = set()
+        matched = values["matched_outlook"]
+        if matched is not None:
+            if values["period"] != "previous_week" or values["report_kind"] != "historical":
+                raise FullDataBackupValidationError(
+                    "matched_outlook is only valid on a previous-week historical report."
+                )
+            matched_source_ids = cls._validate_period_outlook_snapshot(
+                matched,
+                row=values,
+                label="matched_outlook",
+                report_generated_at=report_generated_at,
+                require_same_generated_at=False,
+            )
+            if current_source_ids.intersection(matched_source_ids):
+                raise FullDataBackupValidationError(
+                    "period_reports source identities must be globally unique."
+                )
+        stored_source_ids = json.loads(row["source_record_ids_json"])
+        if (
+            sorted(current_source_ids | matched_source_ids) != stored_source_ids
+            or values["source_record_count"] != len(current_source_ids)
+        ):
+            raise FullDataBackupValidationError(
+                "period_reports source identity does not match its complete content."
+            )
+
+    @classmethod
+    def _validate_period_current_sources(
+        cls,
+        report: Mapping[str, Any],
+        *,
+        report_generated_at: datetime,
+    ) -> set[int]:
+        current_ids: set[int] = set()
+        source_occurrences = 0
+        start_date = date.fromisoformat(report["start_date"])
+        end_date = date.fromisoformat(report["end_date"])
+        for collection_name in ("stock_summaries", "etf_summaries"):
+            expected_asset_type = "stock" if collection_name == "stock_summaries" else "etf"
+            for summary in report[collection_name]:
+                source_ids = summary["source_record_ids"]
+                if (
+                    summary["asset_type"] != expected_asset_type
+                    or
+                    source_ids != list(dict.fromkeys(source_ids))
+                    or any(type(item) is not int or item <= 0 for item in source_ids)
+                    or summary["record_count"] != len(source_ids)
+                    or summary["latest_record_id"] not in source_ids
+                    or sum(summary["direction_counts"].values())
+                    != summary["record_count"]
+                ):
+                    raise FullDataBackupValidationError(
+                        f"{collection_name} source/count/latest semantics are invalid."
+                    )
+                if current_ids.intersection(source_ids):
+                    raise FullDataBackupValidationError(
+                        "Period report source identities must be globally unique."
+                    )
+                if summary["latest_created_at"] is not None:
+                    created_at = cls._require_period_timestamp(
+                        summary["latest_created_at"],
+                        f"{collection_name}.latest_created_at",
+                    )
+                    if (
+                        created_at.date() < start_date
+                        or created_at.date() > end_date
+                        or created_at > report_generated_at
+                    ):
+                        raise FullDataBackupValidationError(
+                            f"{collection_name} source time is outside the report window."
+                        )
+                current_ids.update(source_ids)
+                source_occurrences += len(source_ids)
+        for review in report["market_reviews"]:
+            record_id = review["record_id"]
+            if record_id in current_ids:
+                raise FullDataBackupValidationError(
+                    "Period report source identities must be globally unique."
+                )
+            current_ids.add(record_id)
+            source_occurrences += 1
+            if review["created_at"] is not None:
+                created_at = cls._require_period_timestamp(
+                    review["created_at"],
+                    "market_reviews.created_at",
+                )
+                if (
+                    created_at.date() < start_date
+                    or created_at.date() > end_date
+                    or created_at > report_generated_at
+                ):
+                    raise FullDataBackupValidationError(
+                        "market review source time is outside the report window."
+                    )
+
+        outlook = report["outlook"]
+        if report["report_kind"] == "outlook":
+            if report["period"] != "next_week" or outlook is None:
+                raise FullDataBackupValidationError(
+                    "Outlook reports require one next-week outlook snapshot."
+                )
+            if report["stock_summaries"] or report["etf_summaries"] or report["market_reviews"]:
+                raise FullDataBackupValidationError(
+                    "Outlook reports cannot contain historical summary sections."
+                )
+            if report["matched_outlook"] is not None:
+                raise FullDataBackupValidationError(
+                    "Outlook reports cannot contain matched_outlook."
+                )
+            current_ids = cls._validate_period_outlook_snapshot(
+                outlook,
+                row=report,
+                label="outlook",
+                report_generated_at=report_generated_at,
+                require_same_generated_at=True,
+            )
+            if report["status"] != outlook["status"]:
+                raise FullDataBackupValidationError(
+                    "Outlook report status must match its snapshot."
+                )
+        elif outlook is not None:
+            raise FullDataBackupValidationError(
+                "Historical reports cannot contain outlook."
+            )
+        elif report["source_record_count"] != source_occurrences:
+            raise FullDataBackupValidationError(
+                "Historical source count must match formal generator records."
+            )
+        return current_ids
+
+    @classmethod
+    def _validate_period_outlook_snapshot(
+        cls,
+        snapshot: Mapping[str, Any],
+        *,
+        row: Mapping[str, Any],
+        label: str,
+        report_generated_at: datetime,
+        require_same_generated_at: bool,
+    ) -> set[int]:
+        target = snapshot["target_period"]
+        if (
+            target["start_date"] != row["start_date"]
+            or target["end_date"] != row["end_date"]
+        ):
+            raise FullDataBackupValidationError(
+                f"{label} target window must match the report row."
+            )
+        generated_at = cls._require_period_timestamp(
+            snapshot["generated_at"],
+            f"{label}.generated_at",
+        )
+        if require_same_generated_at:
+            if generated_at != report_generated_at:
+                raise FullDataBackupValidationError(
+                    f"{label}.generated_at must match the report generated_at."
+                )
+        elif generated_at > report_generated_at:
+            raise FullDataBackupValidationError(
+                f"{label}.generated_at cannot follow the report generated_at."
+            )
+        parsed_optional_times: Dict[str, Optional[datetime]] = {}
+        for optional_timestamp in ("snapshot_created_at", "data_as_of"):
+            value = snapshot[optional_timestamp]
+            parsed_optional_times[optional_timestamp] = None
+            if value is not None:
+                parsed = cls._require_period_timestamp(
+                    value,
+                    f"{label}.{optional_timestamp}",
+                )
+                if parsed > generated_at:
+                    raise FullDataBackupValidationError(
+                        f"{label}.{optional_timestamp} cannot follow its generated_at."
+                    )
+                parsed_optional_times[optional_timestamp] = parsed
+
+        source_ids = snapshot["source_record_ids"]
+        if (
+            source_ids != sorted(set(source_ids))
+            or any(type(item) is not int or item <= 0 for item in source_ids)
+            or snapshot["source_record_count"] != len(source_ids)
+        ):
+            raise FullDataBackupValidationError(
+                f"{label} source IDs and count are inconsistent."
+            )
+        nested_ids: set[int] = set()
+        source_occurrences = 0
+        outlook_items: List[Mapping[str, Any]] = []
+        for collection_name in ("stocks", "etfs"):
+            expected_asset_type = "stock" if collection_name == "stocks" else "etf"
+            for item in snapshot[collection_name]:
+                outlook_items.append(item)
+                item_ids = item["source_record_ids"]
+                if (
+                    item["asset_type"] != expected_asset_type
+                    or
+                    item_ids != list(dict.fromkeys(item_ids))
+                    or any(type(value) is not int or value <= 0 for value in item_ids)
+                    or item["source_record_count"] != len(item_ids)
+                ):
+                    raise FullDataBackupValidationError(
+                        f"{label}.{collection_name} source IDs and count are inconsistent."
+                    )
+                if nested_ids.intersection(item_ids):
+                    raise FullDataBackupValidationError(
+                        f"{label} source identities must be globally unique."
+                    )
+                if item["data_as_of"] is not None:
+                    item_time = cls._require_period_timestamp(
+                        item["data_as_of"],
+                        f"{label}.{collection_name}.data_as_of",
+                    )
+                    if item_time > generated_at or (
+                        parsed_optional_times["snapshot_created_at"] is not None
+                        and item_time > parsed_optional_times["snapshot_created_at"]
+                    ):
+                        raise FullDataBackupValidationError(
+                            f"{label}.{collection_name}.data_as_of is too recent."
+                        )
+                nested_ids.update(item_ids)
+                source_occurrences += len(item_ids)
+        for signal in snapshot["market_signals"]:
+            record_id = signal["record_id"]
+            if record_id in nested_ids:
+                raise FullDataBackupValidationError(
+                    f"{label} source identities must be globally unique."
+                )
+            nested_ids.add(record_id)
+            source_occurrences += 1
+            if signal["created_at"] is not None:
+                signal_time = cls._require_period_timestamp(
+                    signal["created_at"],
+                    f"{label}.market_signals.created_at",
+                )
+                if signal_time > generated_at or (
+                    parsed_optional_times["snapshot_created_at"] is not None
+                    and signal_time > parsed_optional_times["snapshot_created_at"]
+                ):
+                    raise FullDataBackupValidationError(
+                        f"{label}.market_signals.created_at is too recent."
+                    )
+        if nested_ids != set(source_ids) or source_occurrences != len(source_ids):
+            raise FullDataBackupValidationError(
+                f"{label} nested source IDs must match its source_record_ids."
+            )
+        expected_ready = bool(outlook_items)
+        if expected_ready:
+            tendencies = {"看多": 0, "中性": 0, "看空": 0}
+            for item in outlook_items:
+                tendencies[item["tendency"]] += 1
+            maximum = max(tendencies.values())
+            leaders = [
+                tendency
+                for tendency, count in tendencies.items()
+                if count == maximum
+            ]
+            expected_tendency = leaders[0] if len(leaders) == 1 else "中性"
+            if (
+                snapshot["status"] != "ready"
+                or snapshot["message"] is not None
+                or snapshot["overall_tendency"] != expected_tendency
+            ):
+                raise FullDataBackupValidationError(
+                    f"{label} ready semantics do not match the formal generator."
+                )
+        elif (
+            snapshot["status"] != "insufficient_data"
+            or snapshot["message"] != INSUFFICIENT_OUTLOOK_MESSAGE
+            or snapshot["overall_tendency"] is not None
+        ):
+            raise FullDataBackupValidationError(
+                f"{label} insufficient-data semantics do not match the formal generator."
+            )
+        return set(source_ids)
+
+    @classmethod
+    def _require_period_timestamp(cls, value: Any, label: str) -> datetime:
+        if not isinstance(value, str) or "T" not in value:
+            raise FullDataBackupValidationError(f"{label} must be an ISO timestamp.")
+        try:
+            return cls._parse_timestamp(value)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise FullDataBackupValidationError(
+                f"{label} must be an ISO timestamp."
+            ) from exc
+
     @staticmethod
     def _validate_timestamp(value: Any, label: str) -> None:
         if not isinstance(value, str) or "T" not in value:
@@ -1429,6 +1855,11 @@ class FullDataBackupService:
             FullDataBackupService._parse_timestamp(value)
         except ValueError as exc:
             raise FullDataBackupValidationError(f"{label} must be an ISO timestamp.") from exc
+
+    @staticmethod
+    def _parse_wall_timestamp(value: str) -> datetime:
+        normalized = value[:-1] + "+00:00" if value.endswith("Z") else value
+        return datetime.fromisoformat(normalized).replace(tzinfo=None)
 
     @staticmethod
     def _parse_timestamp(value: str) -> datetime:
@@ -1467,26 +1898,43 @@ class FullDataBackupService:
         for key, item in values.items():
             if not isinstance(key, str) or not re.fullmatch(r"[A-Z_][A-Z0-9_]*", key):
                 raise FullDataBackupValidationError("Configuration key is invalid.")
+            if key not in BACKUP_CONFIG_ALLOWLIST or is_sensitive_config_key(key):
+                raise FullDataBackupValidationError(
+                    "Configuration key is not permitted by the complete-backup registry policy."
+                )
             if not isinstance(item, str):
                 raise FullDataBackupValidationError("Configuration value is invalid.")
-        permitted_values = self._permitted_configuration_values(values)
-        if set(permitted_values) != set(values):
-            raise FullDataBackupValidationError(
-                "Configuration key is not permitted by the complete-backup registry policy."
-            )
+            self._validate_config_value(item)
         try:
-            normalized = self.config_service.normalize_and_validate_env_subset_values(
+            canonical = self.config_service.normalize_env_subset_values(
                 values=values,
-                managed_keys=set(values),
+                managed_keys=set(BACKUP_CONFIG_ALLOWLIST),
             )
-        except (ConfigImportError, ConfigValidationError) as exc:
+        except Exception as exc:
             raise FullDataBackupValidationError(
-                "Configuration values do not pass normalization and semantic validation."
+                "Configuration values cannot be normalized safely."
             ) from exc
-        if normalized != values:
+        if canonical != values:
             raise FullDataBackupValidationError(
-                "Configuration values are not in canonical normalized form."
+                "Configuration values must use their canonical storage representation."
             )
+
+    @staticmethod
+    def _validate_config_value(value: str) -> None:
+        """Reject URL userinfo without ever interpolating the value into an error."""
+        try:
+            parsed = urlsplit(value)
+            contains_userinfo = bool(parsed.netloc) and parsed.username is not None
+        except (TypeError, ValueError):
+            contains_userinfo = False
+        if contains_userinfo:
+            raise FullDataBackupValidationError(
+                "Configuration value contains credential-bearing URL userinfo."
+            )
+        FullDataBackupService._validate_no_embedded_secrets(
+            value,
+            "configuration value",
+        )
 
     @staticmethod
     def _object(value: Any, label: str) -> Dict[str, Any]:

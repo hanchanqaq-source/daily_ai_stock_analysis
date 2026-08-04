@@ -35,16 +35,6 @@ from src.config import setup_env
 _INITIAL_PROCESS_ENV = dict(os.environ)
 setup_env()
 
-# 代理配置 - 通过 USE_PROXY 环境变量控制，默认关闭
-# GitHub Actions 环境自动跳过代理配置
-if os.getenv("GITHUB_ACTIONS") != "true" and os.getenv("USE_PROXY", "false").lower() == "true":
-    # 本地开发环境，启用代理（可在 .env 中配置 PROXY_HOST 和 PROXY_PORT）
-    proxy_host = os.getenv("PROXY_HOST", "127.0.0.1")
-    proxy_port = os.getenv("PROXY_PORT", "10809")
-    proxy_url = f"http://{proxy_host}:{proxy_port}"
-    os.environ["http_proxy"] = proxy_url
-    os.environ["https_proxy"] = proxy_url
-
 _packaged_import_probe = os.getenv("DSA_PACKAGED_IMPORT_PROBE")
 _packaged_fake_useragent_probe = os.getenv("DSA_PACKAGED_FAKE_USERAGENT_PROBE")
 _packaged_chip_probe = os.getenv("DSA_PACKAGED_CHIP_PROBE")
@@ -199,8 +189,40 @@ _RUNTIME_ENV_FILE_KEYS = {
     if key not in _INITIAL_PROCESS_ENV
 }
 
-# setup_env() already ran at import time above.
-_env_bootstrapped = True
+# setup_env() already ran at import time above; DB recovery and proxy
+# synchronization are deliberately deferred to a real runtime entry point.
+_env_bootstrapped = False
+
+_PROCESS_PROXY_KEYS = (
+    "http_proxy",
+    "https_proxy",
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "no_proxy",
+    "NO_PROXY",
+)
+
+
+def _synchronize_process_proxy_after_recovery() -> None:
+    """Apply restored proxy settings without replacing process overrides."""
+    for key in _PROCESS_PROXY_KEYS:
+        if key in _INITIAL_PROCESS_ENV:
+            os.environ[key] = _INITIAL_PROCESS_ENV[key]
+        else:
+            os.environ.pop(key, None)
+
+    if (
+        os.getenv("GITHUB_ACTIONS") == "true"
+        or os.getenv("USE_PROXY", "false").lower() != "true"
+    ):
+        return
+
+    proxy_host = os.getenv("PROXY_HOST", "127.0.0.1")
+    proxy_port = os.getenv("PROXY_PORT", "10809")
+    proxy_url = f"http://{proxy_host}:{proxy_port}"
+    for key in ("http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY"):
+        if key not in _INITIAL_PROCESS_ENV:
+            os.environ[key] = proxy_url
 
 
 def _bootstrap_environment() -> None:
@@ -214,16 +236,11 @@ def _bootstrap_environment() -> None:
         return
 
     from src.config import setup_env
+    from src.storage import DatabaseManager
 
     setup_env()
-
-    if os.getenv("GITHUB_ACTIONS") != "true" and os.getenv("USE_PROXY", "false").lower() == "true":
-        proxy_host = os.getenv("PROXY_HOST", "127.0.0.1")
-        proxy_port = os.getenv("PROXY_PORT", "10809")
-        proxy_url = f"http://{proxy_host}:{proxy_port}"
-        os.environ["http_proxy"] = proxy_url
-        os.environ["https_proxy"] = proxy_url
-
+    DatabaseManager.get_instance()
+    _synchronize_process_proxy_after_recovery()
     _env_bootstrapped = True
 
 
@@ -1395,6 +1412,10 @@ def main() -> int:
 
     # 加载配置（在 bootstrap logging 之后执行，确保异常有日志）
     try:
+        from src.storage import DatabaseManager
+
+        DatabaseManager.get_instance()
+        _synchronize_process_proxy_after_recovery()
         config = get_config()
     except Exception as exc:
         logger.exception("加载配置失败: %s", exc)

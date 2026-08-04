@@ -8,7 +8,6 @@ import json
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any, Callable, Dict, Iterable, List, Optional
-from uuid import uuid4
 
 from src.services.history_service import HistoryService
 from src.repositories.period_report_repo import PeriodReportRepository
@@ -571,6 +570,9 @@ class PeriodReportService:
         }
         snapshot_id = self._save_outlook_snapshot(outlook, generated_at=generated_at)
         outlook["snapshot_id"] = snapshot_id
+        outlook["snapshot_created_at"] = (
+            _serialize_datetime(generated_at) if snapshot_id is not None else None
+        )
 
         return {
             "period": window.period,
@@ -698,8 +700,12 @@ class PeriodReportService:
     ) -> Optional[int]:
         if self.db is None:
             return None
+        target = outlook.get("target_period") or {}
+        query_id = (
+            f"period-outlook-{target.get('start_date', '')}-{target.get('end_date', '')}"
+        )
         return self.db.save_period_outlook_snapshot(
-            query_id=f"period-outlook-{uuid4().hex}",
+            query_id=query_id,
             snapshot=outlook,
             created_at=generated_at,
         )
