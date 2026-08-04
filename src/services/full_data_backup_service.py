@@ -12,7 +12,7 @@ import threading
 import time as time_module
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, get_args
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional
 from urllib.parse import urlsplit
 
 from sqlalchemy import delete, insert, select
@@ -61,6 +61,8 @@ PROJECT_ID = "PP02"
 PROJECT_NAME = "AI 每日股票分析"
 DEFAULT_APPLICATION_VERSION = "3.29.2"
 DEFAULT_PREVIEW_TOKEN_TTL_SECONDS = 300.0
+PERIOD_REPORT_KINDS = frozenset({"historical", "outlook"})
+PERIOD_REPORT_STATUSES = frozenset({"ready", "insufficient_data"})
 
 TABLE_GROUPS = {
     "analysis": ("analysis_history",),
@@ -300,10 +302,8 @@ JSON_VALUE_COLUMNS = {
 ENUM_COLUMNS = {
     "period_reports": {
         "period": frozenset(SUPPORTED_PERIODS),
-        "report_kind": frozenset(
-            get_args(PeriodReportResponse.model_fields["report_kind"].annotation)
-        ),
-        "status": frozenset(get_args(PeriodReportResponse.model_fields["status"].annotation)),
+        "report_kind": PERIOD_REPORT_KINDS,
+        "status": PERIOD_REPORT_STATUSES,
     },
     "conversation_messages": {"role": frozenset({"user", "assistant", "system"})},
     "portfolio_accounts": {"market": frozenset(VALID_MARKETS)},

@@ -72,6 +72,24 @@ def _restore_process_environment(snapshot: dict[str, str]) -> None:
     os.environ.update(snapshot)
 
 
+def test_period_report_enum_contract_is_static_at_import_boundary() -> None:
+    """Backup import must not depend on Pydantic's runtime field metadata."""
+    from src.services import full_data_backup_service as backup
+
+    assert backup.PERIOD_REPORT_STATUSES == frozenset(
+        {"ready", "insufficient_data"}
+    )
+    assert backup.PERIOD_REPORT_KINDS == frozenset({"historical", "outlook"})
+    assert (
+        backup.ENUM_COLUMNS["period_reports"]["status"]
+        is backup.PERIOD_REPORT_STATUSES
+    )
+    assert (
+        backup.ENUM_COLUMNS["period_reports"]["report_kind"]
+        is backup.PERIOD_REPORT_KINDS
+    )
+
+
 def _stored_period_report_content() -> str:
     return json.dumps(
         {
