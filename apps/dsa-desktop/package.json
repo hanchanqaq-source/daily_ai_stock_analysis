@@ -48,6 +48,10 @@
       {
         "from": "windows/close-owned-processes.ps1",
         "to": "close-owned-processes.ps1"
+      },
+      {
+        "from": "windows/owned-processes.json",
+        "to": "owned-processes.json"
       }
     ],
     "win": {

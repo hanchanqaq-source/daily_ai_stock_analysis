@@ -27,8 +27,13 @@ $diagnosticRoot = Join-Path $fixtureRoot (
 )
 $parentSentinel = Join-Path $fixtureRoot 'parent-sentinel.txt'
 $previousRunnerTemp = [Environment]::GetEnvironmentVariable('RUNNER_TEMP', 'Process')
+$previousInstallerDiagnosticRoot = [Environment]::GetEnvironmentVariable(
+  'DSA_INSTALLER_DIAGNOSTIC_ROOT',
+  'Process'
+)
 $contractStage = 'contract_setup'
 $contractOutput = @()
+$helperProcesses = @()
 
 function Protect-ContractText {
   param([AllowEmptyString()][string]$Text)
@@ -87,9 +92,140 @@ try {
   Add-Type -TypeDefinition $fakeInstallerSource -Language CSharp `
     -OutputAssembly $fakeInstaller -OutputType ConsoleApplication
 
+  $contractStage = 'owned_process_helper'
+  $powerShell = (Get-Process -Id $PID).Path
+  $helperSource = Join-Path $repoRoot 'apps/dsa-desktop/windows/close-owned-processes.ps1'
+  $manifestSource = Join-Path $repoRoot 'apps/dsa-desktop/windows/owned-processes.json'
+  foreach ($requiredSource in @($helperSource, $manifestSource)) {
+    if (-not (Test-Path -LiteralPath $requiredSource -PathType Leaf)) {
+      throw 'Owned-process helper contract source is missing.'
+    }
+  }
+
+  $helperInstallRoot = Join-Path $fixtureRoot 'owned-helper-install'
+  $helperResources = Join-Path $helperInstallRoot 'resources'
+  $helperBackendRoot = Join-Path $helperResources 'backend/stock_analysis'
+  $helperExternalRoot = Join-Path $fixtureRoot 'external-control'
+  $helperDiagnosticRoot = Join-Path $fixtureRoot (
+    'pp02-installer-diagnostics-helper-' + [guid]::NewGuid().ToString('N')
+  )
+  foreach ($directory in @(
+    $helperResources,
+    $helperBackendRoot,
+    $helperExternalRoot,
+    $helperDiagnosticRoot
+  )) {
+    New-Item -ItemType Directory -Path $directory -Force | Out-Null
+  }
+
+  $installedHelper = Join-Path $helperResources 'close-owned-processes.ps1'
+  $installedManifest = Join-Path $helperResources 'owned-processes.json'
+  $ownedDesktop = Join-Path $helperInstallRoot 'PP02 AI Daily Stock Analysis.exe'
+  $ownedBackend = Join-Path $helperBackendRoot 'stock_analysis.exe'
+  $externalDesktop = Join-Path $helperExternalRoot 'PP02 AI Daily Stock Analysis.exe'
+  Copy-Item -LiteralPath $helperSource -Destination $installedHelper
+  Copy-Item -LiteralPath $manifestSource -Destination $installedManifest
+  foreach ($executablePath in @($ownedDesktop, $ownedBackend, $externalDesktop)) {
+    Copy-Item -LiteralPath $powerShell -Destination $executablePath
+  }
+
+  $sleepArguments = @(
+    '-NoLogo',
+    '-NoProfile',
+    '-NonInteractive',
+    '-Command',
+    'Start-Sleep -Seconds 120'
+  )
+  $ownedDesktopProcess = Start-Process `
+    -FilePath $ownedDesktop -ArgumentList $sleepArguments -PassThru
+  $ownedBackendProcess = Start-Process `
+    -FilePath $ownedBackend -ArgumentList $sleepArguments -PassThru
+  $externalDesktopProcess = Start-Process `
+    -FilePath $externalDesktop -ArgumentList $sleepArguments -PassThru
+  $helperProcesses = @(
+    $ownedDesktopProcess,
+    $ownedBackendProcess,
+    $externalDesktopProcess
+  )
+  Start-Sleep -Milliseconds 750
+  foreach ($helperProcess in $helperProcesses) {
+    $helperProcess.Refresh()
+    if ($helperProcess.HasExited) {
+      throw 'Owned-process helper contract fixture exited before validation.'
+    }
+  }
+
+  [Environment]::SetEnvironmentVariable(
+    'DSA_INSTALLER_DIAGNOSTIC_ROOT',
+    $helperDiagnosticRoot,
+    'Process'
+  )
+  $helperStdoutPath = Join-Path $fixtureRoot 'owned-helper.stdout.log'
+  $helperStderrPath = Join-Path $fixtureRoot 'owned-helper.stderr.log'
+  $helperArguments = @(
+    '-NoLogo'
+    '-NoProfile'
+    '-NonInteractive'
+    '-ExecutionPolicy'
+    'Bypass'
+    '-File'
+    ('"{0}"' -f $installedHelper)
+  )
+  $helperContractProcess = Start-Process `
+    -FilePath $powerShell `
+    -ArgumentList $helperArguments `
+    -Wait `
+    -PassThru `
+    -RedirectStandardOutput $helperStdoutPath `
+    -RedirectStandardError $helperStderrPath
+  $helperOutput = @()
+  foreach ($streamPath in @($helperStdoutPath, $helperStderrPath)) {
+    if (Test-Path -LiteralPath $streamPath -PathType Leaf) {
+      $helperOutput += @(
+        Get-Content -LiteralPath $streamPath |
+          ForEach-Object { $_.ToString() }
+      )
+    }
+  }
+  $helperExitCode = $helperContractProcess.ExitCode
+  if ($helperExitCode -ne 0) {
+    throw "Owned-process helper returned code $helperExitCode."
+  }
+  foreach ($ownedProcess in @($ownedDesktopProcess, $ownedBackendProcess)) {
+    $ownedProcess.Refresh()
+    if (-not $ownedProcess.HasExited) {
+      throw 'Owned-process helper left an exact owned process running.'
+    }
+  }
+  $externalDesktopProcess.Refresh()
+  if ($externalDesktopProcess.HasExited) {
+    throw 'Owned-process helper stopped the external same-name control process.'
+  }
+  if (-not ($helperOutput -contains 'PP02_OWNED_PROCESS_EXIT_VALIDATION=PASS')) {
+    throw 'Owned-process helper did not emit its stable validation marker.'
+  }
+  $helperEvidencePath = Join-Path `
+    $helperDiagnosticRoot 'owned-process-cleanup-evidence.json'
+  if (-not (Test-Path -LiteralPath $helperEvidencePath -PathType Leaf)) {
+    throw 'Owned-process helper did not preserve execution evidence.'
+  }
+  $helperEvidence = Get-Content -LiteralPath $helperEvidencePath -Raw |
+    ConvertFrom-Json
+  if ([string]$helperEvidence.status -ne 'PASS' -or
+      [int]$helperEvidence.initialOwnedProcessCount -ne 2 -or
+      [int]$helperEvidence.remainingOwnedProcessCount -ne 0) {
+    throw 'Owned-process helper evidence did not prove exact cleanup.'
+  }
+  Write-Output 'WINDOWS_OWNED_PROCESS_HELPER_CONTRACT=PASS'
+
+  [Environment]::SetEnvironmentVariable(
+    'DSA_INSTALLER_DIAGNOSTIC_ROOT',
+    $previousInstallerDiagnosticRoot,
+    'Process'
+  )
+
   [Environment]::SetEnvironmentVariable('RUNNER_TEMP', $fixtureRoot, 'Process')
   $contractStage = 'child_verifier'
-  $powerShell = (Get-Process -Id $PID).Path
   $stdoutPath = Join-Path $fixtureRoot 'verifier.stdout.log'
   $stderrPath = Join-Path $fixtureRoot 'verifier.stderr.log'
   $arguments = @(
@@ -242,6 +378,22 @@ finally {
     $previousRunnerTemp,
     'Process'
   )
+  [Environment]::SetEnvironmentVariable(
+    'DSA_INSTALLER_DIAGNOSTIC_ROOT',
+    $previousInstallerDiagnosticRoot,
+    'Process'
+  )
+  foreach ($helperProcess in $helperProcesses) {
+    try {
+      $helperProcess.Refresh()
+      if (-not $helperProcess.HasExited) {
+        Stop-Process -Id $helperProcess.Id -Force -ErrorAction SilentlyContinue
+      }
+    }
+    catch {
+      # Fixture cleanup is best-effort after the contract result is recorded.
+    }
+  }
   if (Test-Path -LiteralPath $fixtureRoot) {
     Remove-Item -LiteralPath $fixtureRoot -Recurse -Force -ErrorAction SilentlyContinue
   }

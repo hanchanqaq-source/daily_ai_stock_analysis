@@ -10,9 +10,9 @@ DRAFT_PR=23_OPEN_DRAFT
 WORK22_EVIDENCE_REPORT_SHA256=30AC65C81E3F86E4CADBAEC9D2DBA95B432BA4DF8DBE81F12015857B9E5E39BE
 WORK22_JUDGE=FAIL_LOCKED
 AUTHORITATIVE_VERSION=3.29.3
-REMOTE_FIXED_HEAD=PENDING_FIRST_PUSH
-REMOTE_CI=PENDING_EXACT_HEAD
-JUDGE=ACTIVE_DRAFT_HOLD
+REMOTE_FIXED_HEAD=CA2415B8_FAILED_SUPERSEDED_PENDING_NEW_HEAD
+REMOTE_CI=RUN_30949323920_AND_30952197181_FAILED_WINDOWS_LIVE_UNINSTALL
+JUDGE=ACTIVE_REWORK_DRAFT_HOLD
 ```
 
 ### Scope
@@ -45,6 +45,20 @@ JUDGE=ACTIVE_DRAFT_HOLD
 5. PR #23 must remain Open Draft. Do not Ready, merge, write `main`, create
    another PR, tag, or release. Real signing identity acquisition is a separate
    authorization gate.
+
+### Exact-Head failure evidence and current repair gate
+
+- `8e08d58e…` / Run `30949323920` and `ca2415b8…` / Run `30952197181`
+  both reached 7/8 successful Jobs. Windows installation, startup, restart,
+  version `3.29.3`, and read-only `NotSigned` audit passed; one official
+  uninstaller invocation returned `0` but left the installed app alive.
+- The next Head must not pass ownership identity through NSIS arguments. It must
+  package a closed manifest, self-locate the helper/install root, preserve a
+  sanitized helper evidence file, and run a Windows contract that stops two
+  exact owned executable paths while leaving an external same-name process
+  untouched.
+- Only a new exact-Head full CI can close this gate. Earlier 7/8 runs remain
+  failure evidence and may not be reused as candidate approval.
 
 ---
 

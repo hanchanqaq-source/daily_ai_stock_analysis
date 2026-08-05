@@ -1,5 +1,24 @@
 # PP02 安全重建路线 R0–R7
 
+## 2026-08-05 Work23 Windows strict-acceptance repair
+
+- Existing Draft PR #23 remains based on locked `main@41fd6a6c…`. Work22 stays
+  `FAIL`, bound to report SHA-256
+  `30AC65C81E3F86E4CADBAEC9D2DBA95B432BA4DF8DBE81F12015857B9E5E39BE`.
+- Head `8e08d58e…` / Run `30949323920` and Head `ca2415b8…` / Run
+  `30952197181` each passed 7/8 Jobs and failed only because one official
+  uninstall returned `0` without closing the live installed application.
+- The new local rework packages a closed desktop/backend ownership manifest,
+  derives the install root from the helper location, removes NSIS ownership
+  parameters, supports the official uninstaller-directory fallback, and writes
+  sanitized initial/final process-count evidence. The Windows contract must
+  remove two exact owned processes and preserve an external same-name control.
+- Local recovery gates pass Python packaging `26/26`, Desktop `83/83`, AI
+  governance, and diff formatting. New exact-Head full CI, one-shot installed
+  lifecycle, candidate byte size/SHA-256, and unsigned identity remain pending.
+  PR #23 must stay Draft; Ready, merge, Tag, Release, real signing material, and
+  Work22 real data/checkpoints remain prohibited.
+
 ## 2026-08-04 Work20 complete backup and period persistence
 
 - Work20 starts from locked `v3.29.2` `main@41fd6a6c…`; Work18, Work19, and

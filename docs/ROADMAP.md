@@ -7,12 +7,15 @@
 
 ## 当前路线入口
 
-Work20 is the active Draft-only extension from locked `v3.29.2`
-`main@41fd6a6c…`. It adds complete non-secret formal-data backup/restore and
-canonical period-report persistence. Local verification has passed; push,
-Draft PR creation, exact remote Head, and Actions evidence are pending the
-controller. Judge remains `DRAFT_HOLD`; there is no Ready, merge, Tag, or
-Release authorization. Locked Work18/19/19-A history is unchanged.
+Work23 is the active Draft-only repair on existing PR #23 from locked
+`v3.29.2` `main@41fd6a6c…`. Work20's complete backup/period persistence remains
+the foundation. Work23 normalizes candidate version `3.29.3`, preserves formal
+fundamental snapshots, declares the rebuildable daily cache, and repairs the
+one-shot Windows uninstall lifecycle. Runs `30949323920` and `30952197181`
+ended 7/8 because the official uninstaller returned `0` while the live app
+remained. A self-locating manifest/evidence rework now passes local contracts;
+new exact-Head CI and candidate identity are pending. Judge remains
+`DRAFT_HOLD`; there is no Ready, merge, Tag, or Release authorization.
 
 Work10 已完成 `v3.29.1` 发布；Work11 真机安装闭环裁决 `PASSED_WITH_RESIDUALS`。
 Work12 的个股正式历史缺失由 Work13 PR #20 修复。Work14 已在其固定 Head 上完成
@@ -36,6 +39,7 @@ Work15 已将 PR #20/#21 依序合入主线；PR #21 最终 Run `30825436318` su
 | R7｜主线与正式发布 | 完成 | `v3.29.1` annotated Tag/正式 Release；Run `30786838156` 5/5 success、7 assets |
 | R7-Hotfix 验收 | Work16 完成 / Draft Hold | PR #22 固定 Head CI 与 Windows 双层筹码探针通过；禁止自行 Ready、合并或发布 |
 | Work20｜Complete backup and period persistence | Local verification / Draft Hold | Remote Draft PR and exact fixed-Head CI pending controller; no merge, Tag, or Release |
+| Work23｜Windows strict-acceptance repairs | Local uninstall rework / Draft Hold | Existing PR #23 only; new exact-Head Windows runtime/lifecycle CI pending; no Ready, merge, Tag, or Release |
 
 ## Work 1｜官方稳定版干净底座建立（历史）
 

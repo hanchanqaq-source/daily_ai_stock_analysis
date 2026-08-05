@@ -388,6 +388,12 @@ def test_windows_installer_validates_exit_restart_before_uninstall() -> None:
     verifier = _read_text(
         REPO_ROOT / "scripts" / "verify-windows-installer.ps1"
     )
+    contract = _read_text(
+        REPO_ROOT
+        / "scripts"
+        / "tests"
+        / "verify-windows-installer-contract.ps1"
+    )
 
     first_start = "WINDOWS_INSTALLED_APP_STARTUP_VALIDATION=PASS"
     first_exit = "WINDOWS_INSTALLED_APP_EXIT_VALIDATION=PASS"
@@ -401,6 +407,9 @@ def test_windows_installer_validates_exit_restart_before_uninstall() -> None:
     assert "$restartReadyMarkerBaseline" in verifier
     assert "Get-ExactOwnedProcesses" in verifier
     assert "WINDOWS_OWNED_PROCESS_COUNT_AFTER_UNINSTALL=0" in verifier
+    assert "owned-process-cleanup-evidence.json" in verifier
+    assert "WINDOWS_UNINSTALL_HELPER_EXECUTION_VALIDATION=PASS" in verifier
+    assert "WINDOWS_OWNED_PROCESS_HELPER_CONTRACT=PASS" in contract
     assert verifier.index(first_start) < verifier.index(first_exit)
     assert verifier.index(first_exit) < verifier.index(restart)
     assert verifier.index(restart) < verifier.index(live_uninstall)

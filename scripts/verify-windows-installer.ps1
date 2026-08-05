@@ -801,6 +801,8 @@ if (Test-Path -LiteralPath $diagnosticRoot) {
   throw 'DiagnosticRoot must not exist before verification.'
 }
 New-Item -ItemType Directory -Path $diagnosticRoot -Force | Out-Null
+$ownedProcessEvidencePath = Join-Path `
+  $diagnosticRoot 'owned-process-cleanup-evidence.json'
 
 $verificationStartedAt = Get-Date
 $failureStage = 'preflight'
@@ -1047,6 +1049,24 @@ try {
   if ($uninstallProcess.ExitCode -ne 0) {
     throw "Uninstaller exited with code $($uninstallProcess.ExitCode)."
   }
+  if (-not (Test-Path -LiteralPath $ownedProcessEvidencePath -PathType Leaf)) {
+    throw 'Official uninstaller did not preserve owned-process helper evidence.'
+  }
+  $ownedProcessEvidence = Get-Content `
+    -LiteralPath $ownedProcessEvidencePath `
+    -Raw | ConvertFrom-Json
+  if ([int]$ownedProcessEvidence.schemaVersion -ne 1 -or
+      [string]$ownedProcessEvidence.status -ne 'PASS' -or
+      [int]$ownedProcessEvidence.initialOwnedProcessCount -lt 1 -or
+      [int]$ownedProcessEvidence.remainingOwnedProcessCount -ne 0) {
+    throw 'Owned-process helper evidence did not prove live-process cleanup.'
+  }
+  Write-Output (
+    'WINDOWS_UNINSTALL_HELPER_INITIAL_OWNED_COUNT=' +
+    [int]$ownedProcessEvidence.initialOwnedProcessCount
+  )
+  Write-Output 'WINDOWS_UNINSTALL_HELPER_REMAINING_OWNED_COUNT=0'
+  Write-Output 'WINDOWS_UNINSTALL_HELPER_EXECUTION_VALIDATION=PASS'
   $appProcess.Refresh()
   if (-not $appProcess.HasExited) {
     throw 'One normal uninstaller run did not close the running installed application.'

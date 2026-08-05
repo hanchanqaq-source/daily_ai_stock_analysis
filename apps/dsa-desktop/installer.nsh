@@ -4,14 +4,28 @@
   StrCpy $isForceCurrentInstall 1
 !macroend
 
-!macro _dsaCloseOwnedProcesses SUFFIX
+!macro _dsaCloseOwnedProcesses SUFFIX REQUIRED
   ; PP02 closes only the exact app/backend executable paths under this install.
   ; The shared helper is required for both install/upgrade checks and the
   ; always-run uninstall section because silent uninstall skips checkAppRunning.
-  IfFileExists "$INSTDIR\resources\close-owned-processes.ps1" 0 DsaOwnedProcessCheckDone_${SUFFIX}
+  StrCpy $R1 "$INSTDIR\resources\close-owned-processes.ps1"
+  IfFileExists "$R1" DsaOwnedProcessCheckRun_${SUFFIX} 0
+  ; During uninstall, electron-builder can leave $INSTDIR unavailable while
+  ; the official uninstaller still runs from the product root.
+  StrCpy $R1 "$EXEDIR\resources\close-owned-processes.ps1"
+  IfFileExists "$R1" DsaOwnedProcessCheckRun_${SUFFIX} 0
+  !if ${REQUIRED} == 1
+    DetailPrint "PP02-owned process helper is missing."
+    SetErrorLevel 2
+    Abort "PP02-owned processes could not be checked safely."
+  !else
+    Goto DsaOwnedProcessCheckDone_${SUFFIX}
+  !endif
+
+DsaOwnedProcessCheckRun_${SUFFIX}:
   DetailPrint "Stopping PP02-owned processes before installer file operations."
   ClearErrors
-  ExecWait '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$INSTDIR\resources\close-owned-processes.ps1" -InstallRoot "$INSTDIR" -ProductExecutableName "${APP_EXECUTABLE_FILENAME}" -BackendRelativePath "resources\backend\stock_analysis\stock_analysis.exe"' $R0
+  ExecWait '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$R1"' $R0
   IfErrors 0 DsaOwnedProcessCheckResult_${SUFFIX}
   DetailPrint "PP02-owned process helper could not be started."
   SetErrorLevel 2
@@ -28,11 +42,11 @@ DsaOwnedProcessCheckDone_${SUFFIX}:
 !macroend
 
 !macro customCheckAppRunning
-  !insertmacro _dsaCloseOwnedProcesses Install
+  !insertmacro _dsaCloseOwnedProcesses Install 0
 !macroend
 
 !macro customUnInstall
-  !insertmacro _dsaCloseOwnedProcesses Uninstall
+  !insertmacro _dsaCloseOwnedProcesses Uninstall 1
 !macroend
 
 !macro _dsaRetryQuotedOldUninstall ROOT_KEY SUFFIX

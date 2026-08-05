@@ -88,21 +88,51 @@ def test_official_uninstaller_closes_only_exact_product_owned_processes() -> Non
     package = json.loads((DESKTOP_DIR / "package.json").read_text(encoding="utf-8"))
     installer_script = (DESKTOP_DIR / "installer.nsh").read_text(encoding="utf-8")
     helper_path = DESKTOP_DIR / "windows" / "close-owned-processes.ps1"
+    manifest_path = DESKTOP_DIR / "windows" / "owned-processes.json"
 
     assert helper_path.is_file()
+    assert manifest_path.is_file()
     helper = helper_path.read_text(encoding="utf-8")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     resources = package["build"]["extraResources"]
     assert {
         "from": "windows/close-owned-processes.ps1",
         "to": "close-owned-processes.ps1",
     } in resources
+    assert {
+        "from": "windows/owned-processes.json",
+        "to": "owned-processes.json",
+    } in resources
+    assert manifest == {
+        "schemaVersion": 1,
+        "executables": [
+            {
+                "role": "desktop",
+                "relativePath": "PP02 AI Daily Stock Analysis.exe",
+                "requestMainWindowClose": True,
+            },
+            {
+                "role": "backend",
+                "relativePath": (
+                    "resources/backend/stock_analysis/stock_analysis.exe"
+                ),
+                "requestMainWindowClose": False,
+            },
+        ],
+    }
     assert "!macro _dsaCloseOwnedProcesses" in installer_script
     assert "!macro customCheckAppRunning" in installer_script
     assert "!macro customUnInstall" in installer_script
     assert installer_script.count("!insertmacro _dsaCloseOwnedProcesses") == 2
     assert "$INSTDIR\\resources\\close-owned-processes.ps1" in installer_script
-    assert "${APP_EXECUTABLE_FILENAME}" in installer_script
-    assert "resources\\backend\\stock_analysis\\stock_analysis.exe" in installer_script
+    assert "$EXEDIR\\resources\\close-owned-processes.ps1" in installer_script
+    assert "-InstallRoot" not in installer_script
+    assert "-ProductExecutableName" not in installer_script
+    assert "-BackendRelativePath" not in installer_script
+    assert "$PSScriptRoot" in helper
+    assert "owned-processes.json" in helper
+    assert "DSA_INSTALLER_DIAGNOSTIC_ROOT" in helper
+    assert "owned-process-cleanup-evidence.json" in helper
     assert "Get-CimInstance Win32_Process" in helper
     assert "[StringComparison]::OrdinalIgnoreCase" in helper
     assert ".CloseMainWindow()" in helper

@@ -14,11 +14,11 @@ DESKTOP=PASS_83_OF_83
 WINDOWS_PACKAGING=PASS_26_OF_26
 WEB=PASS_1076_2_SKIPPED_LINT_BUILD
 BACKEND_AGGREGATE=PASS_5327_4_DESELECTED_499_SUBTESTS_EXCLUDING_SANDBOX_BLOCKED_CRASH_FILE
-REMOTE_FIXED_HEAD=PENDING_FIRST_PUSH
-REMOTE_CI=PENDING_EXACT_HEAD
-WINDOWS_CANDIDATE=PENDING_EXACT_HEAD_CI
+REMOTE_FIXED_HEAD=CA2415B8_FAILED_SUPERSEDED_PENDING_NEW_HEAD
+REMOTE_CI=RUN_30949323920_AND_30952197181_FAILED_WINDOWS_LIVE_UNINSTALL
+WINDOWS_CANDIDATE=PENDING_NEW_EXACT_HEAD_CI
 SIGNING=READ_ONLY_GATE_NO_REAL_IDENTITY
-JUDGE=ACTIVE_DRAFT_HOLD
+JUDGE=ACTIVE_REWORK_DRAFT_HOLD
 ```
 
 - The one-run Windows uninstall contract now waits for Electron/backend drain
@@ -41,6 +41,20 @@ JUDGE=ACTIVE_DRAFT_HOLD
 - No Work22 real database, cold backup, complete export, or restore checkpoint
   was used. No Ready, merge, main write, tag, release, or additional PR action
   has occurred.
+- Head `8e08d58e…` / Run `30949323920` and Head `ca2415b8…` / Run
+  `30952197181` each passed seven Jobs and failed only the installed Windows
+  lifecycle: the official uninstaller returned `0`, but the live application
+  remained. They are locked failure evidence, not candidate PASS results.
+- The recovered rework packages a closed two-entry ownership manifest and makes
+  the helper derive its install root from `$PSScriptRoot`; NSIS sends no install
+  root, executable name, or backend path parameter. The uninstaller hook can
+  fall back to `$EXEDIR`, and the helper writes sanitized count/status evidence
+  into the already-owned diagnostic directory.
+- TDD recovery evidence: the new contracts first failed because the manifest
+  and helper evidence were absent; GREEN is Python packaging `26/26`, Desktop
+  `83/83`, AI asset check, and diff check. The added Windows runtime contract is
+  pending the next fixed-Head CI and must prove two owned processes exit while
+  an external same-name control process survives.
 
 ---
 
