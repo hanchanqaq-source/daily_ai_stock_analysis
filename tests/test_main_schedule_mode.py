@@ -2128,6 +2128,30 @@ class MainScheduleModeTestCase(unittest.TestCase):
         self.assertIn("加载配置失败", output)
         self.assertIn("config boom", output)
 
+    def test_cli_main_recovers_database_before_first_runtime_config_read(self) -> None:
+        args = self._make_args()
+        config = self._make_config()
+        events = []
+
+        def recover_database():
+            events.append("database")
+            return object()
+
+        def runtime_config():
+            events.append("config")
+            return config
+
+        with patch("main.parse_arguments", return_value=args), patch(
+            "src.storage.DatabaseManager.get_instance",
+            side_effect=recover_database,
+        ), patch("main.get_config", side_effect=runtime_config), patch(
+            "main.setup_logging"
+        ), patch("main.run_full_analysis"):
+            exit_code = main.main()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(events[:2], ["database", "config"])
+
     def test_bootstrap_logging_failure_does_not_block_startup(self) -> None:
         """Bootstrap log dir unwritable must not prevent startup (P1 regression)."""
         args = self._make_args()

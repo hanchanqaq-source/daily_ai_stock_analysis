@@ -1,4 +1,135 @@
-# WORK-016｜Windows 冻结筹码依赖收口（执行中）
+# WORK-023 | PR #23 strict-acceptance repair return
+
+## Work23 current evidence
+
+```text
+BASE=41fd6a6c76c3e3b56211ef5fb4483d869122b568
+BRANCH=agent/pp02-work20-full-backup-period-persistence
+DRAFT_PR=23_OPEN_DRAFT
+WORK22_EVIDENCE_REPORT_SHA256=30AC65C81E3F86E4CADBAEC9D2DBA95B432BA4DF8DBE81F12015857B9E5E39BE
+WORK22_JUDGE=FAIL_LOCKED
+AUTHORITATIVE_VERSION=3.29.3
+RELATED_BACKEND=PASS_169_PLUS_30
+DESKTOP=PASS_83_OF_83
+WINDOWS_PACKAGING=PASS_26_OF_26
+WEB=PASS_1076_2_SKIPPED_LINT_BUILD
+BACKEND_AGGREGATE=PASS_5327_4_DESELECTED_499_SUBTESTS_EXCLUDING_SANDBOX_BLOCKED_CRASH_FILE
+REMOTE_FIXED_HEAD=C9ACA280_FAILED_SUPERSEDED_PENDING_NEXT_HEAD
+REMOTE_CI=RUN_30988154439_FAILED_DUPLICATE_HELPER_EVIDENCE_OVERWRITE_AFTER_ZERO_CLEANUP
+WINDOWS_CANDIDATE=PENDING_NEXT_EXACT_HEAD_CI
+SIGNING=READ_ONLY_GATE_NO_REAL_IDENTITY
+JUDGE=ACTIVE_REWORK_DRAFT_HOLD
+```
+
+- The one-run Windows uninstall contract now waits for Electron/backend drain
+  and uses exact installed executable paths for graceful close plus exact-PID
+  fallback. The verifier does not pre-kill or retry the official uninstaller.
+- Candidate metadata and Windows file/product version checks use `3.29.3`.
+- `fundamental_snapshot` is now included because its formal snapshot is not
+  safely reconstructible. `stock_daily` remains excluded only under the exact
+  `rebuildable_market_data_cache` manifest contract; restore clears it and
+  `get_daily_history` rebuilds it on demand.
+- Signature inspection is read-only and emits sanitized status/policy evidence.
+  Enforcing a real `Valid` signature requires separately authorized identity
+  material; none was accessed in Work23.
+- One stale, contradictory Chinese JP/KR Web assertion was corrected to match
+  the already-enforced market-light service boundary; product behavior was not
+  changed. The complete Web suite, lint, and build then passed.
+- Linux sandbox policy blocks the crash-recovery tests that intentionally kill
+  and recover subprocesses. All other offline backend tests passed locally; the
+  exact remote Head CI remains the authority for the complete gate.
+- No Work22 real database, cold backup, complete export, or restore checkpoint
+  was used. No Ready, merge, main write, tag, release, or additional PR action
+  has occurred.
+- Head `8e08d58e…` / Run `30949323920` and Head `ca2415b8…` / Run
+  `30952197181` each passed seven Jobs and failed only the installed Windows
+  lifecycle: the official uninstaller returned `0`, but the live application
+  remained. They are locked failure evidence, not candidate PASS results.
+- The recovered rework packages a closed two-entry ownership manifest and makes
+  the helper derive its install root from `$PSScriptRoot`; NSIS sends no install
+  root, executable name, or backend path parameter. The uninstaller hook can
+  fall back to `$EXEDIR`, and the helper writes sanitized count/status evidence
+  into the already-owned diagnostic directory.
+- TDD recovery evidence: the new contracts first failed because the manifest
+  and helper evidence were absent; GREEN is Python packaging `26/26`, Desktop
+  `83/83`, AI asset check, and diff check. The Windows-only helper runtime
+  contract was deferred to exact-Head CI and is proven by the Run below.
+- Head `0eee6a7c…` / Run `30975730060` proved that runtime contract, but NSIS
+  rejected the installer with warning 6012 because the required-uninstall macro
+  did not explicitly jump to its completion label. The candidate workflow then
+  continued after the failed `build-all.ps1` child and surfaced the missing
+  installer only at lifecycle setup. New RED/GREEN contracts require both the
+  explicit label jump and an immediate child-exit check; the installed lifecycle
+  and candidate identity remain pending the next exact Head.
+- Head `976db882…` / Run `30977516983` passed candidate build and both source/
+  synthetic helper contracts. Its installed lifecycle reached one official
+  uninstaller exit `0`, but the sanitized helper evidence was `FAIL` with
+  `initial=5`, `graceful=0`, `forced=0`, `remaining=-1`. The initial CIM exact
+  path discovery therefore worked, while the redundant `Get-Process.Path`
+  ownership recheck blocked every real process action. Diagnostic artifact
+  `8919511035` has SHA-256
+  `1DE5397EBCD6B07314685E2C0C709FA7BFC75A84BC190701ABD2CBE9270CA1DC`.
+  Local RED/GREEN now requires the same CIM PID/path source for revalidation;
+  the next exact-Head installed lifecycle remains pending.
+- Head `c9aca280…` / Run `30988154439` passed candidate build, the helper
+  isolation contract, install/start/exit/restart, and one official uninstall
+  returned `0`. Diagnostics proved the install root and all owned processes were
+  gone, while final evidence was `PASS` with zero remaining. The only gate
+  failure was evidence overwrite: electron-builder's standard uninstall check
+  ran the helper first, then the redundant `customUnInstall` entry ran it again
+  with `initial=0`. Diagnostic artifact `8923770478` has SHA-256
+  `686692F0EB7B4D96084DE30143C11A29C6E6E7406A105B07A7C639732FDC73F4`.
+  Local RED/GREEN now keeps one required standard uninstall entry; the next
+  exact-Head installed lifecycle remains pending.
+
+---
+
+# Historical return | WORK-020 / local closeout
+
+## Work20 current evidence
+
+```text
+BASE=41fd6a6c76c3e3b56211ef5fb4483d869122b568
+LOCAL_BRANCH=agent/pp02-work20-full-backup-period-persistence-pr
+LOCAL_IMPLEMENTATION_HEAD=ae310d1e7fd22fc7139d1ebb63f1bd1d3a0f416c
+LOCAL_EVIDENCE_COMMIT=42e8f75d435b9d90ad5764f538cb20e9e48c1e9f
+RELATED_PYTHON=PASS_405_OF_405
+FULL_BACKEND_GATE=PASS_5222_4_DESELECTED_499_SUBTESTS
+WEB_AFFECTED=PASS_117_OF_117
+WEB_LINT_BUILD=PASS
+AI_ASSETS_PY_COMPILE_DIFF_CHECK=PASS
+LOCAL_VERIFICATION=COMPLETE
+DRAFT_PR=PENDING_CONTROLLER
+REMOTE_FIXED_HEAD=PENDING_CONTROLLER
+REMOTE_CI=PENDING_CONTROLLER
+JUDGE=DRAFT_HOLD
+```
+
+- Complete backup exports canonical format v1 with a closed allow-list,
+  manifest row counts and categories, and SHA-256 integrity. It excludes
+  credentials, tokens, cookies, vault ciphertext, unsaved drafts, runtime paths,
+  logs, traces, and caches; fund is explicitly `not_applicable`.
+- Restore requires a fresh, one-use preview bound to the input and destination,
+  writes a recovery artifact before replacement, coordinates SQLite and managed
+  configuration, preserves concurrent writers, rolls back failures, clears
+  derived portfolio caches, and requires restart.
+- Period reports are now persisted and reloadable without generation. The
+  v3.29.2 migration is idempotent and preserves existing history rows.
+- The first related aggregate exposed Work20 fixture environment leakage into
+  four unrelated LLM validation tests. Only the two Work20 fixtures were fixed
+  to restore the original process environment; the reproduced order then passed
+  and the aggregate passed 405/405. No LLM validation behavior was changed.
+- Task 7 evidence commit is
+  `42e8f75d435b9d90ad5764f538cb20e9e48c1e9f`; local verification is complete.
+  The only next actions are controller push, Draft PR creation, and CI for the
+  exact resulting remote Head.
+- This local phase has no PR number, URL, remote Head, Actions Run, or job
+  result. Those fields remain pending controller publication and fixed-Head CI.
+  No Ready, merge, tag, or release action has occurred. Judge is `DRAFT_HOLD`.
+
+---
+
+# Historical return | WORK-016 / Windows frozen chip dependency closure
 
 ## Work16｜阶段回传
 

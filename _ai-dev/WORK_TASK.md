@@ -1,4 +1,135 @@
-# WORK-016｜Windows 冻结筹码依赖收口
+# WORK-023 | PR #23 Windows strict-acceptance failure repairs
+
+## Work23 authorization and execution contract
+
+```text
+WORK_ID=WORK-023
+BASE=41fd6a6c76c3e3b56211ef5fb4483d869122b568
+BRANCH=agent/pp02-work20-full-backup-period-persistence
+DRAFT_PR=23_OPEN_DRAFT
+WORK22_EVIDENCE_REPORT_SHA256=30AC65C81E3F86E4CADBAEC9D2DBA95B432BA4DF8DBE81F12015857B9E5E39BE
+WORK22_JUDGE=FAIL_LOCKED
+AUTHORITATIVE_VERSION=3.29.3
+REMOTE_FIXED_HEAD=C9ACA280_FAILED_SUPERSEDED_PENDING_NEXT_HEAD
+REMOTE_CI=RUN_30988154439_FAILED_DUPLICATE_HELPER_EVIDENCE_OVERWRITE_AFTER_ZERO_CLEANUP
+JUDGE=ACTIVE_REWORK_DRAFT_HOLD
+```
+
+### Scope
+
+- Make one normal official uninstall naturally close the product-owned process
+  tree, without retries, orphan processes, or broad cleanup of unrelated paths.
+- Normalize EXE file/product version, UI version, build information, and
+  manifest to the single authoritative candidate version `3.29.3`.
+- Prove the backup boundary for `fundamental_snapshot` and `stock_daily`.
+  Include any non-rebuildable/user data; otherwise declare the exact cache
+  contract in the manifest and verify safe restore-time clearing and rebuild.
+- Assess Windows signing read-only. A credential-free policy interface and
+  tests are allowed; real certificates, private keys, purchases, and CI secrets
+  are prohibited and require a separate authorization gate.
+- Run related regressions and complete CI on one exact PR #23 Head, then record
+  the Windows candidate filename, size, and SHA-256 for the next strict retest.
+
+### Acceptance and stop gates
+
+1. Work22 remains `FAIL`; no lowered criterion or rewritten conclusion may be
+   used to claim success.
+2. The official uninstaller is executed once; installed app/backend processes
+   must exit naturally, and cleanup is limited to evidence-confirmed product
+   ownership.
+3. `fundamental_snapshot` is included unless proven rebuildable, while an
+   excluded `stock_daily` must have an exact no-user-data/rebuild manifest and
+   deterministic restore behavior.
+4. No Work22 real database, cold backup, complete export, or restore checkpoint
+   may be read or modified.
+5. PR #23 must remain Open Draft. Do not Ready, merge, write `main`, create
+   another PR, tag, or release. Real signing identity acquisition is a separate
+   authorization gate.
+
+### Exact-Head failure evidence and current repair gate
+
+- `8e08d58e…` / Run `30949323920` and `ca2415b8…` / Run `30952197181`
+  both reached 7/8 successful Jobs. Windows installation, startup, restart,
+  version `3.29.3`, and read-only `NotSigned` audit passed; one official
+  uninstaller invocation returned `0` but left the installed app alive.
+- The next Head must not pass ownership identity through NSIS arguments. It must
+  package a closed manifest, self-locate the helper/install root, preserve a
+  sanitized helper evidence file, and run a Windows contract that stops two
+  exact owned executable paths while leaving an external same-name process
+  untouched.
+- Only a new exact-Head full CI can close this gate. Earlier 7/8 runs remain
+  failure evidence and may not be reused as candidate approval.
+- `0eee6a7c…` / Run `30975730060` passed the new exact-path helper runtime
+  contract, then failed before installed lifecycle execution: NSIS warning 6012
+  identified an unused completion label in the required-uninstall expansion,
+  and the candidate workflow masked the non-zero `build-all.ps1` child exit.
+  The next Head must compile without that warning and fail immediately on any
+  future candidate-build child error before lifecycle or artifact steps.
+- `976db882…` / Run `30977516983` passed those build gates, then proved the
+  installed helper found five exact CIM-owned processes but acted on none after
+  a redundant `Get-Process.Path` recheck. The next Head must use one CIM exact
+  PID/path identity source before graceful and forced action, retain the external
+  same-name control, and produce helper PASS evidence with final zero.
+- `c9aca280…` / Run `30988154439` passed that identity repair and reached zero
+  after one official uninstall. It still failed because the standard
+  `un.checkAppRunning` helper invocation performed cleanup and a second
+  `customUnInstall` invocation overwrote its evidence with `initial=0`. The next
+  Head must use the standard uninstall entry exactly once while keeping the
+  helper required for uninstall builds and optional for install/upgrade builds.
+
+---
+
+# Historical contract | WORK-020 / complete backup and period-report persistence
+
+## Work20 authorization and execution contract
+
+```text
+WORK_ID=WORK-020
+WORK_STATE=LOCAL_VERIFICATION_PASS_REMOTE_PENDING_DRAFT_HOLD
+BASE=41fd6a6c76c3e3b56211ef5fb4483d869122b568
+BRANCH=agent/pp02-work20-full-backup-period-persistence-pr
+DRAFT_PR=PENDING_CONTROLLER
+REMOTE_FIXED_HEAD=PENDING_CONTROLLER
+REMOTE_CI=PENDING_CONTROLLER
+JUDGE=DRAFT_HOLD
+```
+
+### Scope
+
+- Add one strict, versioned, canonical complete-data backup for allow-listed
+  formal PP02 state and non-sensitive configuration.
+- Keep complete, configuration-only, and portfolio-event-only backup purposes
+  visibly distinct.
+- Require validation and a fresh preview before atomic replacement; write a
+  recovery artifact first, preserve concurrent writers, roll back failures, and
+  require service restart after success.
+- Persist generated period reports in a canonical table, reload stored reports
+  without generation, and migrate a v3.29.2 database without changing existing
+  analysis-history rows.
+- Document compatibility, exclusions, fund `not_applicable`, recovery, and
+  uninstall/external-storage guidance.
+
+### Acceptance and stop gates
+
+1. Work20/related Python and affected Web suites pass, followed by the complete
+   backend gate, Web lint/build, AI asset check, changed-Python compile, and
+   `git diff --check`.
+2. Canonical format/manifest/SHA, secret rejection, clean-install restore,
+   restart persistence, recovery-before-replace, rollback, concurrent writer,
+   migration, stored-report read, and user-visible distinction contracts have
+   direct automated evidence.
+3. Fixtures/diff contain no real credential, token, cookie, or ciphertext; only
+   explicit synthetic markers are allowed. Final diff contains only Work20 and
+   its named documentation/evidence files.
+4. This phase may create a local evidence commit. The controller owns push,
+   Draft PR creation, and exact fixed-Head Actions verification.
+5. Do not Ready, merge, write `main`, tag, release, use real user data, or claim
+   remote CI before controller evidence exists. Final Judge remains
+   `DRAFT_HOLD`.
+
+---
+
+# Historical contract | WORK-016 / Windows frozen chip dependency closure
 
 ## Work16｜授权与执行合同
 

@@ -8,11 +8,13 @@ import logging
 import json
 import os
 import re
+import secrets
 import shutil
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Set, Tuple
 from urllib.parse import urlparse, urlunparse
 
 import requests
@@ -49,8 +51,13 @@ from src.llm.hermes import (
     parse_hermes_channel,
     route_identity_candidates,
 )
-from src.core.config_manager import ConfigManager
+from src.core.config_manager import (
+    ConfigManager,
+    ConfigManagerPublicationUncertain,
+    ConfigManagerVersionConflict,
+)
 from src.core.config_registry import (
+    WEB_SETTINGS_HIDDEN_FROM_UI,
     build_schema_response,
     get_category_definitions,
     get_field_definition,
@@ -109,6 +116,67 @@ class ConfigImportError(Exception):
         self.message = message
 
 
+class ConfigReceiptStateError(RuntimeError):
+    """Raised when opaque restore receipt state cannot be consumed safely."""
+
+
+class _ConfigRestoreReceipt:
+    """Opaque immutable handle for private process-local compensation state."""
+
+    __slots__ = ("_handle", "_prior_version", "_post_version", "_sealed")
+
+    def __init__(
+        self,
+        *,
+        handle: str,
+        prior_version: str,
+        post_version: str,
+        seal: object,
+    ) -> None:
+        if seal is not _CONFIG_RESTORE_RECEIPT_SEAL:
+            raise TypeError("Config restore receipts can only be created internally")
+        object.__setattr__(self, "_handle", handle)
+        object.__setattr__(self, "_prior_version", prior_version)
+        object.__setattr__(self, "_post_version", post_version)
+        object.__setattr__(self, "_sealed", True)
+
+    @property
+    def prior_version(self) -> str:
+        return self._prior_version
+
+    @property
+    def post_version(self) -> str:
+        return self._post_version
+
+    def __setattr__(self, _name: str, _value: Any) -> None:
+        raise AttributeError("Config restore receipt is immutable")
+
+    def __repr__(self) -> str:
+        return (
+            "_ConfigRestoreReceipt("
+            f"prior_version={self.prior_version!r}, "
+            f"post_version={self.post_version!r}, state=<opaque>)"
+        )
+
+    def __reduce__(self):
+        raise TypeError("Config restore receipts cannot be serialized")
+
+
+_CONFIG_RESTORE_RECEIPT_SEAL = object()
+
+
+@dataclass(frozen=True, repr=False)
+class _ConfigRestoreReceiptState:
+    receipt: _ConfigRestoreReceipt
+    owner_pid: int
+    canonical_path: Path
+    previous_content: bytes
+    previous_exists: bool
+    applied_content: bytes
+    managed_keys: frozenset[str]
+    post_version: str
+
+
 @dataclass(frozen=True)
 class _LLMDiagnostic:
     """Internal structured diagnosis for LLM test and discovery failures."""
@@ -122,6 +190,9 @@ class _LLMDiagnostic:
 
 class SystemConfigService:
     """Service layer for reading, validating, and updating runtime configuration."""
+
+    _restore_receipt_lock = threading.RLock()
+    _restore_receipts: Dict[str, _ConfigRestoreReceiptState] = {}
 
     _ENV_ASSIGNMENT_RE = re.compile(
         r"^\s*(?:export\s+)?(?:"
@@ -426,7 +497,11 @@ class SystemConfigService:
         container. Use these values as display fallbacks so Settings can show
         startup-injected config without letting it override later WebUI saves.
         """
-        registered_keys = {key.upper() for key in get_registered_field_keys()}
+        registered_keys = {
+            key.upper()
+            for key in get_registered_field_keys()
+            if key.upper() not in WEB_SETTINGS_HIDDEN_FROM_UI
+        }
         channel_names = {
             segment.strip().upper()
             for raw_channels in (
@@ -458,7 +533,7 @@ class SystemConfigService:
             **runtime_config_map,
             **saved_config_map,
         }
-        registered_keys = set(get_registered_field_keys())
+        registered_keys = set(get_registered_field_keys()) - WEB_SETTINGS_HIDDEN_FROM_UI
         all_keys = set(config_map.keys()) | registered_keys
         if include_schema:
             all_keys = self._get_schema_config_keys(config_map, registered_keys)
@@ -724,15 +799,37 @@ class SystemConfigService:
 
     def export_env(self) -> Dict[str, Any]:
         """Return active non-sensitive `.env` content for backup."""
-        content = self._manager.render_without_matching_keys(
+        content, config_version, updated_at = self._manager.snapshot_without_matching_keys(
             lambda key: bool(get_field_definition(key).get("is_sensitive", False))
             or is_sensitive_config_key(key)
         )
 
         return {
             "content": content,
-            "config_version": self._manager.get_config_version(),
-            "updated_at": self._manager.get_updated_at(),
+            "config_version": config_version,
+            "updated_at": updated_at,
+            "credentials_excluded": True,
+        }
+
+    def snapshot_non_sensitive_values(
+        self,
+        *,
+        allowed_keys: Set[str],
+    ) -> Dict[str, Any]:
+        """Return allow-listed logical values from one locked raw generation."""
+        values, config_version, updated_at = self._manager.snapshot_config_map()
+        normalized_allowed = {str(key).upper() for key in allowed_keys}
+        filtered = {
+            key.upper(): value
+            for key, value in values.items()
+            if key.upper() in normalized_allowed
+            and not is_sensitive_config_key(key)
+            and not get_field_definition(key).get("is_sensitive", False)
+        }
+        return {
+            "values": filtered,
+            "config_version": config_version,
+            "updated_at": updated_at,
             "credentials_excluded": True,
         }
 
@@ -793,6 +890,323 @@ class SystemConfigService:
             content=content,
             reload_now=reload_now,
         )
+
+    def replace_env_subset(
+        self,
+        *,
+        config_version: str,
+        content: str,
+        managed_keys: Set[str],
+        reload_now: bool = True,
+    ) -> Dict[str, Any]:
+        """Replace one explicit non-sensitive config subset without touching secrets."""
+        current_version = self._manager.get_config_version()
+        if current_version != config_version:
+            raise ConfigConflictError(current_version=current_version)
+
+        normalized_managed_keys = {
+            str(key).strip().upper() for key in managed_keys if str(key).strip()
+        }
+        registered_keys = set(get_registered_field_keys())
+        if any(
+            key not in registered_keys or is_sensitive_config_key(key)
+            for key in normalized_managed_keys
+        ):
+            raise ConfigImportError(
+                "Replacement config subset contains an unknown or sensitive key"
+            )
+
+        assignment_keys = self._scan_imported_assignment_keys(content)
+        if not assignment_keys.issubset(normalized_managed_keys):
+            raise ConfigImportError(
+                "Replacement config content contains a key outside its managed subset"
+            )
+
+        updated_keys: List[str] = []
+        skipped_masked_count = 0
+        warnings: List[str] = []
+        if content.strip():
+            imported = self.import_env(
+                config_version=config_version,
+                content=content,
+                reload_now=False,
+            )
+            updated_keys = list(imported["updated_keys"])
+            skipped_masked_count = int(imported["skipped_masked_count"])
+            warnings.extend(imported["warnings"])
+
+        imported_keys = assignment_keys
+        removable_keys = (
+            self._manager.get_assignment_keys() & normalized_managed_keys
+        ) - imported_keys
+        removed_keys, final_version = self._manager.remove_keys(removable_keys)
+
+        reload_triggered = False
+        if reload_now:
+            try:
+                Config.reset_instance()
+                self._reload_runtime_singletons()
+                setup_env(override=True)
+                warnings.extend(Config.get_instance().validate())
+                reload_triggered = True
+            except Exception as exc:  # pragma: no cover - defensive branch
+                logger.error("Configuration subset reload failed: %s", exc, exc_info=True)
+                warnings.append("Configuration updated but reload failed")
+
+        return {
+            "success": True,
+            "config_version": final_version,
+            "applied_count": len(updated_keys) + len(removed_keys),
+            "skipped_masked_count": skipped_masked_count,
+            "reload_triggered": reload_triggered,
+            "updated_keys": updated_keys,
+            "removed_keys": removed_keys,
+            "warnings": warnings,
+        }
+
+    def apply_env_subset_atomically(
+        self,
+        *,
+        expected_version: str,
+        values: Mapping[str, str],
+        managed_keys: Set[str],
+        reload_now: bool = False,
+    ) -> _ConfigRestoreReceipt:
+        """CAS-apply one validated subset and retain an exact internal undo receipt."""
+        if reload_now:
+            raise ValueError("Atomic restore subset application requires reload_now=False")
+
+        normalized_managed_keys = {
+            str(key).strip().upper() for key in managed_keys if str(key).strip()
+        }
+        registered_keys = set(get_registered_field_keys())
+        if any(
+            key not in registered_keys or is_sensitive_config_key(key)
+            for key in normalized_managed_keys
+        ):
+            raise ConfigImportError(
+                "Replacement config subset contains an unknown or sensitive key"
+            )
+
+        normalized_values = self.normalize_env_subset_values(
+            values=values,
+            managed_keys=normalized_managed_keys,
+        )
+        items: List[Dict[str, str]] = []
+        for key, normalized_value in normalized_values.items():
+            items.append({"key": key, "value": normalized_value})
+
+        issues = self._collect_issues(
+            items=items,
+            mask_token="__DSA_RESTORE_LITERAL_MASK__",
+        )
+        errors = [issue for issue in issues if issue["severity"] == "error"]
+        if errors:
+            raise ConfigValidationError(issues=errors)
+
+        try:
+            return self._manager.replace_managed_assignments_atomically(
+                expected_version=expected_version,
+                managed_keys=normalized_managed_keys,
+                replacements=normalized_values,
+                prepare_receipt=self._prepare_restore_receipt,
+                discard_receipt=self._discard_restore_receipt,
+            )
+        except ConfigManagerVersionConflict as exc:
+            raise ConfigConflictError(current_version=exc.current_version) from exc
+        except ConfigManagerPublicationUncertain as exc:
+            try:
+                self.compensate_env_subset_atomically(
+                    receipt=exc.receipt,
+                    reload_now=False,
+                )
+            except ConfigConflictError:
+                raise
+            except Exception as compensation_exc:
+                raise ConfigReceiptStateError(
+                    "Uncertain configuration publication retained private "
+                    "compensation state after rollback failed"
+                ) from compensation_exc
+            raise ConfigReceiptStateError(
+                "Uncertain configuration publication was compensated internally"
+            ) from exc
+
+    @staticmethod
+    def normalize_env_subset_values(
+        *,
+        values: Mapping[str, str],
+        managed_keys: Set[str],
+    ) -> Dict[str, str]:
+        """Return the exact normalized representation written by atomic restore."""
+        normalized_managed_keys = {
+            str(key).strip().upper() for key in managed_keys if str(key).strip()
+        }
+        registered_keys = set(get_registered_field_keys())
+        normalized_values: Dict[str, str] = {}
+        for raw_key, raw_value in values.items():
+            key = str(raw_key).strip().upper()
+            if (
+                key not in normalized_managed_keys
+                or key not in registered_keys
+                or is_sensitive_config_key(key)
+            ):
+                raise ConfigImportError(
+                    "Replacement config content contains a key outside its managed subset"
+                )
+            if not isinstance(raw_value, str) or "\n" in raw_value or "\r" in raw_value:
+                raise ConfigImportError("Replacement config value must be one line")
+            field_schema = get_field_definition(key, raw_value)
+            normalized_values[key] = SystemConfigService._normalize_value_for_storage(
+                raw_value,
+                field_schema,
+            )
+        return normalized_values
+
+    def compensate_env_subset_atomically(
+        self,
+        *,
+        receipt: _ConfigRestoreReceipt,
+        reload_now: bool = False,
+    ) -> str:
+        """CAS-restore exact pre-apply bytes without clobbering a later writer."""
+        if reload_now:
+            raise ValueError("Atomic restore subset compensation requires reload_now=False")
+        state = self._claim_restore_receipt(receipt)
+        try:
+            restored_version, concurrent_edit = (
+                self._manager.compensate_managed_assignments_atomically(
+                    previous_content=state.previous_content,
+                    previous_exists=state.previous_exists,
+                    applied_content=state.applied_content,
+                    managed_keys=set(state.managed_keys),
+                    post_version=state.post_version,
+                )
+            )
+        except ConfigManagerVersionConflict as exc:
+            self._restore_claimed_receipt(state)
+            raise ConfigConflictError(current_version=exc.current_version) from exc
+        except BaseException:
+            self._restore_claimed_receipt(state)
+            raise
+        if concurrent_edit:
+            raise ConfigConflictError(current_version=restored_version)
+        return restored_version
+
+    def finalize_env_subset_atomically(self, receipt: _ConfigRestoreReceipt) -> None:
+        """Consume a successful apply receipt after the caller commits its work."""
+        state: Optional[_ConfigRestoreReceiptState] = None
+        with self._restore_receipt_lock:
+            if isinstance(receipt, _ConfigRestoreReceipt):
+                state = self._restore_receipts.pop(receipt._handle, None)
+        if (
+            state is None
+            or state.receipt is not receipt
+            or state.owner_pid != os.getpid()
+            or state.canonical_path != self._manager.env_path
+        ):
+            raise ConfigReceiptStateError(
+                "Configuration restore receipt finalization mismatch"
+            )
+
+    def discard_env_subset_receipt_after_commit(
+        self,
+        receipt: _ConfigRestoreReceipt,
+    ) -> None:
+        """Idempotently discard private undo state after a durable DB commit."""
+        with self._restore_receipt_lock:
+            if not isinstance(receipt, _ConfigRestoreReceipt):
+                return
+            state = self._restore_receipts.get(receipt._handle)
+            if (
+                state is not None
+                and state.receipt is receipt
+                and state.owner_pid == os.getpid()
+                and state.canonical_path == self._manager.env_path
+            ):
+                self._restore_receipts.pop(receipt._handle, None)
+
+    def _prepare_restore_receipt(
+        self,
+        *,
+        previous_content: bytes,
+        previous_exists: bool,
+        applied_content: bytes,
+        managed_keys: frozenset[str],
+        prior_version: str,
+        post_version: str,
+    ) -> _ConfigRestoreReceipt:
+        handle = secrets.token_urlsafe(32)
+        receipt = _ConfigRestoreReceipt(
+            handle=handle,
+            prior_version=prior_version,
+            post_version=post_version,
+            seal=_CONFIG_RESTORE_RECEIPT_SEAL,
+        )
+        state = _ConfigRestoreReceiptState(
+            receipt=receipt,
+            owner_pid=os.getpid(),
+            canonical_path=self._manager.env_path,
+            previous_content=previous_content,
+            previous_exists=previous_exists,
+            applied_content=applied_content,
+            managed_keys=managed_keys,
+            post_version=post_version,
+        )
+        with self._restore_receipt_lock:
+            while handle in self._restore_receipts:
+                handle = secrets.token_urlsafe(32)
+                receipt = _ConfigRestoreReceipt(
+                    handle=handle,
+                    prior_version=prior_version,
+                    post_version=post_version,
+                    seal=_CONFIG_RESTORE_RECEIPT_SEAL,
+                )
+                state = _ConfigRestoreReceiptState(
+                    receipt=receipt,
+                    owner_pid=os.getpid(),
+                    canonical_path=self._manager.env_path,
+                    previous_content=previous_content,
+                    previous_exists=previous_exists,
+                    applied_content=applied_content,
+                    managed_keys=managed_keys,
+                    post_version=post_version,
+                )
+            self._restore_receipts[handle] = state
+        return receipt
+
+    def _discard_restore_receipt(self, receipt: _ConfigRestoreReceipt) -> None:
+        with self._restore_receipt_lock:
+            state = self._restore_receipts.get(receipt._handle)
+            if state is not None and state.receipt is receipt:
+                self._restore_receipts.pop(receipt._handle, None)
+
+    def _claim_restore_receipt(
+        self,
+        receipt: _ConfigRestoreReceipt,
+    ) -> _ConfigRestoreReceiptState:
+        claimed_state: Optional[_ConfigRestoreReceiptState] = None
+        with self._restore_receipt_lock:
+            if isinstance(receipt, _ConfigRestoreReceipt):
+                state = self._restore_receipts.pop(receipt._handle, None)
+                if (
+                    state is not None
+                    and state.receipt is receipt
+                    and state.owner_pid == os.getpid()
+                    and state.canonical_path == self._manager.env_path
+                ):
+                    claimed_state = state
+        if claimed_state is None:
+            raise ConfigConflictError(
+                current_version=self._manager.get_config_version()
+            )
+        return claimed_state
+
+    def _restore_claimed_receipt(self, state: _ConfigRestoreReceiptState) -> None:
+        with self._restore_receipt_lock:
+            self._restore_receipts.setdefault(
+                state.receipt._handle,
+                state,
+            )
 
     def _resolve_hermes_saved_secret(
         self,
@@ -2116,11 +2530,15 @@ class SystemConfigService:
             if bool(field_schema.get("is_sensitive", False)):
                 sensitive_keys.add(key)
 
-        updated_keys, skipped_masked_keys, new_version = self._manager.apply_updates(
-            updates=updates,
-            sensitive_keys=sensitive_keys,
-            mask_token=mask_token,
-        )
+        try:
+            updated_keys, skipped_masked_keys, new_version = self._manager.apply_updates(
+                updates=updates,
+                sensitive_keys=sensitive_keys,
+                mask_token=mask_token,
+                expected_version=config_version,
+            )
+        except ConfigManagerVersionConflict as exc:
+            raise ConfigConflictError(current_version=exc.current_version) from exc
 
         warnings: List[str] = []
         reload_triggered = False

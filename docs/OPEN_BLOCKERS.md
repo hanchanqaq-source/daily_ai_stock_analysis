@@ -1,5 +1,24 @@
 # PP02 当前阻塞
 
+## WORK-020 current gates
+
+| Item | Current fact |
+| --- | --- |
+| Local product blocker | None; all required local gates passed |
+| Base / branch | `main@41fd6a6c…` / `agent/pp02-work20-full-backup-period-persistence-pr` |
+| Related Python | `405/405` passed after scoped Work20 fixture-isolation fixes |
+| External publication | Pending controller push and one Draft PR |
+| Fixed-Head Actions | Pending; no Run ID, job result, or remote Head recorded yet |
+| Authorization outside Work20 | Ready, merge, `main`, Tag, Release, real credentials/data |
+
+The missing Draft PR and fixed-Head Actions results are mandatory external
+acceptance gates, not local code failures. Work20 therefore remains
+`DRAFT_HOLD`. If any remaining full local gate fails, Work20 is blocked and the
+gate must be diagnosed within scope; the gate must not be weakened. Locked
+Work18/19/19-A blocker history is unchanged.
+
+---
+
 ## WORK-016 当前门
 
 | 项目 | 当前事实 |

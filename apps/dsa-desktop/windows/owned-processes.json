@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "executables": [
+    {
+      "role": "desktop",
+      "relativePath": "PP02 AI Daily Stock Analysis.exe",
+      "requestMainWindowClose": true
+    },
+    {
+      "role": "backend",
+      "relativePath": "resources/backend/stock_analysis/stock_analysis.exe",
+      "requestMainWindowClose": false
+    }
+  ]
+}

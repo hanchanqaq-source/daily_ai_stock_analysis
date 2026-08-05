@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """Schemas for manually generated historical period reports and outlooks."""
 
-from __future__ import annotations
-
 from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
+# Keep these annotations eager so Pydantic builds the same closed field set on
+# every supported Python runtime, including the Python 3.11 backend CI gate.
 
 PeriodKey = Literal[
     "week_to_date",
@@ -98,6 +98,8 @@ class PeriodOutlookSnapshot(BaseModel):
 
 
 class PeriodReportResponse(BaseModel):
+    report_id: int = Field(..., ge=1)
+    status: Literal["ready", "insufficient_data"]
     period: PeriodKey
     report_kind: Literal["historical", "outlook"]
     start_date: str

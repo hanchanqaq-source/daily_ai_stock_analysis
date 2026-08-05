@@ -37,7 +37,7 @@ def test_portable_stage_excludes_only_root_runtime_state(tmp_path: Path) -> None
             "node",
             "scripts/prepare-portable-release.js",
             "stage",
-            "v3.21.0",
+            "v3.29.3",
             str(source),
             str(stage),
         ],

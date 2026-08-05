@@ -16,12 +16,15 @@ from contextlib import contextmanager
 import hashlib
 import json
 import logging
+import os
 import threading
 import time
 from datetime import datetime, date, timedelta, timezone
+from pathlib import Path
 from typing import Optional, List, Dict, Any, TYPE_CHECKING, Tuple, Callable, TypeVar, Union
 
 import pandas as pd
+from dotenv import dotenv_values
 from sqlalchemy import (
     create_engine,
     Column,
@@ -54,6 +57,8 @@ from sqlalchemy.orm import (
     Session,
 )
 from sqlalchemy.exc import IntegrityError, OperationalError
+from sqlalchemy.inspection import inspect as sqlalchemy_inspect
+from sqlalchemy.engine import make_url
 
 from src.agent.provider_trace import PROVIDER_TRACE_RETENTION_LIMIT
 from src.config import get_config
@@ -62,7 +67,8 @@ from src.utils.sniper_points import extract_sniper_points, parse_sniper_value
 
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
-CURRENT_SCHEMA_VERSION = "2026-06-05-create-all-baseline"
+PERIOD_REPORT_SCHEMA_VERSION = "2026-08-04-work20-period-reports"
+CURRENT_SCHEMA_VERSION = PERIOD_REPORT_SCHEMA_VERSION
 INTELLIGENCE_ITEM_NULL_SCOPE_VALUE = "__dsa_null_scope__"
 
 # SQLAlchemy ORM 基类
@@ -94,6 +100,15 @@ class DatabaseSchemaMigration(Base):
     version = Column(String(64), primary_key=True)
     description = Column(String(255), nullable=False)
     applied_at = Column(DateTime, default=datetime.now, nullable=False, index=True)
+
+
+class FullDataRestoreCommitMarker(Base):
+    """Durable marker committed atomically with one full-data restore."""
+
+    __tablename__ = "full_data_restore_commits"
+
+    tx_id = Column(String(64), primary_key=True)
+    committed_at = Column(DateTime, default=utc_naive_now, nullable=False)
 
 
 class StockDaily(Base):
@@ -276,9 +291,9 @@ class IntelligenceItem(Base):
 
 class FundamentalSnapshot(Base):
     """
-    基本面上下文快照（P0 write-only）。
+    基本面上下文快照。
 
-    仅用于写入，主链路不依赖读取该表，便于后续回测/画像扩展。
+    分析与历史查询可在外部数据不可用时读取该表，因此它不是可重建缓存。
     """
     __tablename__ = 'fundamental_snapshot'
 
@@ -361,6 +376,39 @@ class AnalysisHistory(Base):
             'take_profit': self.take_profit,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class PeriodReportRecord(Base):
+    """Canonical persisted period report and outlook record."""
+
+    __tablename__ = "period_reports"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    period = Column(String(32), nullable=False, index=True)
+    report_kind = Column(String(32), nullable=False, index=True)
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
+    content_json = Column(Text, nullable=False)
+    source_record_ids_json = Column(Text, nullable=False)
+    status = Column(String(32), nullable=False)
+    generated_at = Column(DateTime, default=utc_naive_now, nullable=False, index=True)
+    updated_at = Column(
+        DateTime,
+        default=utc_naive_now,
+        onupdate=utc_naive_now,
+        nullable=False,
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "period",
+            "report_kind",
+            "start_date",
+            "end_date",
+            name="uix_period_report_identity",
+        ),
+        Index("ix_period_reports_period_generated_at", "period", "generated_at"),
+    )
 
 
 class BacktestResult(Base):
@@ -1217,6 +1265,12 @@ class DatabaseManager(metaclass=_DatabaseManagerMeta):
         created_engine = None
 
         try:
+            recovered = self._recover_full_data_restore_before_runtime_config(db_url)
+            if recovered:
+                from src.config import Config, setup_env
+
+                Config.reset_instance()
+                setup_env(override=True)
             config = get_config()
             if db_url is None:
                 db_url = config.get_db_url()
@@ -1253,12 +1307,10 @@ class DatabaseManager(metaclass=_DatabaseManagerMeta):
                 autoflush=False,
             )
 
-            # 创建所有表
-            Base.metadata.create_all(self._engine)
+            self._initialize_base_schema_transaction()
             self._ensure_llm_usage_telemetry_columns()
             self._ensure_decision_signal_profile_schema()
             self._ensure_intelligence_item_scope_values()
-            self._ensure_schema_migration_record()
             self._ensure_intelligence_items_unique_index()
 
             self._initialized = True
@@ -1278,19 +1330,183 @@ class DatabaseManager(metaclass=_DatabaseManagerMeta):
             self.__class__._instance = None
             raise
 
-    def _ensure_schema_migration_record(self) -> None:
-        session = self._SessionLocal()
-        values = {
-            "version": CURRENT_SCHEMA_VERSION,
-            "description": "Baseline schema created through SQLAlchemy metadata.create_all",
+    def _recover_full_data_restore_before_runtime_config(
+        self,
+        requested_db_url: Optional[str],
+    ) -> bool:
+        """Recover a pending journal before Config or the final engine is exposed."""
+        if requested_db_url is None:
+            if "DATABASE_PATH" in os.environ:
+                raw_database_path = os.environ["DATABASE_PATH"]
+            else:
+                env_file = os.getenv("ENV_FILE")
+                env_path = (
+                    Path(env_file)
+                    if env_file
+                    else Path(__file__).parent.parent / ".env"
+                )
+                try:
+                    raw_values = dotenv_values(env_path, interpolate=False)
+                except Exception as exc:
+                    raise RuntimeError(
+                        "Unable to inspect ENV_FILE for pending restore recovery."
+                    ) from exc
+                raw_database_path = raw_values.get(
+                    "DATABASE_PATH",
+                    "./data/stock_analysis.db",
+                )
+                if raw_database_path is None:
+                    raw_database_path = "./data/stock_analysis.db"
+            database_path = Path(str(raw_database_path)).expanduser().absolute()
+            bootstrap_url = f"sqlite:///{database_path}"
+        else:
+            bootstrap_url = str(requested_db_url)
+        if not bootstrap_url.startswith("sqlite:"):
+            return False
+
+        database = str(make_url(bootstrap_url).database or "").strip()
+        if not database or database.lower() == ":memory:":
+            return False
+        database_path = Path(database).expanduser().resolve()
+        journal_path = (
+            database_path.parent
+            / f"{database_path.stem}_restore_recovery"
+            / ".pp02-full-data-restore-transaction.json"
+        )
+        if not journal_path.exists():
+            return False
+
+        bootstrap_engine = create_engine(bootstrap_url, echo=False, pool_pre_ping=True)
+
+        self._engine = bootstrap_engine
+        self._is_sqlite_engine = True
+        self._sqlite_file_db = True
+        self._SessionLocal = sessionmaker(
+            bind=bootstrap_engine,
+            autocommit=False,
+            autoflush=False,
+        )
+        try:
+            restore_journal = self._build_full_data_restore_journal()
+            if restore_journal is None:  # pragma: no cover - file SQLite invariant
+                return False
+            with restore_journal.transaction_lock():
+                restore_journal.preflight()
+                return restore_journal.recover_pending()
+        finally:
+            bootstrap_engine.dispose()
+            self._engine = None
+            self._SessionLocal = None
+
+    def _build_full_data_restore_journal(self):
+        """Build the startup recovery boundary without exposing a DB session."""
+        if not self._sqlite_file_db:
+            return None
+        from src.services.full_data_backup_service import (
+            BACKUP_CONFIG_ALLOWLIST,
+            DEFAULT_APPLICATION_VERSION,
+            FullDataBackupService,
+        )
+        from src.services.full_data_restore_journal import FullDataRestoreJournal
+        from src.services.system_config_service import SystemConfigService
+
+        application_version = (
+            str(
+                os.getenv("PP02_APPLICATION_VERSION", DEFAULT_APPLICATION_VERSION)
+            ).strip()
+            or DEFAULT_APPLICATION_VERSION
+        )
+        return FullDataRestoreJournal(
+            db_manager=self,
+            config_service=SystemConfigService(),
+            application_version=application_version,
+            database_schema_version=CURRENT_SCHEMA_VERSION,
+            managed_keys=set(BACKUP_CONFIG_ALLOWLIST),
+            value_validator=FullDataBackupService._validate_config_value,
+        )
+
+    def _initialize_base_schema_transaction(self) -> None:
+        """Create, verify, and mark the base schema as one database transaction."""
+
+        if self._is_sqlite_engine:
+            with self._engine.connect() as connection:
+                connection.exec_driver_sql("BEGIN IMMEDIATE")
+                try:
+                    Base.metadata.create_all(connection)
+                    self._verify_period_report_schema(connection)
+                    self._ensure_schema_migration_record(connection)
+                except Exception:
+                    connection.rollback()
+                    raise
+                else:
+                    connection.commit()
+            return
+
+        with self._engine.begin() as connection:
+            Base.metadata.create_all(connection)
+            self._verify_period_report_schema(connection)
+            self._ensure_schema_migration_record(connection)
+
+    def _verify_period_report_schema(self, bind=None) -> None:
+        """Verify the additive Work20 period-report table before recording its marker."""
+
+        inspector = sqlalchemy_inspect(bind or self._engine)
+        table_name = PeriodReportRecord.__tablename__
+        if not inspector.has_table(table_name):
+            raise RuntimeError(f"{table_name} table was not created")
+
+        required_columns = {
+            "id",
+            "period",
+            "report_kind",
+            "start_date",
+            "end_date",
+            "content_json",
+            "source_record_ids_json",
+            "status",
+            "generated_at",
+            "updated_at",
         }
+        actual_columns = {
+            column["name"] for column in inspector.get_columns(table_name)
+        }
+        missing_columns = required_columns - actual_columns
+        if missing_columns:
+            raise RuntimeError(
+                "period_reports schema verification failed; missing columns: "
+                f"{sorted(missing_columns)}"
+            )
+
+        identity = ("period", "report_kind", "start_date", "end_date")
+        unique_identities = {
+            tuple(constraint.get("column_names") or [])
+            for constraint in inspector.get_unique_constraints(table_name)
+        }
+        if identity not in unique_identities:
+            raise RuntimeError(
+                "period_reports schema verification failed; missing unique identity "
+                f"{identity}"
+            )
+
+    def _ensure_schema_migration_record(self, connection=None) -> None:
+        if connection is not None:
+            self._insert_schema_migration_record(connection)
+            return
+
+        session = self._SessionLocal()
         try:
             if self._is_sqlite_engine:
-                statement = sqlite_insert(DatabaseSchemaMigration).values(**values)
+                statement = sqlite_insert(DatabaseSchemaMigration).values(
+                    **self._schema_migration_values()
+                )
                 statement = statement.on_conflict_do_nothing(index_elements=["version"])
                 session.execute(statement)
             else:
-                session.execute(DatabaseSchemaMigration.__table__.insert().values(**values))
+                session.execute(
+                    DatabaseSchemaMigration.__table__.insert().values(
+                        **self._schema_migration_values()
+                    )
+                )
             session.commit()
         except IntegrityError:
             session.rollback()
@@ -1303,6 +1519,31 @@ class DatabaseManager(metaclass=_DatabaseManagerMeta):
             raise
         finally:
             session.close()
+
+    @staticmethod
+    def _schema_migration_values() -> Dict[str, str]:
+        return {
+            "version": CURRENT_SCHEMA_VERSION,
+            "description": "Work20 period_reports schema verified through SQLAlchemy metadata.create_all",
+        }
+
+    def _insert_schema_migration_record(self, connection) -> None:
+        values = self._schema_migration_values()
+        try:
+            if self._is_sqlite_engine:
+                statement = sqlite_insert(DatabaseSchemaMigration).values(**values)
+                statement = statement.on_conflict_do_nothing(index_elements=["version"])
+                connection.execute(statement)
+            else:
+                connection.execute(DatabaseSchemaMigration.__table__.insert().values(**values))
+        except IntegrityError:
+            existing = connection.execute(
+                select(DatabaseSchemaMigration.version).where(
+                    DatabaseSchemaMigration.version == CURRENT_SCHEMA_VERSION
+                )
+            ).scalar_one_or_none()
+            if existing is None:
+                raise
 
     def _ensure_decision_signal_profile_schema(self) -> None:
         """Add and backfill nullable decision_profile for existing SQLite DBs."""
@@ -2024,7 +2265,7 @@ class DatabaseManager(metaclass=_DatabaseManagerMeta):
         coverage: Optional[Any] = None,
     ) -> int:
         """
-        保存基本面快照（P0 write-only）。失败不抛异常，返回写入条数 0/1。
+        保存基本面快照。失败不抛异常，返回写入条数 0/1。
         """
         if not query_id or not code or payload is None:
             return 0
@@ -2216,27 +2457,42 @@ class DatabaseManager(metaclass=_DatabaseManagerMeta):
         )
 
         def _write(session: Session) -> int:
-            history = AnalysisHistory(
-                query_id=query_id,
-                code="PERIOD",
-                name="下周展望",
-                report_type="period_outlook",
-                sentiment_score=None,
-                operation_advice="仅供参考",
-                trend_prediction=overall_tendency,
-                analysis_summary=summary,
-                raw_result=self._safe_json_dumps(
-                    {
-                        "snapshot_version": snapshot.get("snapshot_version"),
-                        "overall_tendency": overall_tendency,
-                        "source_record_ids": snapshot.get("source_record_ids") or [],
-                    }
-                ),
-                news_content=None,
-                context_snapshot=self._safe_json_dumps(snapshot),
-                created_at=created_at,
+            history = None
+            candidates = session.execute(
+                select(AnalysisHistory)
+                .where(AnalysisHistory.report_type == "period_outlook")
+                .order_by(AnalysisHistory.id.desc())
+            ).scalars().all()
+            for candidate in candidates:
+                try:
+                    candidate_snapshot = json.loads(candidate.context_snapshot or "{}")
+                except (TypeError, ValueError, json.JSONDecodeError):
+                    continue
+                if candidate_snapshot.get("target_period") == target_period:
+                    history = candidate
+                    break
+            if history is None:
+                history = AnalysisHistory(
+                    query_id=query_id,
+                    code="PERIOD",
+                    name="下周展望",
+                    report_type="period_outlook",
+                )
+                session.add(history)
+            history.sentiment_score = None
+            history.operation_advice = "仅供参考"
+            history.trend_prediction = overall_tendency
+            history.analysis_summary = summary
+            history.raw_result = self._safe_json_dumps(
+                {
+                    "snapshot_version": snapshot.get("snapshot_version"),
+                    "overall_tendency": overall_tendency,
+                    "source_record_ids": snapshot.get("source_record_ids") or [],
+                }
             )
-            session.add(history)
+            history.news_content = None
+            history.context_snapshot = self._safe_json_dumps(snapshot)
+            history.created_at = created_at
             session.flush()
             return int(history.id or 0)
 

@@ -81,6 +81,8 @@ export type PeriodOutlookSnapshot = {
 };
 
 export type PeriodReportResponse = {
+  reportId: number;
+  status: 'ready' | 'insufficient_data';
   period: PeriodReportKey;
   reportKind: 'historical' | 'outlook';
   startDate: string;

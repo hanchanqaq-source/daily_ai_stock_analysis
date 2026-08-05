@@ -7,6 +7,23 @@
 
 ## 当前路线入口
 
+Work23 is the active Draft-only repair on existing PR #23 from locked
+`v3.29.2` `main@41fd6a6c…`. Work20's complete backup/period persistence remains
+the foundation. Work23 normalizes candidate version `3.29.3`, preserves formal
+fundamental snapshots, declares the rebuildable daily cache, and repairs the
+one-shot Windows uninstall lifecycle. Runs `30949323920` and `30952197181`
+ended 7/8 because the official uninstaller returned `0` while the live app
+remained. A self-locating manifest/evidence rework now passes local contracts;
+Run `30975730060` proved its exact-path helper contract but exposed an NSIS
+unused-label warning and a masked child build exit before installed lifecycle.
+Run `30977516983` passed that repair and candidate build, then showed the real
+helper's secondary `Get-Process.Path` check blocked all five CIM-discovered owned
+processes. Run `30988154439` passed the single-CIM repair and reached zero after
+one uninstall, but a redundant second helper entry overwrote the live-cleanup
+evidence with a no-op zero-count run. A single standard uninstall entry rework
+is awaiting next exact-Head CI and candidate identity. Judge remains
+`DRAFT_HOLD`; there is no Ready, merge, Tag, or Release authorization.
+
 Work10 已完成 `v3.29.1` 发布；Work11 真机安装闭环裁决 `PASSED_WITH_RESIDUALS`。
 Work12 的个股正式历史缺失由 Work13 PR #20 修复。Work14 已在其固定 Head 上完成
 未发布 Windows 候选的 `600519` 正式历史与重启持久化验收，最终裁决为
@@ -28,6 +45,8 @@ Work15 已将 PR #20/#21 依序合入主线；PR #21 最终 Run `30825436318` su
 | R6｜正式数据迁移 | 完成（无数据，跳过迁移） | Work6 `NO_FORMAL_DATA_FOUND`；旧项目和数据库从未建立 |
 | R7｜主线与正式发布 | 完成 | `v3.29.1` annotated Tag/正式 Release；Run `30786838156` 5/5 success、7 assets |
 | R7-Hotfix 验收 | Work16 完成 / Draft Hold | PR #22 固定 Head CI 与 Windows 双层筹码探针通过；禁止自行 Ready、合并或发布 |
+| Work20｜Complete backup and period persistence | Local verification / Draft Hold | Remote Draft PR and exact fixed-Head CI pending controller; no merge, Tag, or Release |
+| Work23｜Windows strict-acceptance repairs | Local single-uninstall-entry rework / Draft Hold | Existing PR #23 only; next exact-Head Windows lifecycle CI pending; no Ready, merge, Tag, or Release |
 
 ## Work 1｜官方稳定版干净底座建立（历史）
 

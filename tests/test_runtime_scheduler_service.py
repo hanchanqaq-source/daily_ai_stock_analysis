@@ -575,6 +575,58 @@ class RuntimeSchedulerServiceTestCase(unittest.TestCase):
             ("stop", False),
         ])
 
+    def test_lifespan_recovers_database_before_runtime_config_and_scheduler(self) -> None:
+        from api.app import create_app
+
+        events = []
+
+        class FakeRuntimeSchedulerService:
+            def __init__(self, **_kwargs):
+                events.append("scheduler")
+
+            def reconcile_from_config(self, **_kwargs):
+                events.append("reconcile")
+
+            def stop(self):
+                events.append("stop")
+
+        class FakeSystemConfigService:
+            def __init__(self, runtime_scheduler=None):
+                self.runtime_scheduler = runtime_scheduler
+
+        def recovered_database():
+            events.append("database")
+            return object()
+
+        def runtime_config():
+            events.append("config")
+            return SimpleNamespace(schedule_run_immediately=False)
+
+        with tempfile.TemporaryDirectory() as temp_dir, patch.dict(
+            os.environ,
+            {},
+            clear=False,
+        ), patch(
+            "src.storage.DatabaseManager.get_instance",
+            side_effect=recovered_database,
+        ), patch(
+            "src.config.get_config",
+            side_effect=runtime_config,
+        ), patch(
+            "api.app.RuntimeSchedulerService",
+            FakeRuntimeSchedulerService,
+        ), patch(
+            "api.app.SystemConfigService",
+            FakeSystemConfigService,
+        ), patch("api.app._schedule_stock_index_background_refresh"):
+            os.environ.pop(CLI_SCHEDULER_OWNER_ENV, None)
+            os.environ.pop(RUNTIME_SCHEDULER_RUN_IMMEDIATELY_ENV, None)
+            app = create_app(static_dir=Path(temp_dir))
+            with TestClient(app):
+                pass
+
+        self.assertEqual(events[:3], ["database", "config", "scheduler"])
+
     def test_lifespan_passes_runtime_scheduler_start_flags(self) -> None:
         from api.app import create_app
 

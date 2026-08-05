@@ -57,6 +57,22 @@ def test_windows_backend_build_script_collects_alphasift_adapter() -> None:
     assert "importlib.import_module(_packaged_import_probe)" in main_py
 
 
+def test_windows_candidate_build_and_installer_verify_one_version_identity() -> None:
+    build_script = _read_text(REPO_ROOT / "scripts" / "build-backend.ps1")
+    verifier = _read_text(REPO_ROOT / "scripts" / "verify-windows-installer.ps1")
+    backup_service = _read_text(
+        REPO_ROOT / "src" / "services" / "full_data_backup_service.py"
+    )
+
+    assert "$env:DSA_WEB_VERSION" in build_script
+    assert "apps\\dsa-desktop\\package.json" in build_script
+    assert ".VersionInfo.FileVersion" in verifier
+    assert ".VersionInfo.ProductVersion" in verifier
+    assert "build-info.json" in verifier
+    assert "webBuildInfo.version" in verifier
+    assert 'DEFAULT_APPLICATION_VERSION = "3.29.3"' in backup_service
+
+
 def test_windows_backend_collects_and_exercises_fake_useragent_runtime() -> None:
     script = _read_text(REPO_ROOT / "scripts" / "build-backend.ps1")
     verifier = _read_text(REPO_ROOT / "scripts" / "verify-frozen-backend.ps1")
@@ -234,8 +250,10 @@ def test_windows_jobs_execute_the_shared_installer_verifier() -> None:
         REPO_ROOT / ".github" / "workflows" / "desktop-release.yml"
     )
     verifier_call = "scripts/verify-windows-installer.ps1"
+    windows_job = _workflow_job(ci, "desktop-futu-package-windows")
 
     assert verifier_call in ci
+    assert "Windows candidate build failed with exit code $LASTEXITCODE." in windows_job
     assert "Validate Windows installer verifier contracts" in ci
     assert "Validate installed Windows lifecycle" in ci
     assert ci.index(verifier_call) < ci.index("Upload verified Windows candidate")
@@ -372,21 +390,57 @@ def test_windows_installer_validates_exit_restart_before_uninstall() -> None:
     verifier = _read_text(
         REPO_ROOT / "scripts" / "verify-windows-installer.ps1"
     )
+    contract = _read_text(
+        REPO_ROOT
+        / "scripts"
+        / "tests"
+        / "verify-windows-installer-contract.ps1"
+    )
 
     first_start = "WINDOWS_INSTALLED_APP_STARTUP_VALIDATION=PASS"
     first_exit = "WINDOWS_INSTALLED_APP_EXIT_VALIDATION=PASS"
     restart = "WINDOWS_INSTALLED_APP_RESTART_VALIDATION=PASS"
-    restart_exit = "WINDOWS_INSTALLED_APP_RESTART_EXIT_VALIDATION=PASS"
+    live_uninstall = "WINDOWS_UNINSTALL_LIVE_PROCESS_VALIDATION=PASS"
     uninstall = "WINDOWS_UNINSTALL_VALIDATION=PASS"
 
-    for marker in (first_start, first_exit, restart, restart_exit, uninstall):
+    for marker in (first_start, first_exit, restart, live_uninstall, uninstall):
         assert marker in verifier
     assert "installed_app_restart" in verifier
     assert "$restartReadyMarkerBaseline" in verifier
+    assert "Get-ExactOwnedProcesses" in verifier
+    assert "WINDOWS_OWNED_PROCESS_COUNT_AFTER_UNINSTALL=0" in verifier
+    assert "owned-process-cleanup-evidence.json" in verifier
+    assert "WINDOWS_UNINSTALL_HELPER_EXECUTION_VALIDATION=PASS" in verifier
+    assert "WINDOWS_OWNED_PROCESS_HELPER_CONTRACT=PASS" in contract
     assert verifier.index(first_start) < verifier.index(first_exit)
     assert verifier.index(first_exit) < verifier.index(restart)
-    assert verifier.index(restart) < verifier.index(restart_exit)
-    assert verifier.index(restart_exit) < verifier.index(uninstall)
+    assert verifier.index(restart) < verifier.index(live_uninstall)
+    assert verifier.index(live_uninstall) < verifier.index(uninstall)
+    live_segment = verifier[
+        verifier.index(restart):verifier.index(live_uninstall)
+    ]
+    assert "Stop-StartedProcessTree -Process $appProcess" not in live_segment
+
+
+def test_windows_signing_interface_is_read_only_and_has_an_explicit_identity_gate() -> None:
+    verifier = _read_text(
+        REPO_ROOT / "scripts" / "verify-windows-installer.ps1"
+    )
+    workflow = _read_text(REPO_ROOT / ".github" / "workflows" / "ci.yml")
+    package = _read_text(REPO_ROOT / "apps" / "dsa-desktop" / "package.json")
+
+    assert "[switch]$RequireValidSignature" in verifier
+    assert "Get-AuthenticodeSignature" in verifier
+    assert "WINDOWS_INSTALLER_SIGNATURE_STATUS=" in verifier
+    assert "WINDOWS_APP_SIGNATURE_STATUS=" in verifier
+    assert "WINDOWS_SIGNATURE_POLICY=AUDIT_ONLY" in verifier
+    assert "WINDOWS_SIGNATURE_POLICY=REQUIRE_VALID" in verifier
+    assert "Authenticode signature is required but" in verifier
+    combined = "\n".join((verifier, workflow, package))
+    assert "CSC_LINK" not in combined
+    assert "WIN_CSC_LINK" not in combined
+    assert "certificatePassword" not in combined
+    assert "signtool sign" not in combined.lower()
 
 
 def test_desktop_build_jobs_use_supported_node_22_runtime() -> None:

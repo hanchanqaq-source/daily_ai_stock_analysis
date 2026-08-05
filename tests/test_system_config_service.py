@@ -4,9 +4,11 @@
 import os
 import json
 import logging
+import pickle
 import tempfile
 import unittest
 from contextlib import contextmanager
+from dataclasses import asdict
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Dict, List, Optional
@@ -56,6 +58,307 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         Config.reset_instance()
         self.manager = ConfigManager(env_path=self.env_path)
         self.service = SystemConfigService(manager=self.manager)
+
+    @patch.object(SystemConfigService, "_reload_runtime_singletons")
+    def test_atomic_restore_subset_compensation_restores_exact_raw_bytes_without_reload(
+        self,
+        mock_reload_runtime_singletons,
+    ) -> None:
+        original = (
+            b"# exact header\r\n"
+            b"STOCK_LIST=600519\r\n"
+            b"OPENAI_API_KEY=secret-preserved\r\n"
+            b"STOCK_LIST=000001\r\n"
+            b"MAX_WORKERS=2\r\n"
+            b"DATABASE_PATH=/runtime/database.db\r\n"
+        )
+        self.env_path.write_bytes(original)
+        self.manager = ConfigManager(env_path=self.env_path)
+        self.service = SystemConfigService(manager=self.manager)
+
+        receipt = self.service.apply_env_subset_atomically(
+            expected_version=self.manager.get_config_version(),
+            values={"STOCK_LIST": "300750"},
+            managed_keys={"STOCK_LIST", "MAX_WORKERS"},
+            reload_now=False,
+        )
+
+        applied = self.env_path.read_bytes()
+        self.assertIn(b"OPENAI_API_KEY=secret-preserved\r\n", applied)
+        self.assertIn(b"DATABASE_PATH=/runtime/database.db\r\n", applied)
+        self.assertNotIn(b"MAX_WORKERS=", applied)
+        self.assertEqual(applied.count(b"STOCK_LIST="), 1)
+        self.assertEqual(receipt.post_version, self.manager.get_config_version())
+
+        restored_version = self.service.compensate_env_subset_atomically(
+            receipt=receipt,
+            reload_now=False,
+        )
+
+        self.assertEqual(self.env_path.read_bytes(), original)
+        self.assertEqual(restored_version, self.manager.get_config_version())
+        mock_reload_runtime_singletons.assert_not_called()
+
+    def test_atomic_restore_subset_rejects_writer_race_before_apply(self) -> None:
+        expected_version = self.manager.get_config_version()
+        writer_manager = ConfigManager(env_path=self.env_path)
+        writer = SystemConfigService(manager=writer_manager)
+        writer.update(
+            config_version=writer_manager.get_config_version(),
+            items=[{"key": "STOCK_LIST", "value": "300750"}],
+            reload_now=False,
+        )
+        writer_bytes = self.env_path.read_bytes()
+
+        with self.assertRaises(ConfigConflictError):
+            self.service.apply_env_subset_atomically(
+                expected_version=expected_version,
+                values={"STOCK_LIST": "AAPL"},
+                managed_keys={"STOCK_LIST"},
+                reload_now=False,
+            )
+
+        self.assertEqual(self.env_path.read_bytes(), writer_bytes)
+        self.assertEqual(writer_manager.read_config_map()["STOCK_LIST"], "300750")
+
+    def test_atomic_restore_subset_rejects_writer_race_before_compensation(self) -> None:
+        receipt = self.service.apply_env_subset_atomically(
+            expected_version=self.manager.get_config_version(),
+            values={"STOCK_LIST": "300750"},
+            managed_keys={"STOCK_LIST", "MAX_WORKERS"},
+            reload_now=False,
+        )
+        writer_manager = ConfigManager(env_path=self.env_path)
+        writer = SystemConfigService(manager=writer_manager)
+        writer.update(
+            config_version=writer_manager.get_config_version(),
+            items=[{"key": "MAX_WORKERS", "value": "7"}],
+            reload_now=False,
+        )
+        writer_bytes = self.env_path.read_bytes()
+
+        with self.assertRaises(ConfigConflictError):
+            self.service.compensate_env_subset_atomically(
+                receipt=receipt,
+                reload_now=False,
+            )
+
+        self.assertNotEqual(self.env_path.read_bytes(), writer_bytes)
+        current_map = writer_manager.read_config_map()
+        self.assertEqual(current_map["STOCK_LIST"], "600519,000001")
+        self.assertEqual(current_map["MAX_WORKERS"], "7")
+
+    def test_atomic_restore_interrupted_compensation_retains_receipt(self) -> None:
+        original = self.env_path.read_bytes()
+        receipt = self.service.apply_env_subset_atomically(
+            expected_version=self.manager.get_config_version(),
+            values={"STOCK_LIST": "300750"},
+            managed_keys={"STOCK_LIST"},
+            reload_now=False,
+        )
+
+        with patch.object(
+            self.manager,
+            "compensate_managed_assignments_atomically",
+            side_effect=KeyboardInterrupt("interrupted compensation"),
+        ):
+            with self.assertRaisesRegex(KeyboardInterrupt, "interrupted compensation"):
+                self.service.compensate_env_subset_atomically(
+                    receipt=receipt,
+                    reload_now=False,
+                )
+
+        self.service.compensate_env_subset_atomically(
+            receipt=receipt,
+            reload_now=False,
+        )
+        self.assertEqual(self.env_path.read_bytes(), original)
+
+    def test_atomic_restore_receipt_is_opaque_unforgeable_and_one_use(self) -> None:
+        self.env_path.write_text(
+            "STOCK_LIST=600519\nOPENAI_API_KEY=receipt-secret-marker\n",
+            encoding="utf-8",
+        )
+        self.manager = ConfigManager(env_path=self.env_path)
+        self.service = SystemConfigService(manager=self.manager)
+        receipt = self.service.apply_env_subset_atomically(
+            expected_version=self.manager.get_config_version(),
+            values={"STOCK_LIST": "300750"},
+            managed_keys={"STOCK_LIST"},
+            reload_now=False,
+        )
+
+        self.assertNotIn("receipt-secret-marker", repr(receipt))
+        self.assertNotIn("receipt-secret-marker", str(receipt))
+        self.assertFalse(hasattr(receipt, "_previous_content"))
+        with self.assertRaises(TypeError):
+            vars(receipt)
+        with self.assertRaises(TypeError):
+            pickle.dumps(receipt)
+        with self.assertRaises(TypeError):
+            asdict(receipt)
+        with self.assertRaises((AttributeError, TypeError)):
+            receipt.post_version = "forged"
+        with self.assertRaises(ConfigConflictError):
+            self.service.compensate_env_subset_atomically(
+                receipt=SimpleNamespace(post_version=receipt.post_version),
+                reload_now=False,
+            )
+
+        self.service.compensate_env_subset_atomically(
+            receipt=receipt,
+            reload_now=False,
+        )
+        with self.assertRaises(ConfigConflictError):
+            self.service.compensate_env_subset_atomically(
+                receipt=receipt,
+                reload_now=False,
+            )
+        self.assertIn(
+            "OPENAI_API_KEY=receipt-secret-marker",
+            self.env_path.read_text(encoding="utf-8"),
+        )
+
+    def test_atomic_restore_staged_publish_failure_leaves_config_unchanged(self) -> None:
+        original = self.env_path.read_bytes()
+        with patch.object(
+            self.manager,
+            "_publish_staged_bytes",
+            side_effect=OSError("injected staged publish failure"),
+        ):
+            with self.assertRaisesRegex(OSError, "injected staged publish failure"):
+                self.service.apply_env_subset_atomically(
+                    expected_version=self.manager.get_config_version(),
+                    values={"STOCK_LIST": "300750"},
+                    managed_keys={"STOCK_LIST"},
+                    reload_now=False,
+                )
+
+        self.assertEqual(self.env_path.read_bytes(), original)
+        receipt = self.service.apply_env_subset_atomically(
+            expected_version=self.manager.get_config_version(),
+            values={"STOCK_LIST": "300750"},
+            managed_keys={"STOCK_LIST"},
+            reload_now=False,
+        )
+        self.service.compensate_env_subset_atomically(
+            receipt=receipt,
+            reload_now=False,
+        )
+        self.assertEqual(self.env_path.read_bytes(), original)
+
+    def test_atomic_restore_post_publish_exception_returns_usable_receipt(self) -> None:
+        original = self.env_path.read_bytes()
+        original_publish = self.manager._publish_staged_bytes
+
+        def publish_then_raise(staged_path):
+            original_publish(staged_path)
+            raise RuntimeError("injected exception after successful publication")
+
+        with patch.object(
+            self.manager,
+            "_publish_staged_bytes",
+            side_effect=publish_then_raise,
+        ):
+            receipt = self.service.apply_env_subset_atomically(
+                expected_version=self.manager.get_config_version(),
+                values={"STOCK_LIST": "300750"},
+                managed_keys={"STOCK_LIST"},
+                reload_now=False,
+            )
+
+        self.assertEqual(self.manager.read_config_map()["STOCK_LIST"], "300750")
+        self.service.compensate_env_subset_atomically(
+            receipt=receipt,
+            reload_now=False,
+        )
+        self.assertEqual(self.env_path.read_bytes(), original)
+
+    def test_atomic_restore_post_publish_third_generation_fails_closed(self) -> None:
+        original_publish = self.manager._publish_staged_bytes
+        baseline_receipts = len(SystemConfigService._restore_receipts)
+        injected = False
+
+        def publish_mutate_then_raise(staged_path):
+            nonlocal injected
+            original_publish(staged_path)
+            if injected:
+                return
+            injected = True
+            self.env_path.write_text("STOCK_LIST=AAPL\n", encoding="utf-8")
+            raise RuntimeError("injected third generation after publication")
+
+        with patch.object(
+            self.manager,
+            "_publish_staged_bytes",
+            side_effect=publish_mutate_then_raise,
+        ):
+            with self.assertRaises(ConfigConflictError):
+                self.service.apply_env_subset_atomically(
+                    expected_version=self.manager.get_config_version(),
+                    values={"STOCK_LIST": "300750"},
+                    managed_keys={"STOCK_LIST"},
+                    reload_now=False,
+                )
+
+        self.assertEqual(self.manager.read_config_map()["STOCK_LIST"], "AAPL")
+        self.assertEqual(len(SystemConfigService._restore_receipts), baseline_receipts)
+
+    @unittest.skipIf(os.name == "nt", "Windows symlink creation may require elevation")
+    def test_atomic_restore_symlink_apply_and_compensate_preserve_link(self) -> None:
+        target_path = Path(self.temp_dir.name) / "target.env"
+        link_path = Path(self.temp_dir.name) / "linked.env"
+        original = b"# target\r\nSTOCK_LIST=600519\r\nOPENAI_API_KEY=link-secret\r\n"
+        target_path.write_bytes(original)
+        link_path.symlink_to(target_path)
+        manager = ConfigManager(env_path=link_path)
+        service = SystemConfigService(manager=manager)
+        second_manager = ConfigManager(env_path=target_path)
+
+        self.assertIs(manager._lock_state, second_manager._lock_state)
+        self.assertEqual(manager._advisory_lock_path, second_manager._advisory_lock_path)
+        receipt = service.apply_env_subset_atomically(
+            expected_version=manager.get_config_version(),
+            values={"STOCK_LIST": "300750"},
+            managed_keys={"STOCK_LIST"},
+            reload_now=False,
+        )
+
+        self.assertTrue(link_path.is_symlink())
+        self.assertEqual(
+            ConfigManager(env_path=link_path).read_config_map()["STOCK_LIST"],
+            "300750",
+        )
+        service.compensate_env_subset_atomically(receipt=receipt, reload_now=False)
+        self.assertTrue(link_path.is_symlink())
+        self.assertEqual(target_path.read_bytes(), original)
+
+    @unittest.skipIf(os.name == "nt", "Windows symlink creation may require elevation")
+    def test_atomic_restore_symlink_finalize_consumes_receipt_and_preserves_link(self) -> None:
+        target_path = Path(self.temp_dir.name) / "finalize-target.env"
+        link_path = Path(self.temp_dir.name) / "finalize-linked.env"
+        target_path.write_text("STOCK_LIST=600519\n", encoding="utf-8")
+        link_path.symlink_to(target_path)
+        manager = ConfigManager(env_path=link_path)
+        service = SystemConfigService(manager=manager)
+        baseline_receipts = len(SystemConfigService._restore_receipts)
+        receipt = service.apply_env_subset_atomically(
+            expected_version=manager.get_config_version(),
+            values={"STOCK_LIST": "300750"},
+            managed_keys={"STOCK_LIST"},
+            reload_now=False,
+        )
+
+        service.finalize_env_subset_atomically(receipt)
+
+        self.assertTrue(link_path.is_symlink())
+        self.assertEqual(
+            target_path.read_text(encoding="utf-8"),
+            "STOCK_LIST=300750\n",
+        )
+        self.assertEqual(len(SystemConfigService._restore_receipts), baseline_receipts)
+        with self.assertRaisesRegex(RuntimeError, "receipt"):
+            service.finalize_env_subset_atomically(receipt)
 
     @staticmethod
     def _mock_completion_response(content: str = "OK", tool_calls=None):
@@ -2820,6 +3123,10 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         self.assertFalse(validation["valid"])
         self.assertTrue(any(issue["code"] == "missing_api_key" for issue in validation["issues"]))
 
+    @patch.dict(
+        os.environ,
+        {"OPENAI_API_KEY": "", "OPENAI_API_KEYS": "", "AIHUBMIX_KEY": ""},
+    )
     def test_validate_reports_stale_primary_model_when_all_channels_disabled(self) -> None:
         validation = self.service.validate(
             items=[
@@ -2895,6 +3202,10 @@ class SystemConfigServiceTestCase(unittest.TestCase):
 
         self.assertFalse(any(issue.get("key") == "LITELLM_MODEL" and issue["code"] == "missing_runtime_source" for issue in validation.get("issues", [])))
 
+    @patch.dict(
+        os.environ,
+        {"OPENAI_API_KEY": "", "OPENAI_API_KEYS": "", "AIHUBMIX_KEY": ""},
+    )
     def test_validate_reports_stale_agent_primary_model_when_all_channels_disabled(self) -> None:
         validation = self.service.validate(
             items=[
@@ -2949,6 +3260,10 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         self.assertTrue(validation["valid"], validation["issues"])
         self.assertEqual(validation["issues"], [])
 
+    @patch.dict(
+        os.environ,
+        {"OPENAI_API_KEY": "", "OPENAI_API_KEYS": "", "AIHUBMIX_KEY": ""},
+    )
     def test_validate_excludes_blank_disabled_anspire_channel_from_runtime_models(self) -> None:
         validation = self.service.validate(
             items=[
@@ -2963,6 +3278,10 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         self.assertFalse(validation["valid"])
         self.assertTrue(any(issue["key"] == "LITELLM_MODEL" and issue["code"] == "missing_runtime_source" for issue in validation["issues"]))
 
+    @patch.dict(
+        os.environ,
+        {"OPENAI_API_KEY": "", "OPENAI_API_KEYS": "", "AIHUBMIX_KEY": ""},
+    )
     def test_validate_excludes_disabled_anspire_channel_from_legacy_runtime_source(self) -> None:
         validation = self.service.validate(
             items=[

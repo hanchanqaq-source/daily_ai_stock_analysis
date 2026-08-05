@@ -1,5 +1,60 @@
 # PP02 安全重建路线 R0–R7
 
+## 2026-08-05 Work23 Windows strict-acceptance repair
+
+- Existing Draft PR #23 remains based on locked `main@41fd6a6c…`. Work22 stays
+  `FAIL`, bound to report SHA-256
+  `30AC65C81E3F86E4CADBAEC9D2DBA95B432BA4DF8DBE81F12015857B9E5E39BE`.
+- Head `8e08d58e…` / Run `30949323920` and Head `ca2415b8…` / Run
+  `30952197181` each passed 7/8 Jobs and failed only because one official
+  uninstall returned `0` without closing the live installed application.
+- The new local rework packages a closed desktop/backend ownership manifest,
+  derives the install root from the helper location, removes NSIS ownership
+  parameters, supports the official uninstaller-directory fallback, and writes
+  sanitized initial/final process-count evidence. The Windows contract must
+  remove two exact owned processes and preserve an external same-name control.
+- Local recovery gates pass Python packaging `26/26`, Desktop `83/83`, AI
+  governance, and diff formatting. Next exact-Head full CI, one-shot installed
+  lifecycle, candidate byte size/SHA-256, and unsigned identity remain pending.
+  PR #23 must stay Draft; Ready, merge, Tag, Release, real signing material, and
+  Work22 real data/checkpoints remain prohibited.
+- Head `0eee6a7c…` / Run `30975730060` passed the new helper runtime contract,
+  proving exact owned-process cleanup and external same-name preservation. NSIS
+  then rejected an unused completion-label warning as fatal, while the candidate
+  step masked the failed child build until lifecycle setup. Local contracts now
+  require an explicit completion jump and immediate child-exit failure; next
+  exact-Head CI and the installed one-shot lifecycle remain pending.
+- Head `976db882…` / Run `30977516983` passed those build gates and the helper
+  isolation contract. Installed evidence then reported five CIM-owned processes
+  but zero graceful/forced actions, isolating the blocker to the redundant
+  `Get-Process.Path` recheck. The local repair now revalidates PID/path with the
+  same exact CIM source before acting; next exact-Head installed lifecycle and
+  candidate identity remain pending.
+- Head `c9aca280…` / Run `30988154439` passed that repair and reached zero after
+  one official uninstall. The remaining failure was evidence-only: the standard
+  uninstall check performed live cleanup, then a redundant `customUnInstall`
+  helper call overwrote the first evidence with `initial=0`. The local rework
+  keeps one required standard uninstall entry; next exact-Head lifecycle and
+  candidate identity remain pending.
+
+## 2026-08-04 Work20 complete backup and period persistence
+
+- Work20 starts from locked `v3.29.2` `main@41fd6a6c…`; Work18, Work19, and
+  Work19-A completion history is not revised.
+- Complete backup is a canonical, SHA-256-bound, closed allow-list for formal
+  analysis, stock portfolio events, saved period reports, structured records,
+  and non-sensitive configuration. Configuration-only and portfolio-only backup
+  flows remain separate. Fund is `not_applicable`.
+- Restore requires a fresh preview and explicit confirmation, writes a recovery
+  artifact before replacement, preserves concurrent writers, rolls back failed
+  replacement, clears derived portfolio caches, and requires restart.
+- Period reports use a canonical persisted table, survive restart, and can be
+  loaded without generation. The v3.29.2 migration preserves existing analysis
+  history and rolls back failed schema verification.
+- Local verification passed. The controller owns push, one Draft PR,
+  and exact fixed-Head Actions evidence. Work20 stays `DRAFT_HOLD`; no Ready,
+  merge, Tag, or Release has occurred or is authorized.
+
 ## 2026-08-03 Work16 Windows frozen chip runtime closure
 
 - 固定 Base 为 `main@568e26adf0e6393a7a0da1be57369535735cd05a`，独立 Draft

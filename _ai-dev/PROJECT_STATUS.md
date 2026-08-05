@@ -6,21 +6,21 @@
 PROJECT_ID=PP02
 PROJECT_NAME=AI 每日股票分析
 CHAT_ROLE=AUTO_TAKEOVER
-WORK_ID=WORK-016
+WORK_ID=WORK-023
 ROLE_LOCK=SUPERSEDED_BY_PP02-WORK-HANDOFF-002
 WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
-WORK_STATE=COMPLETED_DRAFT_HOLD
-EXECUTION_LOCK=RELEASED_AFTER_WORK_016
-APPLICATION_BASE_VERSION=3.29.1
-CURRENT_RELEASE_VERSION=3.29.1
+WORK_STATE=LOCAL_SINGLE_UNINSTALL_ENTRY_REWORK_PASS_REMOTE_RETEST_PENDING_DRAFT_HOLD
+EXECUTION_LOCK=NEXT_EXACT_REMOTE_HEAD_CI_AND_WINDOWS_CANDIDATE_PENDING
+APPLICATION_BASE_VERSION=3.29.3
+CURRENT_RELEASE_VERSION=3.29.2
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-ACTIVE_BASE=568e26adf0e6393a7a0da1be57369535735cd05a
-ACTIVE_BRANCH=agent/pp02-work16-windows-chip-runtime
-ACTIVE_PR=22_DRAFT
-CURRENT_STAGE=R7 Hotfix / Work16 Windows Frozen Chip Dependency Closure
-CURRENT_WORK=WORK-016 — package and prove the existing Windows mini-racer runtime in frozen and final portable artifacts
-ACTIVE_GOAL=close the frozen chip runtime gap without dependency, news, signing, release, or Windows real-machine scope
+ACTIVE_BASE=41fd6a6c76c3e3b56211ef5fb4483d869122b568
+ACTIVE_BRANCH=agent/pp02-work20-full-backup-period-persistence
+ACTIVE_PR=23_OPEN_DRAFT
+CURRENT_STAGE=Work23 real uninstall reached zero but duplicate helper entry overwrote live-cleanup evidence; single-entry rework passed local contract; next exact remote Head CI pending
+CURRENT_WORK=WORK-023 — PR #23 Windows strict-acceptance failure repairs
+ACTIVE_GOAL=push the single-uninstall-entry repair, complete exact-Head CI, and record the next unsigned Windows candidate identity
 PRODUCT_PR=20_MERGED
 PRODUCT_FIXED_HEAD=e11946f528c9cb64beeec8b626ada457c02b0034
 PRODUCT_MERGE_COMMIT=25de369f8e12438a1ec1f3511c68256c471243e4
@@ -49,13 +49,123 @@ WORK16_WINDOWS_JOB=91746056804_SUCCESS
 WORK16_CHIP_PROBE=PASS_3_MARKERS_DIRECT_REBUILD_FINAL_ZIP
 WORK16_REVIEW=PASS_NO_CRITICAL_OR_IMPORTANT
 WORK16_JUDGE=PASS_DRAFT_HOLD
-CURRENT_STATUS=WORK16_PASS_DRAFT_HOLD
-ACTIVE_BLOCKER=NONE
-NEXT_WORK=WAITING_SEPARATE_AUTHORIZATION
-NEXT_ACTION=NONE_WITHOUT_NEW_AUTHORIZATION
-AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/TAG/RELEASE/DEPENDENCY_CHANGE/NEWS/SIGNING/ADDITIONAL_WINDOWS_ACTION
-LAST_UPDATED=2026-08-03
+WORK20_LOCAL_IMPLEMENTATION_HEAD=ae310d1e7fd22fc7139d1ebb63f1bd1d3a0f416c
+WORK20_EVIDENCE_COMMIT=42e8f75d435b9d90ad5764f538cb20e9e48c1e9f
+WORK22_EVIDENCE_REPORT_SHA256=30AC65C81E3F86E4CADBAEC9D2DBA95B432BA4DF8DBE81F12015857B9E5E39BE
+WORK22_JUDGE=FAIL_LOCKED
+WORK23_AUTHORITATIVE_VERSION=3.29.3
+WORK23_DRAFT_PR=23_OPEN_DRAFT
+WORK23_REMOTE_FIXED_HEAD=C9ACA280_FAILED_SUPERSEDED_PENDING_NEXT_HEAD
+WORK23_REMOTE_CI=RUN_30988154439_FAILED_DUPLICATE_HELPER_EVIDENCE_OVERWRITE_AFTER_ZERO_CLEANUP
+WORK23_WINDOWS_CANDIDATE=PENDING_NEW_EXACT_HEAD_CI
+WORK23_SIGNING=READ_ONLY_AUDIT_INTERFACE_NO_REAL_IDENTITY
+WORK23_JUDGE=ACTIVE_REWORK_DRAFT_HOLD
+CURRENT_STATUS=WORK23_LOCAL_SINGLE_UNINSTALL_ENTRY_REWORK_PASS_REMOTE_RETEST_PENDING_DRAFT_HOLD
+ACTIVE_BLOCKER=NEXT_EXACT_REMOTE_HEAD_SINGLE_ENTRY_WINDOWS_LIFECYCLE_AND_ARTIFACT_IDENTITY_PENDING
+NEXT_WORK=NONE
+NEXT_ACTION=COMMIT_AND_PUSH_EXISTING_PR23_BRANCH_THEN_VERIFY_NEXT_EXACT_HEAD_CI_AND_ARTIFACT
+AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/TAG/RELEASE
+LAST_UPDATED=2026-08-05
 ```
+
+## 2026-08-04 Work23 / PR #23 Windows strict-acceptance failure repairs
+
+- Work22 remains `FAIL`, bound to evidence-report SHA-256
+  `30AC65C81E3F86E4CADBAEC9D2DBA95B432BA4DF8DBE81F12015857B9E5E39BE`.
+  Work23 does not lower its gates or revise that decision.
+- The official uninstaller now drains the Electron-owned backend before final
+  quit and invokes a bundled exact-path process helper. Windows verification
+  runs the official uninstaller once and requires the installed app/backend
+  process tree to reach zero without a retry or broad name-based termination.
+- Candidate identity is normalized to `3.29.3` across Desktop/Web package
+  metadata, backend defaults, build information, installer manifest, and the
+  Windows file/product-version checks.
+- Evidence shows `fundamental_snapshot` contains formal non-rebuildable
+  snapshot data, so it is included in the complete backup. `stock_daily` is a
+  rebuildable market-data cache with no user data; it remains excluded under an
+  exact manifest contract, is cleared on restore, and rebuilds on demand via
+  `get_daily_history`.
+- Authenticode handling is read-only. The verifier records installer/app status
+  and supports a credential-free `RequireValidSignature` policy gate, but no
+  certificate, private key, signing purchase, or CI secret was accessed. A real
+  signing identity remains a separate authorization gate.
+- Related backend suites, Desktop `83/83`, Windows packaging contracts `26/26`,
+  and Web `1076 passed / 2 skipped` plus lint/build pass locally. The offline
+  backend aggregate passed `5327` tests plus `499` subtests when the sandbox-
+  blocked crash-recovery process-kill file was omitted; exact remote CI remains
+  authoritative for the complete gate.
+- PR #23 remains Open Draft. Remote fixed Head, complete Actions evidence, and
+  the Windows candidate name/size/SHA-256 are pending the next authorized push.
+  No Work22 real database, cold backup, export, or restore checkpoint was used.
+- The first published Work23 Head `d0e1bdf2…` / Run `30948969458` exposed one
+  deterministic Web test wait race; the test-only wait fix passed on the next
+  Head. Head `8e08d58e…` / Run `30949323920` and Head `ca2415b8…` / Run
+  `30952197181` each finished 7/8 Jobs, with Windows alone failing after the
+  official uninstaller returned `0` but left the running application alive.
+- The new local rework removes all NSIS command-line ownership parameters. A
+  packaged closed manifest declares the exact desktop/backend relative paths;
+  the helper derives the install root from its own resource location, while
+  NSIS can fall back from `$INSTDIR` to the official uninstaller directory.
+  Sanitized JSON evidence records helper execution, initial owned count, and
+  final zero count. A Windows runtime contract starts two exact owned copies
+  plus an external same-name control process and requires only the owned pair
+  to exit.
+- Fresh recovery verification passed Python packaging contracts `26/26`,
+  Desktop `83/83`, AI governance, and diff formatting. Run `30975730060` now
+  supplies the Windows runtime-helper PASS; the one-shot installed lifecycle
+  remains pending the next exact-Head Actions run. No failed remote Head is a
+  candidate PASS.
+- Head `0eee6a7c…` / Run `30975730060` proved the Windows runtime helper
+  contract: two exact owned process paths exited and the external same-name
+  control survived. The Windows candidate build itself failed because NSIS
+  treats warning 6012 as fatal and the required-uninstall macro left its final
+  label without an explicit jump. The candidate step also masked the child
+  `build-all.ps1` exit code until the lifecycle could not find the installer.
+  Local RED/GREEN contracts now require the explicit label jump and immediate
+  `$LASTEXITCODE` failure; a next exact-Head CI is required.
+- Head `976db882…` / Run `30977516983` passed that NSIS/fail-fast boundary,
+  rebuilt the candidate, and again passed the synthetic helper contract. The
+  installed lifecycle passed install/start/exit/restart, then one official
+  uninstaller returned `0`; helper evidence was `FAIL` with initial owned count
+  `5`, graceful/forced counts `0`, and final count `-1`. This proves the initial
+  CIM exact-path lookup succeeded while the later `Get-Process.Path` recheck
+  prevented every action on real Electron/backend processes. Diagnostic artifact
+  `8919511035` is Head/Run-bound with SHA-256
+  `1DE5397EBCD6B07314685E2C0C709FA7BFC75A84BC190701ABD2CBE9270CA1DC`.
+  Local RED/GREEN now requires one CIM PID/path identity source before both
+  graceful and forced actions; the next exact-Head installed lifecycle remains
+  authoritative.
+- Head `c9aca280…` / Run `30988154439` passed the full candidate build, the
+  synthetic exact-path helper contract, install/start/exit/restart, and one
+  official uninstall returned `0`. The diagnostic then proved the install root
+  was removed, app/backend processes were gone, and the final helper evidence
+  was `PASS` with zero remaining processes. CI still failed because the helper
+  ran twice: electron-builder's standard `un.checkAppRunning` performed the
+  live cleanup, then the extra `customUnInstall` call overwrote evidence with a
+  no-op `initial=0` run. Diagnostic artifact `8923770478` is Head/Run-bound with
+  SHA-256 `686692F0EB7B4D96084DE30143C11A29C6E6E7406A105B07A7C639732FDC73F4`.
+  Local RED/GREEN now keeps one standard uninstall entry, required for uninstall
+  builds and optional for install/upgrade builds; next exact-Head CI remains
+  authoritative.
+
+## 2026-08-04 Work20 / complete backup and persisted period reports
+
+- Work20 is based on the locked `v3.29.2` main commit
+  `41fd6a6c76c3e3b56211ef5fb4483d869122b568`. Work18, Work19, and Work19-A
+  history remains locked and is not revised by this append-only checkpoint.
+- The implementation adds a strict complete-data backup format, explicit
+  preview/confirm restore, a pre-replacement recovery artifact, coordinated
+  SQLite/config rollback, and persisted/reloadable period reports.
+- Complete backup is distinct from the existing configuration-only and
+  portfolio-event-only tools. Credentials, cookies, tokens, vault ciphertext,
+  drafts, logs, caches, and runtime paths remain excluded. Fund is recorded as
+  `not_applicable`.
+- Local verification is complete at evidence commit
+  `42e8f75d435b9d90ad5764f538cb20e9e48c1e9f`. The Draft PR, remote fixed
+  Head, Actions Run, and job results are pending the controller and must not be
+  invented or backfilled from a different Head.
+- Judge remains `DRAFT_HOLD`. Work20 has not been pushed, made Ready, merged,
+  tagged, or released by this local phase.
 
 ## 2026-08-03 Work16 / Windows 冻结筹码依赖收口
 

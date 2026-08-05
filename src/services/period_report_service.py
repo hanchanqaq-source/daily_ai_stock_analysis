@@ -4,12 +4,13 @@
 from __future__ import annotations
 
 import calendar
+import json
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any, Callable, Dict, Iterable, List, Optional
-from uuid import uuid4
 
 from src.services.history_service import HistoryService
+from src.repositories.period_report_repo import PeriodReportRepository
 from src.storage import DatabaseManager
 
 
@@ -176,6 +177,7 @@ class PeriodReportService:
         else:
             self.db = self.db or DatabaseManager.get_instance()
             self.history = HistoryService(self.db)
+        self.period_reports = PeriodReportRepository(self.db) if self.db is not None else None
         self._now_provider = now_provider or datetime.now
 
     @staticmethod
@@ -220,18 +222,140 @@ class PeriodReportService:
         generated_at = self._now_provider()
 
         if period == "next_week":
-            return self._generate_outlook(
+            report = self._generate_outlook(
                 window=window,
                 as_of=resolved_as_of,
                 generated_at=generated_at,
             )
-
-        report = self._generate_historical(window=window, generated_at=generated_at)
-        if period == "previous_week":
-            report["matched_outlook"] = self._find_matching_outlook(window)
         else:
-            report["matched_outlook"] = None
-        return report
+            report = self._generate_historical(window=window, generated_at=generated_at)
+            if period == "previous_week":
+                report["matched_outlook"] = self._find_matching_outlook(window)
+            else:
+                report["matched_outlook"] = None
+        return self._persist_report(report, window=window, generated_at=generated_at)
+
+    def get_report(self, report_id: int) -> Optional[Dict[str, Any]]:
+        """Return a stored canonical or legacy outlook report without generating one."""
+        if self.period_reports is not None:
+            row = self.period_reports.get_report(report_id)
+            if row is not None:
+                return self._deserialize_report(row)
+        return self._legacy_outlook_report_by_id(report_id)
+
+    def get_latest(self, period: str) -> Optional[Dict[str, Any]]:
+        """Return the latest stored report for a period without generating one."""
+        if period not in SUPPORTED_PERIODS:
+            raise ValueError(f"unsupported period: {period}")
+        if self.period_reports is not None:
+            row = self.period_reports.get_latest(period)
+            if row is not None:
+                return self._deserialize_report(row)
+        if period == "next_week":
+            return self._latest_legacy_outlook_report()
+        return None
+
+    def _latest_legacy_outlook_report(self) -> Optional[Dict[str, Any]]:
+        """Adapt the newest readable legacy outlook without writing canonical data."""
+        for item in self._get_history_items(report_type=PERIOD_OUTLOOK_REPORT_TYPE):
+            record_id = int(item.get("id") or 0)
+            if not record_id:
+                continue
+            report = self._legacy_outlook_report_by_id(record_id)
+            if report is not None:
+                return report
+        return None
+
+    def _legacy_outlook_report_by_id(self, report_id: int) -> Optional[Dict[str, Any]]:
+        detail = self.history.get_history_detail_by_id(report_id) or {}
+        if detail.get("report_type") != PERIOD_OUTLOOK_REPORT_TYPE:
+            return None
+        snapshot = detail.get("context_snapshot")
+        if not isinstance(snapshot, dict):
+            return None
+        target = snapshot.get("target_period")
+        if not isinstance(target, dict):
+            return None
+        start_date = target.get("start_date")
+        end_date = target.get("end_date")
+        generated_at = snapshot.get("generated_at") or detail.get("created_at")
+        if not all(isinstance(value, str) and value for value in (start_date, end_date, generated_at)):
+            return None
+
+        outlook = dict(snapshot)
+        outlook["snapshot_id"] = report_id
+        outlook["snapshot_created_at"] = detail.get("created_at")
+        status = outlook.get("status")
+        if status not in {"ready", "insufficient_data"}:
+            status = "ready"
+        return {
+            "report_id": report_id,
+            "status": status,
+            "period": "next_week",
+            "report_kind": "outlook",
+            "start_date": start_date,
+            "end_date": end_date,
+            "generated_at": generated_at,
+            "source_record_count": int(outlook.get("source_record_count") or 0),
+            "stock_summaries": [],
+            "etf_summaries": [],
+            "market_reviews": [],
+            "outlook": outlook,
+            "matched_outlook": None,
+            "disclaimer": outlook.get("disclaimer"),
+        }
+
+    def _persist_report(
+        self,
+        report: Dict[str, Any],
+        *,
+        window: PeriodWindow,
+        generated_at: datetime,
+    ) -> Dict[str, Any]:
+        if self.period_reports is None:
+            return report
+        status = str((report.get("outlook") or {}).get("status") or "ready")
+        row = self.period_reports.upsert_report(
+            period=window.period,
+            report_kind=str(report["report_kind"]),
+            start_date=window.start_date,
+            end_date=window.end_date,
+            content=report,
+            source_history_ids=self._source_history_ids(report),
+            status=status,
+            generated_at=generated_at,
+        )
+        return self._deserialize_report(row)
+
+    @staticmethod
+    def _source_history_ids(value: Any) -> List[int]:
+        """Collect source history IDs exposed by the complete response payload."""
+        source_ids: set[int] = set()
+
+        def visit(item: Any) -> None:
+            if isinstance(item, dict):
+                for key, nested in item.items():
+                    if key == "source_record_ids" and isinstance(nested, list):
+                        for record_id in nested:
+                            if isinstance(record_id, int) and record_id > 0:
+                                source_ids.add(record_id)
+                    elif key == "record_id" and isinstance(nested, int) and nested > 0:
+                        source_ids.add(nested)
+                    else:
+                        visit(nested)
+            elif isinstance(item, list):
+                for nested in item:
+                    visit(nested)
+
+        visit(value)
+        return sorted(source_ids)
+
+    @staticmethod
+    def _deserialize_report(row: Any) -> Dict[str, Any]:
+        payload = json.loads(row.content_json)
+        payload["report_id"] = row.id
+        payload["status"] = row.status
+        return payload
 
     def _get_history_items(
         self,
@@ -446,6 +570,9 @@ class PeriodReportService:
         }
         snapshot_id = self._save_outlook_snapshot(outlook, generated_at=generated_at)
         outlook["snapshot_id"] = snapshot_id
+        outlook["snapshot_created_at"] = (
+            _serialize_datetime(generated_at) if snapshot_id is not None else None
+        )
 
         return {
             "period": window.period,
@@ -573,8 +700,12 @@ class PeriodReportService:
     ) -> Optional[int]:
         if self.db is None:
             return None
+        target = outlook.get("target_period") or {}
+        query_id = (
+            f"period-outlook-{target.get('start_date', '')}-{target.get('end_date', '')}"
+        )
         return self.db.save_period_outlook_snapshot(
-            query_id=f"period-outlook-{uuid4().hex}",
+            query_id=query_id,
             snapshot=outlook,
             created_at=generated_at,
         )

@@ -113,8 +113,15 @@ spctl --assess --type execute --verbose=4 "/Applications/PP02 AI Daily Stock Ana
 PR 的 `desktop-futu-package-windows` 与正式 `desktop-release` Windows Job 现在都会在
 Node 22 下调用同一个 `scripts/verify-windows-installer.ps1`：对本次 Job 自己创建的
 `RUNNER_TEMP/pp02-installer-verify-*` 目录执行静默安装，核对版本、资源、冻结后端和
-HKCU 卸载登记，启动到 `Main UI loaded in`，再静默卸载并确认程序文件及登记消失。
+HKCU 卸载登记，启动到 `Main UI loaded in`，停止后再次启动，并在应用仍运行时只调用
+一次官方卸载器，确认应用/后端进程归零、程序文件及登记消失。
 任一步失败都会阻止候选上传或 Release 发布。
+
+卸载助手与一个闭合的两项清单一起放在安装目录的 `resources` 下。助手从自身位置
+推导安装根，只匹配清单中桌面 EXE 和冻结后端的完整路径；NSIS 不通过命令行传入
+安装根、程序名或后端路径。CI 会读取助手写入验收诊断目录的脱敏 JSON，只记录执行
+状态和初始/最终数量，不记录机器范围进程、凭据或用户数据。Windows 合同还会启动
+一个位于外部目录的同名对照进程，要求卸载助手保留它。
 
 验证器只允许删除它已确认归属于本次运行且在执行前不存在的临时目录，不扫描或删除
 既有 PP02 安装目录和用户目录。CI 生命周期验证不替代正式 Release 的可见安装向导、
@@ -132,10 +139,12 @@ powershell -ExecutionPolicy Bypass -File scripts/tests/verify-windows-installer-
 $version = (Get-Content apps/dsa-desktop/package.json -Raw | ConvertFrom-Json).version
 $installer = Get-Item "apps/dsa-desktop/dist/pp02-ai-daily-stock-analysis-windows-installer-v$version.exe"
 $root = Join-Path $env:RUNNER_TEMP "pp02-installer-verify-$((git rev-parse HEAD).Trim())"
+$diagnostics = Join-Path $env:RUNNER_TEMP "pp02-installer-diagnostics-$((git rev-parse HEAD).Trim())"
 powershell -ExecutionPolicy Bypass -File scripts/verify-windows-installer.ps1 `
   -InstallerPath $installer.FullName `
   -ExpectedVersion $version `
   -InstallRoot $root `
+  -DiagnosticRoot $diagnostics `
   -ExpectedCommitSha ((git rev-parse HEAD).Trim())
 ```
 

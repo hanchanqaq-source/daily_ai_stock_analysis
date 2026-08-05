@@ -332,7 +332,7 @@ class TestSettingsHelpMetadata(unittest.TestCase):
     }
     _SYSTEM_HIDDEN_KEYS = {
         "ADMIN_AUTH_ENABLED",
-    }
+    } | WEB_SETTINGS_HIDDEN_FROM_UI
 
     _HELP_KEYS = (
         "STOCK_LIST",

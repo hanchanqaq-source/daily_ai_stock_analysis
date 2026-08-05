@@ -1757,6 +1757,49 @@ test('stopBackend uses taskkill on Windows and clears after backend exit', async
   assert.equal(mainModule.__getBackendProcessForTest(), null);
 });
 
+test('before-quit waits for the backend process tree before completing app quit', async (t) => {
+  const appHandlers = new Map();
+  const taskkillCalls = [];
+  let quitCalls = 0;
+  const fakeBackend = new EventEmitter();
+  const fakeTaskkill = new EventEmitter();
+  const mainModule = loadMainModule(t, {
+    platform: 'win32',
+    app: {
+      on: (event, handler) => appHandlers.set(event, handler),
+      quit: () => {
+        quitCalls += 1;
+      },
+    },
+    childProcess: {
+      spawn: (command, args, options) => {
+        taskkillCalls.push({ command, args, options });
+        process.nextTick(() => {
+          fakeBackend.exitCode = 0;
+          fakeBackend.emit('exit', 0, null);
+          fakeTaskkill.emit('exit', 0, null);
+        });
+        return fakeTaskkill;
+      },
+    },
+  });
+
+  fakeBackend.pid = 4321;
+  fakeBackend.killed = false;
+  fakeBackend.exitCode = null;
+  fakeBackend.signalCode = null;
+  mainModule.__setBackendProcessForTest(fakeBackend);
+  const event = { preventDefaultCalls: 0, preventDefault() { this.preventDefaultCalls += 1; } };
+
+  appHandlers.get('before-quit')(event);
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(event.preventDefaultCalls, 1);
+  assert.equal(quitCalls, 1);
+  assert.equal(mainModule.__getBackendProcessForTest(), null);
+  assert.deepEqual(taskkillCalls[0].args, ['/PID', '4321', '/T', '/F']);
+});
+
 test('desktop release identity targets the PP02 repository', (t) => {
   const mainModule = loadMainModule(t);
 

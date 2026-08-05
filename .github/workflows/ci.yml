@@ -219,6 +219,9 @@ jobs:
           }
 
           powershell -ExecutionPolicy Bypass -File scripts/build-all.ps1
+          if ($LASTEXITCODE -ne 0) {
+            throw "Windows candidate build failed with exit code $LASTEXITCODE."
+          }
           $version = (Get-Content apps/dsa-desktop/package.json -Raw | ConvertFrom-Json).version
           $tag = "v$version"
           $stage = 'dist/portable-stage'

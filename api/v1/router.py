@@ -19,6 +19,7 @@ from api.v1.endpoints import (
     auth,
     backtest,
     decision_signals,
+    full_data_backup,
     health,
     history,
     intelligence,
@@ -73,6 +74,12 @@ router.include_router(
     system_config.router,
     prefix="/system",
     tags=["SystemConfig"]
+)
+
+router.include_router(
+    full_data_backup.router,
+    prefix="/system/full-data-backup",
+    tags=["FullDataBackup"],
 )
 
 router.include_router(

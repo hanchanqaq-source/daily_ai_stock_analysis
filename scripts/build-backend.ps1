@@ -1,6 +1,11 @@
 $ErrorActionPreference = 'Stop'
 
 Write-Host 'Building React UI (static assets)...'
+if ([string]::IsNullOrWhiteSpace($env:DSA_WEB_VERSION)) {
+  $env:DSA_WEB_VERSION = (
+    Get-Content 'apps\dsa-desktop\package.json' -Raw | ConvertFrom-Json
+  ).version
+}
 Push-Location 'apps\dsa-web'
 if (!(Test-Path 'node_modules')) {
   npm install

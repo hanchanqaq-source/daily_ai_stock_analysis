@@ -2,13 +2,62 @@
 """Unit tests for structured `.env` line preservation in ConfigManager."""
 
 import errno
+import multiprocessing
 import os
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from src.core.config_manager import ConfigManager
+from src.core.config_manager import ConfigManager, ConfigManagerPublicationUncertain
+from src.services.system_config_service import ConfigConflictError, SystemConfigService
+
+
+def _atomic_restore_apply_process(
+    env_path: str,
+    expected_version: str,
+    value: str,
+    label: str,
+    pause_before_publish: bool,
+    entered,
+    release,
+    started,
+    finished,
+    results,
+) -> None:
+    manager = ConfigManager(env_path=Path(env_path))
+    service = SystemConfigService(manager=manager)
+    if pause_before_publish:
+        if hasattr(manager, "_publish_staged_bytes"):
+            original_publish = manager._publish_staged_bytes
+            method_name = "_publish_staged_bytes"
+        else:
+            original_publish = manager._atomic_replace_bytes
+            method_name = "_atomic_replace_bytes"
+
+        def pausing_publish(*args, **kwargs):
+            entered.set()
+            if not release.wait(timeout=15):
+                raise TimeoutError("test did not release staged config publish")
+            return original_publish(*args, **kwargs)
+
+        setattr(manager, method_name, pausing_publish)
+    started.set()
+    try:
+        service.apply_env_subset_atomically(
+            expected_version=expected_version,
+            values={"STOCK_LIST": value},
+            managed_keys={"STOCK_LIST"},
+            reload_now=False,
+        )
+    except ConfigConflictError:
+        results.put((label, "conflict"))
+    except Exception as exc:
+        results.put((label, f"error:{type(exc).__name__}:{exc}"))
+    else:
+        results.put((label, "success"))
+    finally:
+        finished.set()
 
 
 class ConfigManagerTestCase(unittest.TestCase):
@@ -49,6 +98,175 @@ class ConfigManagerTestCase(unittest.TestCase):
         self.assertIn("\n\nexport SHOULD_STAY_UNCHANGED\n", env_content)
         self.assertIn("# Secrets\nGEMINI_API_KEY=secret-key\n", env_content)
         self.assertIn("STOCK_LIST=600519,300750\n", env_content)
+
+    def test_config_version_is_exact_content_generation_not_file_metadata(self) -> None:
+        content = b"STOCK_LIST=600519\n"
+        self.env_path.write_bytes(content)
+        original_version = self.manager.get_config_version()
+
+        os.utime(self.env_path, ns=(1_900_000_000_000_000_000,) * 2)
+        self.assertEqual(self.manager.get_config_version(), original_version)
+        self.env_path.write_bytes(content)
+        self.assertEqual(self.manager.get_config_version(), original_version)
+
+        self.env_path.write_bytes(b"STOCK_LIST=300750\n")
+        self.assertNotEqual(self.manager.get_config_version(), original_version)
+        self.env_path.unlink()
+        missing_version = self.manager.get_config_version()
+        self.env_path.write_bytes(b"")
+        self.assertNotEqual(self.manager.get_config_version(), missing_version)
+
+    def _assert_post_publish_interruption_restores_prior(
+        self,
+        interruption: BaseException,
+    ) -> None:
+        original = (
+            b"# exact prior\r\n"
+            b"STOCK_LIST=600519\r\n"
+            b"OPENAI_API_KEY=secret-stays-local\r\n"
+        )
+        self.env_path.write_bytes(original)
+        original_publish = self.manager._publish_staged_bytes
+        receipt = object()
+        discarded = []
+        publish_count = 0
+
+        def publish_then_interrupt(staged_path):
+            nonlocal publish_count
+            original_publish(staged_path)
+            publish_count += 1
+            if publish_count == 1:
+                raise interruption
+            raise OSError("injected callback failure after rollback publication")
+
+        with patch.object(
+            self.manager,
+            "_publish_staged_bytes",
+            side_effect=publish_then_interrupt,
+        ):
+            with self.assertRaises(type(interruption)) as raised:
+                self.manager.replace_managed_assignments_atomically(
+                    expected_version=self.manager.get_config_version(),
+                    managed_keys={"STOCK_LIST"},
+                    replacements={"STOCK_LIST": "300750"},
+                    prepare_receipt=lambda **_state: receipt,
+                    discard_receipt=discarded.append,
+                )
+
+        self.assertIs(raised.exception, interruption)
+        self.assertEqual(self.env_path.read_bytes(), original)
+        self.assertGreaterEqual(publish_count, 2)
+        self.assertEqual(discarded, [receipt])
+
+    def test_post_publish_keyboard_interrupt_restores_prior_and_reraises(self) -> None:
+        self._assert_post_publish_interruption_restores_prior(
+            KeyboardInterrupt("injected interruption after real publication")
+        )
+
+    def test_post_publish_system_exit_restores_prior_and_reraises(self) -> None:
+        self._assert_post_publish_interruption_restores_prior(
+            SystemExit("injected exit after real publication")
+        )
+
+    def test_post_publish_interruption_failed_rollback_retains_receipt(self) -> None:
+        self.env_path.write_text("STOCK_LIST=600519\n", encoding="utf-8")
+        original_publish = self.manager._publish_staged_bytes
+        receipt = object()
+        discarded = []
+        publish_count = 0
+
+        def interrupt_then_fail_rollback(staged_path):
+            nonlocal publish_count
+            publish_count += 1
+            if publish_count == 1:
+                original_publish(staged_path)
+                raise KeyboardInterrupt("interrupted after applied publication")
+            raise OSError("injected interruption rollback failure")
+
+        with patch.object(
+            self.manager,
+            "_publish_staged_bytes",
+            side_effect=interrupt_then_fail_rollback,
+        ):
+            with self.assertRaises(ConfigManagerPublicationUncertain) as raised:
+                self.manager.replace_managed_assignments_atomically(
+                    expected_version=self.manager.get_config_version(),
+                    managed_keys={"STOCK_LIST"},
+                    replacements={"STOCK_LIST": "300750"},
+                    prepare_receipt=lambda **_state: receipt,
+                    discard_receipt=discarded.append,
+                )
+
+        self.assertIs(raised.exception.receipt, receipt)
+        self.assertEqual(
+            self.manager.read_config_map()["STOCK_LIST"],
+            "300750",
+        )
+        self.assertEqual(discarded, [])
+
+    def test_two_process_atomic_restore_writers_linearize_on_expected_generation(self) -> None:
+        self.env_path.write_text("STOCK_LIST=600519\n", encoding="utf-8")
+        expected_version = self.manager.get_config_version()
+        context = multiprocessing.get_context(
+            "spawn" if os.name == "nt" else "fork"
+        )
+        first_entered = context.Event()
+        release_first = context.Event()
+        first_started = context.Event()
+        first_finished = context.Event()
+        second_started = context.Event()
+        second_finished = context.Event()
+        results = context.Queue()
+        first = context.Process(
+            target=_atomic_restore_apply_process,
+            args=(
+                str(self.env_path),
+                expected_version,
+                "300750",
+                "first",
+                True,
+                first_entered,
+                release_first,
+                first_started,
+                first_finished,
+                results,
+            ),
+        )
+        second = context.Process(
+            target=_atomic_restore_apply_process,
+            args=(
+                str(self.env_path),
+                expected_version,
+                "AAPL",
+                "second",
+                False,
+                context.Event(),
+                context.Event(),
+                second_started,
+                second_finished,
+                results,
+            ),
+        )
+        first.start()
+        try:
+            self.assertTrue(first_started.wait(timeout=10))
+            self.assertTrue(first_entered.wait(timeout=10))
+            second.start()
+            self.assertTrue(second_started.wait(timeout=10))
+            second_completed_while_first_locked = second_finished.wait(timeout=1)
+        finally:
+            release_first.set()
+        first.join(timeout=15)
+        second.join(timeout=15)
+        self.assertFalse(first.is_alive())
+        self.assertFalse(second.is_alive())
+        self.assertFalse(second_completed_while_first_locked)
+        outcomes = dict(results.get(timeout=5) for _ in range(2))
+        self.assertEqual(outcomes, {"first": "success", "second": "conflict"})
+        self.assertEqual(
+            ConfigManager(env_path=self.env_path).read_config_map()["STOCK_LIST"],
+            "300750",
+        )
 
     def test_apply_updates_only_rewrites_last_duplicate_assignment(self) -> None:
         self.env_path.write_text(
