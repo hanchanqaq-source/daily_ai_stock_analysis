@@ -4,26 +4,26 @@
 
 | Item | Current fact |
 | --- | --- |
-| State | `WORK23_LOCAL_CIM_SINGLE_IDENTITY_REWORK_PASS_REMOTE_RETEST_PENDING_DRAFT_HOLD` |
+| State | `WORK23_LOCAL_SINGLE_UNINSTALL_ENTRY_REWORK_PASS_REMOTE_RETEST_PENDING_DRAFT_HOLD` |
 | Base | `main@41fd6a6c76c3e3b56211ef5fb4483d869122b568` (`v3.29.2`) |
 | Branch | `agent/pp02-work20-full-backup-period-persistence` |
 | Goal | Fix PR #23 Windows strict-acceptance blockers and produce the next exact-Head candidate identity |
 | Work22 evidence | Report SHA-256 `30AC65C81E3F86E4CADBAEC9D2DBA95B432BA4DF8DBE81F12015857B9E5E39BE`; Judge remains `FAIL` |
 | Draft PR | [#23](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/23), Open Draft |
 | Candidate version | Authoritative `3.29.3` |
-| Fixed-Head CI | Run `30977516983`: build/helper contract PASS, installed helper dual-path recheck failure; next Head pending |
+| Fixed-Head CI | Run `30988154439`: uninstall reached zero, duplicate helper entry overwrote live-cleanup evidence; next Head pending |
 | Signing | Read-only audit/policy interface; real signing identity is a separate authorization gate |
 | Judge | `ACTIVE — DRAFT_HOLD` |
 | Prohibited | Ready, merge, `main`, another PR, Tag, Release, real signing material, Work22 real data/checkpoints |
 
-Continue by committing the single-CIM PID/path identity recheck, pushing only
-the existing PR #23 branch, and verifying all applicable Actions jobs for that
-next exact remote Head. Run `30977516983` proved candidate build and the
-synthetic same-name isolation contract, but the installed helper discovered five
-owned processes and took zero actions because its secondary `Get-Process.Path`
-recheck disagreed with CIM. The installed lifecycle must preserve PASS evidence
-and reach zero after one official uninstall. Record the resulting Windows
-installer/ZIP filename, byte size, and SHA-256 without changing the fixed Head.
+Continue by committing the single-uninstall-entry rework, pushing only the
+existing PR #23 branch, and verifying all applicable Actions jobs for that next
+exact remote Head. Run `30988154439` proved the product reached zero after one
+official uninstall, but electron-builder's standard check and the extra
+`customUnInstall` entry ran the helper twice; the second no-op run overwrote the
+first live-cleanup evidence. The next lifecycle must preserve the first PASS
+evidence and still reach zero. Record the resulting Windows installer/ZIP
+filename, byte size, and SHA-256 without changing the fixed Head.
 
 The implementation requires a one-run exact-path uninstaller lifecycle,
 normalizes every candidate-version source to `3.29.3`, includes non-rebuildable

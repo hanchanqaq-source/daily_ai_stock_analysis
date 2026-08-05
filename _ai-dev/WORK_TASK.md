@@ -10,8 +10,8 @@ DRAFT_PR=23_OPEN_DRAFT
 WORK22_EVIDENCE_REPORT_SHA256=30AC65C81E3F86E4CADBAEC9D2DBA95B432BA4DF8DBE81F12015857B9E5E39BE
 WORK22_JUDGE=FAIL_LOCKED
 AUTHORITATIVE_VERSION=3.29.3
-REMOTE_FIXED_HEAD=976DB882_FAILED_SUPERSEDED_PENDING_NEXT_HEAD
-REMOTE_CI=RUN_30977516983_FAILED_HELPER_DUAL_PATH_IDENTITY_REVALIDATION
+REMOTE_FIXED_HEAD=C9ACA280_FAILED_SUPERSEDED_PENDING_NEXT_HEAD
+REMOTE_CI=RUN_30988154439_FAILED_DUPLICATE_HELPER_EVIDENCE_OVERWRITE_AFTER_ZERO_CLEANUP
 JUDGE=ACTIVE_REWORK_DRAFT_HOLD
 ```
 
@@ -70,6 +70,12 @@ JUDGE=ACTIVE_REWORK_DRAFT_HOLD
   a redundant `Get-Process.Path` recheck. The next Head must use one CIM exact
   PID/path identity source before graceful and forced action, retain the external
   same-name control, and produce helper PASS evidence with final zero.
+- `c9aca280…` / Run `30988154439` passed that identity repair and reached zero
+  after one official uninstall. It still failed because the standard
+  `un.checkAppRunning` helper invocation performed cleanup and a second
+  `customUnInstall` invocation overwrote its evidence with `initial=0`. The next
+  Head must use the standard uninstall entry exactly once while keeping the
+  helper required for uninstall builds and optional for install/upgrade builds.
 
 ---
 

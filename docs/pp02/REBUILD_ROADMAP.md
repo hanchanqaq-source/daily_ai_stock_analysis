@@ -30,6 +30,12 @@
   `Get-Process.Path` recheck. The local repair now revalidates PID/path with the
   same exact CIM source before acting; next exact-Head installed lifecycle and
   candidate identity remain pending.
+- Head `c9aca280…` / Run `30988154439` passed that repair and reached zero after
+  one official uninstall. The remaining failure was evidence-only: the standard
+  uninstall check performed live cleanup, then a redundant `customUnInstall`
+  helper call overwrote the first evidence with `initial=0`. The local rework
+  keeps one required standard uninstall entry; next exact-Head lifecycle and
+  candidate identity remain pending.
 
 ## 2026-08-04 Work20 complete backup and period persistence
 

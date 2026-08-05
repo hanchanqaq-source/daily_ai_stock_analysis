@@ -43,11 +43,11 @@ DsaOwnedProcessCheckDone_${SUFFIX}:
 !macroend
 
 !macro customCheckAppRunning
-  !insertmacro _dsaCloseOwnedProcesses Install 0
-!macroend
-
-!macro customUnInstall
-  !insertmacro _dsaCloseOwnedProcesses Uninstall 1
+  !ifdef BUILD_UNINSTALLER
+    !insertmacro _dsaCloseOwnedProcesses Uninstall 1
+  !else
+    !insertmacro _dsaCloseOwnedProcesses Install 0
+  !endif
 !macroend
 
 !macro _dsaRetryQuotedOldUninstall ROOT_KEY SUFFIX

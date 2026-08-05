@@ -122,7 +122,10 @@ def test_official_uninstaller_closes_only_exact_product_owned_processes() -> Non
     }
     assert "!macro _dsaCloseOwnedProcesses" in installer_script
     assert "!macro customCheckAppRunning" in installer_script
-    assert "!macro customUnInstall" in installer_script
+    assert "!ifdef BUILD_UNINSTALLER" in installer_script
+    assert "!insertmacro _dsaCloseOwnedProcesses Uninstall 1" in installer_script
+    assert "!insertmacro _dsaCloseOwnedProcesses Install 0" in installer_script
+    assert "!macro customUnInstall" not in installer_script.splitlines()
     assert installer_script.count("!insertmacro _dsaCloseOwnedProcesses") == 2
     assert installer_script.count("Goto DsaOwnedProcessCheckDone_${SUFFIX}") == 2
     assert "$INSTDIR\\resources\\close-owned-processes.ps1" in installer_script

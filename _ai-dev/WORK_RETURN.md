@@ -14,8 +14,8 @@ DESKTOP=PASS_83_OF_83
 WINDOWS_PACKAGING=PASS_26_OF_26
 WEB=PASS_1076_2_SKIPPED_LINT_BUILD
 BACKEND_AGGREGATE=PASS_5327_4_DESELECTED_499_SUBTESTS_EXCLUDING_SANDBOX_BLOCKED_CRASH_FILE
-REMOTE_FIXED_HEAD=976DB882_FAILED_SUPERSEDED_PENDING_NEXT_HEAD
-REMOTE_CI=RUN_30977516983_FAILED_HELPER_DUAL_PATH_IDENTITY_REVALIDATION
+REMOTE_FIXED_HEAD=C9ACA280_FAILED_SUPERSEDED_PENDING_NEXT_HEAD
+REMOTE_CI=RUN_30988154439_FAILED_DUPLICATE_HELPER_EVIDENCE_OVERWRITE_AFTER_ZERO_CLEANUP
 WINDOWS_CANDIDATE=PENDING_NEXT_EXACT_HEAD_CI
 SIGNING=READ_ONLY_GATE_NO_REAL_IDENTITY
 JUDGE=ACTIVE_REWORK_DRAFT_HOLD
@@ -71,6 +71,16 @@ JUDGE=ACTIVE_REWORK_DRAFT_HOLD
   `1DE5397EBCD6B07314685E2C0C709FA7BFC75A84BC190701ABD2CBE9270CA1DC`.
   Local RED/GREEN now requires the same CIM PID/path source for revalidation;
   the next exact-Head installed lifecycle remains pending.
+- Head `c9aca280…` / Run `30988154439` passed candidate build, the helper
+  isolation contract, install/start/exit/restart, and one official uninstall
+  returned `0`. Diagnostics proved the install root and all owned processes were
+  gone, while final evidence was `PASS` with zero remaining. The only gate
+  failure was evidence overwrite: electron-builder's standard uninstall check
+  ran the helper first, then the redundant `customUnInstall` entry ran it again
+  with `initial=0`. Diagnostic artifact `8923770478` has SHA-256
+  `686692F0EB7B4D96084DE30143C11A29C6E6E7406A105B07A7C639732FDC73F4`.
+  Local RED/GREEN now keeps one required standard uninstall entry; the next
+  exact-Head installed lifecycle remains pending.
 
 ---
 
