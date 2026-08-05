@@ -17,8 +17,8 @@ FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
 ACTIVE_BASE=f813084944f7a9c5459312ef84da7956cda1a37f
 ACTIVE_BRANCH=agent/pp02-work25-windows-frozen-startup-timeout
-ACTIVE_PR=PENDING_DRAFT_PR
-CURRENT_STAGE=Work25 TDD RED/GREEN and applicable local verification pass; Draft PR publication and exact-Head CI pending
+ACTIVE_PR=25_OPEN_DRAFT
+CURRENT_STAGE=Work25 Draft PR #25 published; status-sync Head and its exact complete CI pending
 CURRENT_WORK=WORK-025 — Windows frozen-backend startup timeout repair
 ACTIVE_GOAL=replace the conflicting fixed 3-second uvicorn startup deadline with one bounded condition-based wait, then publish one Draft PR and verify its exact Head CI
 PRODUCT_PR=20_MERGED
@@ -80,14 +80,14 @@ WORK25_TDD_GREEN=PASS_DELAYED_READY_AFTER_4_SECONDS
 WORK25_LOCAL_RELATED=PASS_32_OF_32
 WORK25_LOCAL_AUXILIARY=PASS_PY_COMPILE_AI_ASSETS_BOUNDARIES_DIFF
 WORK25_LOCAL_FULL_BACKEND=DEFERRED_EXISTING_ENV_MISSING_LOCKED_DEPS_AND_FLAKE8_REMOTE_CI_AUTHORITATIVE
-WORK25_DRAFT_PR=PENDING
-WORK25_REMOTE_FIXED_HEAD=PENDING
-WORK25_REMOTE_CI=PENDING
+WORK25_DRAFT_PR=25_OPEN_DRAFT
+WORK25_REMOTE_FIXED_HEAD=65fddad28ce672a84813e5d422aa7b9d4f642a73_INITIAL_IMPLEMENTATION_PENDING_STATUS_SYNC_HEAD
+WORK25_REMOTE_CI=PENDING_FINAL_STATUS_SYNC_HEAD
 WORK25_JUDGE=ACTIVE_DRAFT_HOLD
-CURRENT_STATUS=WORK25_LOCAL_RELATED_VERIFICATION_PASS_DRAFT_HOLD
-ACTIVE_BLOCKER=DRAFT_PR_PUBLICATION_AND_EXACT_REMOTE_HEAD_CI_PENDING
+CURRENT_STATUS=WORK25_DRAFT_PR_OPEN_STATUS_SYNC_AND_EXACT_HEAD_CI_PENDING
+ACTIVE_BLOCKER=STATUS_SYNC_COMMIT_AND_FINAL_EXACT_REMOTE_HEAD_CI_PENDING
 NEXT_WORK=NONE
-NEXT_ACTION=FINAL_DIFF_REVIEW_COMMIT_PUSH_CREATE_DRAFT_PR_THEN_VERIFY_EXACT_HEAD_CI
+NEXT_ACTION=COMMIT_STATUS_SYNC_UPDATE_PR25_BRANCH_THEN_VERIFY_FINAL_EXACT_HEAD_CI
 AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/TAG/RELEASE
 LAST_UPDATED=2026-08-05
 ```
@@ -116,6 +116,9 @@ LAST_UPDATED=2026-08-05
   Python compile, AI governance, explicit error/dead-thread/timeout boundaries,
   and diff checks pass. The existing cloud environment lacks locked backend
   dependencies and flake8, so exact-Head CI remains authoritative for those gates.
+- Draft PR #25 was created from the exact nine-file tree with initial remote
+  implementation Head `65fddad2…`. One status-only synchronization commit is
+  required so the final Head records the PR identity before authoritative CI.
 
 ## Historical current entry | Work24 / Windows runtime integrity guard
 

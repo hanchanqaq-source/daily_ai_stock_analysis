@@ -8,16 +8,16 @@
 | Base | `main@f813084944f7a9c5459312ef84da7956cda1a37f` |
 | Branch | `agent/pp02-work25-windows-frozen-startup-timeout` |
 | Goal | Replace the conflicting fixed 3-second uvicorn startup deadline with one bounded condition-based wait |
-| Draft PR | Pending publication |
+| Draft PR | [#25](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/25), Open Draft |
 | Failure evidence | Main Run `31032267014` 7/8; Windows Job `92395692229` failed after `3.0s` FastAPI startup deadline |
 | Root cause | Inner 3-second deadline terminated the backend before the outer 90-second frozen HTTP readiness gate could complete |
 | Local evidence | Helper/main-disconnect RED; delayed-ready GREEN; related `32/32`; compile/governance/boundaries/diff pass |
-| Remote CI | Pending exact Draft PR Head |
+| Remote CI | Initial implementation Head `65fddad2…`; status-sync final Head and exact CI pending |
 | Judge | `ACTIVE — DRAFT_HOLD` |
 | Prohibited | Ready, merge, `main`, Tag, Release, version/dependency/config expansion, signing identity, real Windows data |
 
-Continue with final diff review, one commit/push, one Draft PR, and exact-Head
-Actions verification. The cloud environment lacks locked backend dependencies
+Continue with one status-only synchronization commit on PR #25, then lock that
+final Head and wait for its complete Actions verification. The cloud environment lacks locked backend dependencies
 and flake8, so it did not claim the full local backend gate; remote CI is the
 authority for backend, Windows/macOS packaging, final ZIP, and lifecycle checks.
 

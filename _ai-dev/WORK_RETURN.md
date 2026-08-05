@@ -13,9 +13,9 @@ TDD_GREEN=PASS_DELAYED_READY_AFTER_4_SECONDS
 LOCAL_RELATED=PASS_32_OF_32
 LOCAL_AUXILIARY=PASS_PY_COMPILE_AI_ASSETS_BOUNDARIES_DIFF
 LOCAL_FULL_BACKEND=DEFERRED_EXISTING_ENV_MISSING_LOCKED_DEPS_AND_FLAKE8_REMOTE_CI_AUTHORITATIVE
-DRAFT_PR=PENDING
-REMOTE_FIXED_HEAD=PENDING
-REMOTE_CI=PENDING
+DRAFT_PR=25_OPEN_DRAFT
+REMOTE_FIXED_HEAD=65fddad28ce672a84813e5d422aa7b9d4f642a73_INITIAL_IMPLEMENTATION_PENDING_STATUS_SYNC_HEAD
+REMOTE_CI=PENDING_FINAL_STATUS_SYNC_HEAD
 JUDGE=ACTIVE_DRAFT_HOLD
 ```
 
@@ -35,6 +35,9 @@ JUDGE=ACTIVE_DRAFT_HOLD
   pass. The current Work25 cloud environment lacks locked backend dependencies and
   flake8; no dependency was installed or upgraded, and exact-Head CI remains
   authoritative for the complete gate.
+- Draft PR #25 is Open Draft. Initial implementation Head `65fddad2…` has the
+  exact local nine-file tree; a status-only synchronization commit will become
+  the final Head used for complete CI evidence.
 
 ---
 

@@ -17,6 +17,9 @@
   tests pass 32/32, including the real `main.start_api_server` connection, while
   complete backend and Windows artifact authority stays
   with the exact Draft PR Head CI.
+- Draft PR #25 is Open Draft. Initial Head `65fddad2…` contains the exact
+  reviewed implementation tree; the status-sync final Head and complete CI are
+  pending.
 
 ## 2026-08-05 Work23 Windows strict-acceptance repair
 
