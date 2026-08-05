@@ -1,5 +1,26 @@
 # PP02 安全重建路线 R0–R7
 
+## 2026-08-05 Work25 Windows frozen-backend startup timeout repair
+
+- PR #24 fixed Head `f91576cb…` passed Run `31028088206` 8/8, then merged as
+  `main@f813084…`. Main Run `31032267014` finished 7/8 and is not releaseable.
+- Windows Job `92395692229` completed the frozen build and MiniRacer probe, then
+  the backend exited at the inner hard-coded `3.0s` uvicorn startup deadline.
+  The outer frozen verifier already polls HTTP readiness for up to 90 seconds;
+  Desktop separately polls health for 60 seconds.
+- Work25 uses TDD to replace only the conflicting inner gate with a bounded,
+  monotonic condition wait. It must stop at one Draft PR and exact-Head CI;
+  Ready, merge, Tag, Release, version/dependency changes, and real data remain
+  prohibited.
+- Local mutation RED reproduces the 3-second failure; delayed readiness after
+  four simulated seconds is GREEN under the 30-second bounded helper. Related
+  tests pass 32/32, including the real `main.start_api_server` connection, while
+  complete backend and Windows artifact authority stays
+  with the exact Draft PR Head CI.
+- Draft PR #25 is Open Draft. Initial Head `65fddad2…` contains the exact
+  reviewed implementation tree; the status-sync final Head and complete CI are
+  pending.
+
 ## 2026-08-05 Work23 Windows strict-acceptance repair
 
 - Existing Draft PR #23 remains based on locked `main@41fd6a6c…`. Work22 stays

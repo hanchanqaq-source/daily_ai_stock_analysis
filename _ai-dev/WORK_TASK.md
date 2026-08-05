@@ -1,4 +1,58 @@
-# WORK-024 | Windows runtime integrity guard
+# WORK-025 | Windows frozen-backend startup timeout repair
+
+## Work25 authorization and execution contract
+
+```text
+WORK_ID=WORK-025
+WORK_STATE=LOCAL_RELATED_VERIFICATION_PASS_DRAFT_PR_PENDING
+BASE=f813084944f7a9c5459312ef84da7956cda1a37f
+BRANCH=agent/pp02-work25-windows-frozen-startup-timeout
+FAILURE_RUN=31032267014
+FAILURE_JOB=92395692229
+DRAFT_PR=25_OPEN_DRAFT
+REMOTE_FIXED_HEAD=65fddad28ce672a84813e5d422aa7b9d4f642a73_INITIAL_IMPLEMENTATION_PENDING_STATUS_SYNC_HEAD
+REMOTE_CI=PENDING_FINAL_STATUS_SYNC_HEAD
+JUDGE=ACTIVE_DRAFT_HOLD
+```
+
+### Root cause and selected design
+
+- `start_api_server` already polls the real `uvicorn_server.started` condition,
+  but an inner hard-coded `3.0s` deadline terminates slow frozen Windows starts.
+  The outer frozen verifier is designed to wait for HTTP readiness for up to 90
+  seconds and Desktop waits for health for 60 seconds, so the inner gate defeats
+  both authoritative condition-based checks.
+- Extract one small internal wait helper using a monotonic clock. Preserve
+  immediate startup-error and dead-thread failure, keep a bounded 30-second
+  default, and allow tests to supply a deterministic clock/sleeper.
+- Do not add a user environment variable or config knob. Do not alter API,
+  ports, package identity, dependencies, version, signing, or data behavior.
+
+### Implementation plan
+
+1. Add one real-behavior regression where the server becomes ready after four
+   simulated seconds; verify it fails before production code exists.
+2. Implement the bounded condition wait and connect `start_api_server` to it;
+   verify the regression and existing startup-error/dead-thread contracts.
+3. Run related Python tests, compile, AI governance, diff checks, and every
+   locally applicable gate without installing or upgrading dependencies.
+4. Commit/push only the reviewed Work25 scope, create one Draft PR, lock the
+   remote Head, and wait for its complete CI. Windows CI remains authoritative.
+
+### Acceptance and stop gates
+
+1. TDD RED/GREEN evidence must prove readiness after the old 3-second boundary.
+2. Startup still fails promptly on a captured exception or dead server thread,
+   and a never-ready live thread remains bounded.
+3. The fixed-Head Windows Job must complete frozen startup, final ZIP identity,
+   installer contract, install/start/restart/uninstall lifecycle, and candidate
+   upload before Work25 may be judged PASS.
+4. Keep the PR Draft. Do not Ready, merge, write `main`, Tag, Release, change
+   version/dependencies, or use real credentials/data.
+
+---
+
+# Historical contract | WORK-024 / Windows runtime integrity guard
 
 ## Work24 authorization and execution contract
 
