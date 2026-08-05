@@ -25,10 +25,12 @@
       "output": "dist"
     },
     "afterPack": "scripts/afterPackMacos.js",
+    "afterSign": "scripts/afterSignRuntimeIntegrity.js",
     "files": [
       "main.js",
       "preload.js",
       "portable-update/**/*",
+      "runtime-integrity/**/*",
       "renderer/**/*",
       "secure-credentials/**/*"
     ],

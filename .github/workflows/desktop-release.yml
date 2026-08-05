@@ -329,6 +329,7 @@ jobs:
               Remove-OwnedReleaseDirectoryWithRetry -OwnedRoot $releaseFinalExtract
             }
             Expand-Archive -LiteralPath $zipTarget -DestinationPath $releaseFinalExtract
+            $releaseVersion = $env:RELEASE_TAG.TrimStart('v')
             $requiredBrowserRelativePath = 'resources/backend/stock_analysis/_internal/fake_useragent/data/browsers.jsonl'
             $releaseFinalManifestPath = Join-Path $releaseFinalExtract 'pp02-portable-release.json'
             $releaseFinalManifest = Get-Content -LiteralPath $releaseFinalManifestPath -Raw | ConvertFrom-Json
@@ -342,6 +343,10 @@ jobs:
             $releaseBrowserData = Join-Path $releaseFinalExtract $requiredBrowserRelativePath
             if (-not (Test-Path -LiteralPath $releaseBrowserData -PathType Leaf)) {
               throw "Final Release portable ZIP is missing $requiredBrowserRelativePath."
+            }
+            node scripts/verify-windows-runtime-integrity.js $releaseFinalExtract $releaseVersion
+            if ($LASTEXITCODE -ne 0) {
+              throw "Final Release portable ZIP runtime integrity verification failed with exit code $LASTEXITCODE."
             }
             $releaseFinalPackagedEntry = Join-Path $releaseFinalExtract 'resources/backend/stock_analysis/stock_analysis.exe'
             powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/verify-frozen-backend.ps1 -PackagedEntry $releaseFinalPackagedEntry

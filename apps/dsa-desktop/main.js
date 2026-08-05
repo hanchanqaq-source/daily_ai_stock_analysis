@@ -17,6 +17,11 @@ const { copyHelperToTemp } = require('./portable-update/portableTransaction');
 const { CredentialVault, SecureCredentialError } = require('./secure-credentials/credentialVault');
 const { isSensitiveConfigKey } = require('./secure-credentials/sensitiveKeys');
 const { sanitizeEnvFile } = require('./secure-credentials/envSanitizer');
+const {
+  RUNTIME_INTEGRITY_PUBLIC_MESSAGE,
+  RuntimeIntegrityError,
+  verifyPackagedWindowsRuntime,
+} = require('./runtime-integrity/runtimeIntegrity');
 
 let mainWindow = null;
 let backendProcess = null;
@@ -34,6 +39,7 @@ let portableRelease = null;
 let credentialVault = null;
 let activeBackendRuntime = null;
 let installerDiagnosticBytesWritten = 0;
+let backendStderrTail = '';
 
 function resolveWindowBackgroundColor() {
   return nativeTheme.shouldUseDarkColors ? '#08080c' : '#f4f7fb';
@@ -52,6 +58,8 @@ const DESKTOP_UPDATE_BACKUP_MANIFEST_FILE = 'runtime-state.json';
 const DESKTOP_BACKEND_DEFAULT_HOST = '127.0.0.1';
 const INSTALLER_DIAGNOSTIC_ROOT_ENV = 'DSA_INSTALLER_DIAGNOSTIC_ROOT';
 const INSTALLER_DIAGNOSTIC_MAX_BYTES = 512 * 1024;
+const BACKEND_STDERR_TAIL_MAX_CHARS = 8192;
+const DESKTOP_LAUNCH_CONTRACT_MARKER = 'PP02_DESKTOP_LAUNCH_CONTRACT_REJECTED';
 const PUBLIC_BIND_HOSTS = Object.freeze(new Set(['0.0.0.0', '::', '[::]', '*']));
 const MAC_DESKTOP_CLI_PATH_ENTRIES = Object.freeze([
   '/opt/homebrew/bin',
@@ -854,6 +862,13 @@ function resolveBackendBindHost({
   return normalizeBackendBindHost(envFileHost || fallback, fallback);
 }
 
+function resolveDesktopBackendBindHost(options = {}) {
+  if (app.isPackaged && isWindows) {
+    return DESKTOP_BACKEND_DEFAULT_HOST;
+  }
+  return resolveBackendBindHost(options);
+}
+
 function resolveDesktopConnectHost(bindHost) {
   const host = normalizeBackendBindHost(bindHost, DESKTOP_BACKEND_DEFAULT_HOST);
   if (PUBLIC_BIND_HOSTS.has(host.toLowerCase())) {
@@ -1096,6 +1111,46 @@ function protectInstallerDiagnosticText(value) {
     .replace(/([?&](?:api[_-]?key|token|secret|password|webhook)=)[^&\s]+/gi, '$1<redacted>')
     .replace(/(Bearer\s+)[A-Za-z0-9._~+/=-]+/gi, '$1<redacted>')
     .replace(/\b(?:sk-[A-Za-z0-9_-]{8,}|gh[opsu]_[A-Za-z0-9_]{12,})\b/g, '<redacted>');
+}
+
+function appendBackendStderrTail(value) {
+  const protectedValue = protectInstallerDiagnosticText(value);
+  backendStderrTail = `${backendStderrTail}\n${protectedValue}`
+    .slice(-BACKEND_STDERR_TAIL_MAX_CHARS);
+}
+
+function classifyBackendStartupFailure({
+  startError = null,
+  processRef = backendProcess,
+  stderrTail = backendStderrTail,
+} = {}) {
+  if (startError) {
+    return `backend start error: ${startError.message || String(startError)}`;
+  }
+  if (String(stderrTail || '').includes(DESKTOP_LAUNCH_CONTRACT_MARKER)) {
+    return RUNTIME_INTEGRITY_PUBLIC_MESSAGE;
+  }
+  if (!processRef) {
+    return 'backend process is unavailable';
+  }
+  if (processRef.exitCode !== null && processRef.exitCode !== undefined) {
+    return `backend exited with code ${processRef.exitCode}`;
+  }
+  if (processRef.signalCode) {
+    return `backend exited by signal ${processRef.signalCode}`;
+  }
+  return null;
+}
+
+function formatStartupErrorForUser(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (
+    error instanceof RuntimeIntegrityError
+    || message.includes(RUNTIME_INTEGRITY_PUBLIC_MESSAGE)
+  ) {
+    return RUNTIME_INTEGRITY_PUBLIC_MESSAGE;
+  }
+  return String(error);
 }
 
 function resolveInstallerDiagnosticFile(sourceEnv = process.env) {
@@ -1352,11 +1407,39 @@ function waitForHealth(
 function startBackend({ port, envFile, dbPath, logDir, host = null, secureCredentials = undefined }) {
   const backendPath = resolveBackendPath();
   backendStartError = null;
+  backendStderrTail = '';
   const launchStartedAt = Date.now();
   const bindHost = normalizeBackendBindHost(
-    normalizeBackendHost(host) || resolveBackendBindHost({ envFile }),
+    app.isPackaged && isWindows
+      ? DESKTOP_BACKEND_DEFAULT_HOST
+      : normalizeBackendHost(host) || resolveDesktopBackendBindHost({ envFile }),
     DESKTOP_BACKEND_DEFAULT_HOST
   );
+
+  if (app.isPackaged && isWindows) {
+    try {
+      verifyPackagedWindowsRuntime({
+        platform: process.platform,
+        packaged: app.isPackaged,
+        appRoot: path.dirname(app.getPath('exe')),
+        resourcesPath: process.resourcesPath,
+        exePath: app.getPath('exe'),
+        backendPath,
+        version: resolveDesktopVersion(),
+      });
+      writeInstallerBackendDiagnostic('runtime_integrity status=PASS');
+    } catch (error) {
+      const reasonCode = error instanceof RuntimeIntegrityError
+        ? error.reasonCode
+        : 'verification_error';
+      writeInstallerBackendDiagnostic(`runtime_integrity status=FAIL reason=${reasonCode}`);
+      logLine(`[backend] runtime integrity rejected before spawn reason=${reasonCode}`);
+      if (error instanceof RuntimeIntegrityError) {
+        throw error;
+      }
+      throw new RuntimeIntegrityError(reasonCode);
+    }
+  }
 
   let resolvedSecureCredentials = secureCredentials;
   if (resolvedSecureCredentials === undefined && isWindows) {
@@ -1452,6 +1535,7 @@ function startBackend({ port, envFile, dbPath, logDir, host = null, secureCreden
         logLine(`[backend] first stderr after ${Date.now() - launchStartedAt}ms`);
       }
       const decodedStderr = decodeBackendOutput(data, stderrDecoder);
+      appendBackendStderrTail(decodedStderr);
       writeInstallerBackendDiagnostic(`backend_stderr ${decodedStderr}`);
       if (forwardBackendOutput) {
         logLine(`[backend] ${decodedStderr}`);
@@ -2221,7 +2305,7 @@ async function createWindow() {
   ensureEnvFile(envPath);
   logStartup(`Env file ready: ${envPath}`);
 
-  const backendBindHost = resolveBackendBindHost({ envFile: envPath });
+  const backendBindHost = resolveDesktopBackendBindHost({ envFile: envPath });
   const backendConnectHost = resolveDesktopConnectHost(backendBindHost);
   logStartup(`Backend bind host=${backendBindHost}; desktop connect host=${backendConnectHost}`);
 
@@ -2249,7 +2333,8 @@ async function createWindow() {
     logStartup('Waiting for backend health check');
   } catch (error) {
     logStartup(`Backend launch failed: ${String(error)}`);
-    const errorUrl = `file://${loadingPath}?error=${encodeURIComponent(String(error))}`;
+    const publicError = formatStartupErrorForUser(error);
+    const errorUrl = `file://${loadingPath}?error=${encodeURIComponent(publicError)}`;
     await mainWindow.loadURL(errorUrl);
     return;
   }
@@ -2301,19 +2386,11 @@ async function createWindow() {
       250,
       1500,
       () => {
-        if (backendStartError) {
-          return `backend start error: ${backendStartError.message}`;
-        }
-        if (!backendProcess) {
-          return 'backend process is unavailable';
-        }
-        if (backendProcess.exitCode !== null) {
-          return `backend exited with code ${backendProcess.exitCode}`;
-        }
-        if (backendProcess.signalCode) {
-          return `backend exited by signal ${backendProcess.signalCode}`;
-        }
-        return null;
+        return classifyBackendStartupFailure({
+          startError: backendStartError,
+          processRef: backendProcess,
+          stderrTail: backendStderrTail,
+        });
       },
       onHealthProgress
     );
@@ -2329,7 +2406,8 @@ async function createWindow() {
     }
   } catch (error) {
     logStartup(`Startup failed while waiting for health: ${String(error)}`);
-    const errorUrl = `file://${loadingPath}?error=${encodeURIComponent(String(error))}`;
+    const publicError = formatStartupErrorForUser(error);
+    const errorUrl = `file://${loadingPath}?error=${encodeURIComponent(publicError)}`;
     await mainWindow.loadURL(errorUrl);
   }
 }
@@ -2394,6 +2472,8 @@ module.exports = {
   isTrustedSecureCredentialSender,
   sanitizeEnvFile,
   sanitizeReleaseUrl,
+  classifyBackendStartupFailure,
+  formatStartupErrorForUser,
   shouldForwardBackendOutput,
   startBackend,
   stopBackend,

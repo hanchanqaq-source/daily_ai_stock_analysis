@@ -1,4 +1,48 @@
-# WORK-023 | PR #23 Windows strict-acceptance failure repairs
+# WORK-024 | Windows runtime integrity guard
+
+## Work24 authorization and execution contract
+
+```text
+WORK_ID=WORK-024
+WORK_STATE=LOCAL_SCOPED_VERIFICATION_PASS_DRAFT_PR_PENDING
+BASE=e59c9d9e475d1f1149da01cceaa0cc79101497c7
+BRANCH=agent/pp02-runtime-integrity-guard
+DRAFT_PR=PENDING
+REMOTE_FIXED_HEAD=PENDING
+REMOTE_CI=PENDING
+JUDGE=ACTIVE_DRAFT_HOLD
+```
+
+### Scope
+
+- Generate a closed post-sign identity manifest for the final Windows Desktop
+  and frozen backend executables, then verify path, size, and SHA-256 before
+  backend spawn.
+- Require a complete loopback `serve-only` contract whenever
+  `DSA_DESKTOP_MODE` is active, before logging, configuration, database,
+  scheduling, analysis, reports, or history can initialize.
+- Classify runtime/launch-contract failures with a bounded diagnostic and a
+  fixed Chinese user message; never render raw backend stderr.
+- Reuse the same identity verifier on the final extracted Windows CI and
+  Release ZIP, update documentation/status, and publish one Draft PR.
+
+### Acceptance and stop gates
+
+1. Tests must first fail on the missing manifest/verifier/launch contract and
+   pass after the minimal implementation; affected Desktop, Python, packaging,
+   AI governance, compile, diff, and complete applicable local gates must pass.
+2. The product defense must stay generic. Do not encode a malware name, fixed
+   wrapper size, filename pattern, or machine-local path.
+3. No affected-machine EXE, database, `.env`, backup, log, evidence, credential,
+   or real user data may be read, copied, committed, or uploaded.
+4. Windows exact-Head CI is authoritative for real `afterSign`, NSIS, final ZIP,
+   installed lifecycle, and runtime behavior; Linux results cannot replace it.
+5. Keep the PR Draft. Do not Ready, merge, write `main`, bump version, Tag,
+   Release, acquire signing identity, or perform a new Windows-machine action.
+
+---
+
+# Historical contract | WORK-023 / PR #23 Windows strict-acceptance failure repairs
 
 ## Work23 authorization and execution contract
 

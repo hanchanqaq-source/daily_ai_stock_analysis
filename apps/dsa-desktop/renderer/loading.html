@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Daily Stock Analysis</title>
+    <title>AI 每日股票分析</title>
     <style>
       :root {
         color-scheme: dark light;
@@ -118,13 +118,13 @@
   </head>
   <body>
     <div class="panel">
-      <h1 class="title">Daily Stock Analysis</h1>
-      <p class="subtitle">Launching local analysis service</p>
+      <h1 class="title">AI 每日股票分析</h1>
+      <p class="subtitle">正在启动本机分析服务</p>
       <div class="status">
         <span class="dot"></span>
-        <span>Preparing backend and loading UI...</span>
+        <span>正在准备后端并加载界面…</span>
       </div>
-      <p class="tips">If this takes long, check your API keys and network connectivity.</p>
+      <p class="tips">如果等待时间较长，请检查网络连接和模型配置。</p>
       <div class="error" id="errorBox"></div>
     </div>
     <script>
@@ -134,7 +134,7 @@
         if (!error) return;
         const box = document.getElementById('errorBox');
         if (!box) return;
-        box.textContent = `Error: ${decodeURIComponent(error)}`;
+        box.textContent = `启动失败：${error}`;
         box.style.display = 'block';
       })();
     </script>
