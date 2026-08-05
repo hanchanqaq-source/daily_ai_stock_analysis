@@ -124,6 +124,7 @@ from src.brokers.futu.portfolio import FutuPortfolioError
 from data_provider.base import canonical_stock_code
 from src.services.stock_list_parser import split_stock_list
 from src.services.stock_code_utils import resolve_index_stock_code_for_analysis
+from src.core.api_server_startup import wait_for_api_server_startup
 from src.core.desktop_launch_contract import enforce_desktop_launch_contract
 
 
@@ -1216,7 +1217,7 @@ def start_api_server(host: str, port: int, config: Config) -> None:
     # the "api.app:app" import string. With the string, uvicorn imports the app
     # lazily inside the server thread, and that import (litellm + the full app
     # tree, ~10s+ on constrained hosts) runs inside the startup probe window
-    # below, tripping the 3.0s timeout and causing a restart loop on slower
+    # below, tripping the former 3.0s timeout and causing a restart loop on slower
     # machines. Importing first keeps the heavy work out of the probe window;
     # genuine import failures still surface immediately to the caller.
     from api.app import app as fastapi_app
@@ -1252,30 +1253,14 @@ def start_api_server(host: str, port: int, config: Config) -> None:
 
     thread = threading.Thread(target=run_server, daemon=True)
     thread.start()
-
-    timeout_seconds = 3.0
-    wait_deadline = time.time() + timeout_seconds
-    while time.time() < wait_deadline:
-        if startup_error:
-            raise RuntimeError(
-                f"FastAPI server failed to start: {host}:{port}; {startup_error[0]}"
-            )
-        if uvicorn_server.started:
-            logger.info(f"FastAPI 服务已启动: http://{host}:{port}")
-            return
-        if not thread.is_alive():
-            break
-        time.sleep(0.05)
-
-    if startup_error:
-        raise RuntimeError(f"FastAPI server failed to start: {host}:{port}; {startup_error[0]}")
-    if uvicorn_server.started:
-        logger.info(f"FastAPI 服务已启动: http://{host}:{port}")
-        return
-    if not thread.is_alive():
-        raise RuntimeError(f"FastAPI 服务器启动后立即退出: {host}:{port}")
-
-    raise RuntimeError(f"FastAPI 服务在 {timeout_seconds:.1f}s 内未完成启动: {host}:{port}")
+    wait_for_api_server_startup(
+        server=uvicorn_server,
+        thread=thread,
+        startup_errors=startup_error,
+        host=host,
+        port=port,
+    )
+    logger.info(f"FastAPI 服务已启动: http://{host}:{port}")
 
 
 def _is_truthy_env(var_name: str, default: str = "true") -> bool:

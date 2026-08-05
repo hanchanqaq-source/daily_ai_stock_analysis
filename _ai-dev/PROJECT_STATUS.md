@@ -6,21 +6,21 @@
 PROJECT_ID=PP02
 PROJECT_NAME=AI 每日股票分析
 CHAT_ROLE=AUTO_TAKEOVER
-WORK_ID=WORK-024
+WORK_ID=WORK-025
 ROLE_LOCK=SUPERSEDED_BY_PP02-WORK-HANDOFF-002
 WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
-WORK_STATE=LOCAL_SCOPED_VERIFICATION_PASS_DRAFT_PR_PENDING
-EXECUTION_LOCK=WORK24_DRAFT_PR_AND_EXACT_HEAD_CI_PENDING
+WORK_STATE=LOCAL_RELATED_VERIFICATION_PASS_DRAFT_PR_PENDING
+EXECUTION_LOCK=WORK25_MINIMAL_FIX_DRAFT_PR_AND_EXACT_HEAD_CI_ONLY
 APPLICATION_BASE_VERSION=3.29.3
 CURRENT_RELEASE_VERSION=3.29.3
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-ACTIVE_BASE=e59c9d9e475d1f1149da01cceaa0cc79101497c7
-ACTIVE_BRANCH=agent/pp02-runtime-integrity-guard
+ACTIVE_BASE=f813084944f7a9c5459312ef84da7956cda1a37f
+ACTIVE_BRANCH=agent/pp02-work25-windows-frozen-startup-timeout
 ACTIVE_PR=PENDING_DRAFT_PR
-CURRENT_STAGE=Work24 implementation and applicable local gates pass; Draft PR publication and exact-Head CI pending
-CURRENT_WORK=WORK-024 — Windows runtime integrity guard
-ACTIVE_GOAL=complete local verification, publish one Draft PR, and verify its exact remote Head CI without merge or release
+CURRENT_STAGE=Work25 TDD RED/GREEN and applicable local verification pass; Draft PR publication and exact-Head CI pending
+CURRENT_WORK=WORK-025 — Windows frozen-backend startup timeout repair
+ACTIVE_GOAL=replace the conflicting fixed 3-second uvicorn startup deadline with one bounded condition-based wait, then publish one Draft PR and verify its exact Head CI
 PRODUCT_PR=20_MERGED
 PRODUCT_FIXED_HEAD=e11946f528c9cb64beeec8b626ada457c02b0034
 PRODUCT_MERGE_COMMIT=25de369f8e12438a1ec1f3511c68256c471243e4
@@ -64,18 +64,60 @@ WORK24_LOCAL_NODE=PASS_99_OF_99
 WORK24_LOCAL_PYTHON=PASS_24_LAUNCH_CONTRACT_PLUS_10_PACKAGING
 WORK24_LOCAL_AUXILIARY=PASS_PY_COMPILE_AI_ASSETS_SYNTAX_DIFF
 WORK24_LOCAL_BACKEND_AGGREGATE=DEFERRED_MISSING_LOCKED_DEPS_NETWORK_POLICY_REMOTE_CI_AUTHORITATIVE
-WORK24_REMOTE_FIXED_HEAD=PENDING_DRAFT_PR
-WORK24_REMOTE_CI=PENDING_DRAFT_PR
-WORK24_JUDGE=ACTIVE_DRAFT_HOLD
-CURRENT_STATUS=WORK24_LOCAL_SCOPED_VERIFICATION_PASS_DRAFT_HOLD
+WORK24_PR=24_MERGED
+WORK24_REMOTE_FIXED_HEAD=f91576cb6fa9d7d516141758593a5086a50e205a
+WORK24_REMOTE_CI=RUN_31028088206_PASS_8_OF_8
+WORK24_MERGE_COMMIT=f813084944f7a9c5459312ef84da7956cda1a37f
+WORK24_MAIN_CI=RUN_31032267014_FAIL_7_OF_8
+WORK24_WINDOWS_JOB=92395692229_FAILED_FIXED_3_SECOND_UVICORN_STARTUP_DEADLINE
+WORK24_JUDGE=MERGED_MAIN_CI_FAIL_NOT_RELEASEABLE
+WORK25_BASE=f813084944f7a9c5459312ef84da7956cda1a37f
+WORK25_FAILURE_RUN=31032267014
+WORK25_FAILURE_JOB=92395692229
+WORK25_ROOT_CAUSE=INNER_FIXED_3_SECOND_STARTUP_DEADLINE_CONFLICTS_WITH_OUTER_90_SECOND_FROZEN_HEALTH_GATE
+WORK25_TDD_RED=PASS_HELPER_3_SECONDS_AND_MAIN_DISCONNECT_REPRODUCE_RUNTIMEERROR
+WORK25_TDD_GREEN=PASS_DELAYED_READY_AFTER_4_SECONDS
+WORK25_LOCAL_RELATED=PASS_32_OF_32
+WORK25_LOCAL_AUXILIARY=PASS_PY_COMPILE_AI_ASSETS_BOUNDARIES_DIFF
+WORK25_LOCAL_FULL_BACKEND=DEFERRED_EXISTING_ENV_MISSING_LOCKED_DEPS_AND_FLAKE8_REMOTE_CI_AUTHORITATIVE
+WORK25_DRAFT_PR=PENDING
+WORK25_REMOTE_FIXED_HEAD=PENDING
+WORK25_REMOTE_CI=PENDING
+WORK25_JUDGE=ACTIVE_DRAFT_HOLD
+CURRENT_STATUS=WORK25_LOCAL_RELATED_VERIFICATION_PASS_DRAFT_HOLD
 ACTIVE_BLOCKER=DRAFT_PR_PUBLICATION_AND_EXACT_REMOTE_HEAD_CI_PENDING
 NEXT_WORK=NONE
-NEXT_ACTION=COMMIT_PUSH_CREATE_DRAFT_PR_THEN_VERIFY_EXACT_HEAD_CI
+NEXT_ACTION=FINAL_DIFF_REVIEW_COMMIT_PUSH_CREATE_DRAFT_PR_THEN_VERIFY_EXACT_HEAD_CI
 AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/TAG/RELEASE
 LAST_UPDATED=2026-08-05
 ```
 
-## 2026-08-05 Work24 / Windows runtime integrity guard
+## 2026-08-05 Work25 / Windows frozen-backend startup timeout repair
+
+- PR #24 fixed Head `f91576cb…` passed Run `31028088206` 8/8 and was merged as
+  `main@f813084…`. The merge tree matches the PR tree, but main Run
+  `31032267014` finished 7/8 and therefore remains non-releaseable.
+- The only failed Job was Windows `92395692229`. Its frozen backend completed
+  packaging and the MiniRacer probe, then exited because `start_api_server`
+  allowed only `3.0s` for `uvicorn_server.started`. The outer frozen verifier
+  already waits for real HTTP readiness for up to 90 seconds; Desktop waits for
+  health for 60 seconds. The inner fixed deadline is the conflicting gate.
+- The `cp1252` `UnicodeEncodeError` lines occurred while rendering diagnostics
+  after startup had already failed. They are secondary noise, not this Work's
+  root cause or scope.
+- Work25 is limited to a tested, bounded condition-based startup wait and the
+  existing project-control/changelog evidence. No dependency, API, port,
+  version, signing, product-data, Ready, merge, Tag, or Release change is allowed.
+- TDD mutation evidence reproduces the exact old failure when the new helper's
+  default is temporarily set back to `3.0s`, then passes with a delayed 4-second
+  readiness under the restored 30-second bound. Disconnecting `main.py` from
+  the helper also reproduces the exact 3-second failure. Related local tests
+  pass 32/32;
+  Python compile, AI governance, explicit error/dead-thread/timeout boundaries,
+  and diff checks pass. The existing cloud environment lacks locked backend
+  dependencies and flake8, so exact-Head CI remains authoritative for those gates.
+
+## Historical current entry | Work24 / Windows runtime integrity guard
 
 - Work23 已以 Head `190c3bd2…`、CI Run `30990684208` 8/8 成功后合并，`main`、
   `v3.29.3` 与本 Work 固定 Base 均为 `e59c9d9…`。旧台账的 Open Draft 与待重测

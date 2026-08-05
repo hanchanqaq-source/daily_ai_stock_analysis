@@ -1,30 +1,40 @@
 # PP02 handoff
 
-## Current takeover entry | WORK-024
+## Current takeover entry | WORK-025
 
 | Item | Current fact |
 | --- | --- |
-| State | `WORK24_LOCAL_SCOPED_VERIFICATION_PASS_DRAFT_PR_PENDING` |
-| Base | `main@e59c9d9e475d1f1149da01cceaa0cc79101497c7` (`v3.29.3`) |
-| Branch | `agent/pp02-runtime-integrity-guard` |
-| Goal | Fail before backend spawn/business initialization when packaged Windows program identity or Desktop launch arguments are invalid |
+| State | `WORK25_LOCAL_RELATED_VERIFICATION_PASS_DRAFT_PR_PENDING` |
+| Base | `main@f813084944f7a9c5459312ef84da7956cda1a37f` |
+| Branch | `agent/pp02-work25-windows-frozen-startup-timeout` |
+| Goal | Replace the conflicting fixed 3-second uvicorn startup deadline with one bounded condition-based wait |
 | Draft PR | Pending publication |
-| Local evidence | Desktop `99/99`; Python launch contract `24/24`; packaging/final ZIP `10/10`; compile/governance/syntax/diff pass |
+| Failure evidence | Main Run `31032267014` 7/8; Windows Job `92395692229` failed after `3.0s` FastAPI startup deadline |
+| Root cause | Inner 3-second deadline terminated the backend before the outer 90-second frozen HTTP readiness gate could complete |
+| Local evidence | Helper/main-disconnect RED; delayed-ready GREEN; related `32/32`; compile/governance/boundaries/diff pass |
 | Remote CI | Pending exact Draft PR Head |
 | Judge | `ACTIVE — DRAFT_HOLD` |
-| Prohibited | Ready, merge, `main`, Tag, Release, version bump, signing identity, real Windows data or affected-machine artifacts |
+| Prohibited | Ready, merge, `main`, Tag, Release, version/dependency/config expansion, signing identity, real Windows data |
 
-Continue by committing and pushing the reviewed Work24 diff, creating one Draft
-PR to `main`, then recording the exact remote Head and complete GitHub Actions
-result. The full backend aggregate was not run locally because the cloud worker
-could not fetch its missing locked dependencies; exact-Head CI is authoritative. The
-repository defense must remain generic: no malware-family name, wrapper size,
-filename heuristic, machine path, executable, database, `.env`, backup, log, or
-security evidence from the affected Windows machine may enter the diff.
+Continue with final diff review, one commit/push, one Draft PR, and exact-Head
+Actions verification. The cloud environment lacks locked backend dependencies
+and flake8, so it did not claim the full local backend gate; remote CI is the
+authority for backend, Windows/macOS packaging, final ZIP, and lifecycle checks.
 
-Work23 is complete and merged. Its fixed Head `190c3bd2…` passed CI Run
-`30990684208` 8/8 before merge commit `e59c9d9…` became `main` and `v3.29.3`.
-Do not reopen Work23 or use its earlier failure Heads as current status.
+Work24 fixed Head `f91576cb…` passed PR Run `31028088206` 8/8 and merged as
+`f813084…`; main Run `31032267014` failed only the Windows package Job, so it
+must not be described as releaseable. Work25 does not reopen or broaden Work24.
+
+---
+
+## Historical takeover entry | WORK-024
+
+- PR #24: merged; fixed Head `f91576cb6fa9d7d516141758593a5086a50e205a`.
+- PR CI: Run `31028088206`, 8/8 success.
+- Merge commit: `f813084944f7a9c5459312ef84da7956cda1a37f`.
+- Main CI: Run `31032267014`, 7/8; Windows Job `92395692229` failed at the
+  frozen FastAPI fixed 3-second startup deadline.
+- No Tag or Release was created from the failed main.
 
 ---
 

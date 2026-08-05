@@ -1,4 +1,44 @@
-# WORK-024 | Windows runtime integrity guard return
+# WORK-025 | Windows frozen-backend startup timeout repair return
+
+## Work25 current evidence
+
+```text
+BASE=f813084944f7a9c5459312ef84da7956cda1a37f
+BRANCH=agent/pp02-work25-windows-frozen-startup-timeout
+MAIN_FAILURE_RUN=31032267014
+MAIN_FAILURE_JOB=92395692229
+ROOT_CAUSE=INNER_FIXED_3_SECOND_STARTUP_DEADLINE_CONFLICTS_WITH_OUTER_CONDITION_GATES
+TDD_RED=PASS_HELPER_3_SECONDS_AND_MAIN_DISCONNECT_REPRODUCE_RUNTIMEERROR
+TDD_GREEN=PASS_DELAYED_READY_AFTER_4_SECONDS
+LOCAL_RELATED=PASS_32_OF_32
+LOCAL_AUXILIARY=PASS_PY_COMPILE_AI_ASSETS_BOUNDARIES_DIFF
+LOCAL_FULL_BACKEND=DEFERRED_EXISTING_ENV_MISSING_LOCKED_DEPS_AND_FLAKE8_REMOTE_CI_AUTHORITATIVE
+DRAFT_PR=PENDING
+REMOTE_FIXED_HEAD=PENDING
+REMOTE_CI=PENDING
+JUDGE=ACTIVE_DRAFT_HOLD
+```
+
+- GitHub App evidence binds the failure to `main@f813084…`, Run
+  `31032267014`, Windows Job `92395692229`. Seven other Jobs succeeded.
+- The Windows log shows packaging and the MiniRacer probe succeeded before the
+  frozen server raised `FastAPI 服务在 3.0s 内未完成启动`. The later cp1252
+  logging exceptions are secondary diagnostic noise.
+- A real-behavior regression uses a deterministic monotonic clock and a server
+  that becomes ready after four simulated seconds. Restoring the old 3-second
+  default makes the test fail with the original timeout; restoring the bounded
+  30-second default makes it pass. A second mutation reconnects the actual
+  `main.start_api_server` body to the former loop and reproduces the same 3-second
+  failure, proving the integration test protects the production boundary.
+- Related Python/packaging contracts pass 32/32. Python compile, AI governance,
+  explicit startup-error/dead-thread/never-ready boundaries, and diff checks
+  pass. The current Work25 cloud environment lacks locked backend dependencies and
+  flake8; no dependency was installed or upgraded, and exact-Head CI remains
+  authoritative for the complete gate.
+
+---
+
+# Historical return | WORK-024 / Windows runtime integrity guard
 
 ## Work24 current evidence
 
