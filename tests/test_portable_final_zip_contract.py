@@ -72,6 +72,13 @@ def test_windows_ci_smokes_the_final_extracted_portable_zip() -> None:
     assert "$requiredBrowserRelativePath" in workflow
     assert "Final portable manifest does not manage exactly one" in workflow
     assert "-PackagedEntry $finalPackagedEntry" in workflow
+    assert (
+        "node scripts/verify-windows-runtime-integrity.js $finalExtract $version"
+        in workflow
+    )
+    assert workflow.index(
+        "node scripts/verify-windows-runtime-integrity.js $finalExtract $version"
+    ) < workflow.index("-PackagedEntry $finalPackagedEntry")
     assert "win-unpacked/resources/backend/stock_analysis/stock_analysis.exe" not in workflow
 
 
@@ -85,6 +92,14 @@ def test_windows_release_smokes_the_final_extracted_portable_zip() -> None:
     assert "$requiredBrowserRelativePath" in workflow
     assert "Final Release portable manifest does not manage exactly one" in workflow
     assert "-PackagedEntry $releaseFinalPackagedEntry" in workflow
+    assert "$releaseVersion = $env:RELEASE_TAG.TrimStart('v')" in workflow
+    assert (
+        "node scripts/verify-windows-runtime-integrity.js $releaseFinalExtract $releaseVersion"
+        in workflow
+    )
+    assert workflow.index(
+        "node scripts/verify-windows-runtime-integrity.js $releaseFinalExtract $releaseVersion"
+    ) < workflow.index("-PackagedEntry $releaseFinalPackagedEntry")
     assert (
         "Remove-OwnedReleaseDirectoryWithRetry "
         "-OwnedRoot $releaseFinalExtract"

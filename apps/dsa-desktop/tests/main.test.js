@@ -781,6 +781,159 @@ test('startBackend preserves redacted packaged stderr in the verifier diagnostic
   assert.match(diagnostic, /exit_code=1/);
 });
 
+test('startBackend rejects packaged Windows files before spawn when integrity manifest is missing', (t) => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pp02-pre-spawn-integrity-'));
+  const appRoot = path.join(tempRoot, 'app');
+  const resourcesPath = path.join(appRoot, 'resources');
+  const backendPath = path.join(resourcesPath, 'backend', 'stock_analysis', 'stock_analysis.exe');
+  const exePath = path.join(appRoot, 'PP02 AI Daily Stock Analysis.exe');
+  const envPath = path.join(appRoot, '.env');
+  const originalResourcesPath = Object.getOwnPropertyDescriptor(process, 'resourcesPath');
+  fs.mkdirSync(path.dirname(backendPath), { recursive: true });
+  fs.writeFileSync(exePath, 'desktop');
+  fs.writeFileSync(backendPath, 'backend');
+  fs.writeFileSync(envPath, '', 'utf8');
+  Object.defineProperty(process, 'resourcesPath', {
+    configurable: true,
+    value: resourcesPath,
+  });
+  const spawnCalls = [];
+  const mainModule = loadMainModule(t, {
+    platform: 'win32',
+    app: {
+      isPackaged: true,
+      getVersion: () => '3.29.3',
+      getPath: (name) => (name === 'exe' ? exePath : appRoot),
+    },
+    childProcess: {
+      spawn: (...args) => {
+        spawnCalls.push(args);
+        throw new Error('spawn must not be reached');
+      },
+    },
+  });
+
+  t.after(() => {
+    if (originalResourcesPath) {
+      Object.defineProperty(process, 'resourcesPath', originalResourcesPath);
+    } else {
+      delete process.resourcesPath;
+    }
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  });
+
+  assert.throws(
+    () => mainModule.startBackend({
+      port: 8000,
+      envFile: envPath,
+      dbPath: path.join(appRoot, 'data', 'stock_analysis.db'),
+      logDir: path.join(appRoot, 'logs'),
+      secureCredentials: null,
+    }),
+    /程序文件或启动参数校验失败/
+  );
+  assert.equal(spawnCalls.length, 0);
+});
+
+test('packaged Windows Desktop always spawns the verified backend on loopback', (t) => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pp02-loopback-contract-'));
+  const appRoot = path.join(tempRoot, 'app');
+  const resourcesPath = path.join(appRoot, 'resources');
+  const backendPath = path.join(resourcesPath, 'backend', 'stock_analysis', 'stock_analysis.exe');
+  const exePath = path.join(appRoot, 'PP02 AI Daily Stock Analysis.exe');
+  const envPath = path.join(appRoot, '.env');
+  const originalResourcesPath = Object.getOwnPropertyDescriptor(process, 'resourcesPath');
+  fs.mkdirSync(path.dirname(backendPath), { recursive: true });
+  fs.writeFileSync(exePath, 'desktop');
+  fs.writeFileSync(backendPath, 'backend');
+  fs.writeFileSync(envPath, 'WEBUI_HOST=0.0.0.0\n', 'utf8');
+  require('../runtime-integrity/runtimeIntegrity').writeWindowsRuntimeIntegrityManifest({
+    appOutDir: appRoot,
+    platform: 'win32',
+    version: '3.29.3',
+  });
+  Object.defineProperty(process, 'resourcesPath', {
+    configurable: true,
+    value: resourcesPath,
+  });
+  const spawnCalls = [];
+  const fakeBackend = new EventEmitter();
+  fakeBackend.stdout = new EventEmitter();
+  fakeBackend.stderr = new EventEmitter();
+  fakeBackend.exitCode = null;
+  fakeBackend.signalCode = null;
+  const mainModule = loadMainModule(t, {
+    platform: 'win32',
+    app: {
+      isPackaged: true,
+      getVersion: () => '3.29.3',
+      getPath: (name) => (name === 'exe' ? exePath : appRoot),
+    },
+    childProcess: {
+      spawn: (command, args, options) => {
+        spawnCalls.push({ command, args, options });
+        return fakeBackend;
+      },
+    },
+  });
+
+  t.after(() => {
+    mainModule.__setBackendProcessForTest(null);
+    if (originalResourcesPath) {
+      Object.defineProperty(process, 'resourcesPath', originalResourcesPath);
+    } else {
+      delete process.resourcesPath;
+    }
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  });
+
+  mainModule.startBackend({
+    port: 8000,
+    envFile: envPath,
+    dbPath: path.join(appRoot, 'data', 'stock_analysis.db'),
+    logDir: path.join(appRoot, 'logs'),
+    secureCredentials: null,
+  });
+
+  assert.equal(spawnCalls.length, 1);
+  assert.deepEqual(spawnCalls[0].args, [
+    '--serve-only',
+    '--host',
+    '127.0.0.1',
+    '--port',
+    '8000',
+  ]);
+  assert.equal(spawnCalls[0].options.env.WEBUI_HOST, '127.0.0.1');
+});
+
+test('backend launch-contract marker is classified without exposing raw stderr', (t) => {
+  const mainModule = loadMainModule(t);
+
+  const message = mainModule.classifyBackendStartupFailure({
+    processRef: { exitCode: 2, signalCode: null },
+    stderrTail: 'secret=should-not-render\nPP02_DESKTOP_LAUNCH_CONTRACT_REJECTED reason=missing_serve_only',
+  });
+
+  assert.equal(
+    message,
+    '程序文件或启动参数校验失败，后端未启动，也没有启动任何分析任务。请从官方 Release 重新安装后再试。'
+  );
+  assert.equal(message.includes('should-not-render'), false);
+});
+
+test('startup error renderer keeps the launch-contract message fully Chinese', (t) => {
+  const mainModule = loadMainModule(t);
+  const publicMessage =
+    '程序文件或启动参数校验失败，后端未启动，也没有启动任何分析任务。请从官方 Release 重新安装后再试。';
+
+  assert.equal(
+    mainModule.formatStartupErrorForUser(
+      new Error(`Health check aborted: ${publicMessage}`)
+    ),
+    publicMessage
+  );
+});
+
 test('extendMacDesktopBackendPath preserves existing order and avoids duplicates', (t) => {
   const mainModule = loadMainModule(t, { platform: 'darwin' });
 
@@ -1476,14 +1629,14 @@ test('createWindow startup path does not throw ReferenceError after restore resu
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'dsa-desktop-startup-'));
   const appDir = path.join(tempRoot, 'app');
   const userDataDir = path.join(tempRoot, 'userData');
-  const exePath = path.join(appDir, 'Daily Stock Analysis.exe');
+  const exePath = path.join(appDir, 'PP02 AI Daily Stock Analysis.exe');
   const uninstallPath = path.join(appDir, 'Uninstall Daily Stock Analysis.exe');
   const loadedFiles = [];
   const loadedUrls = [];
   let startupError;
   let updateCheckRequested = false;
   const originalResourcesPathDescriptor = Object.getOwnPropertyDescriptor(process, 'resourcesPath');
-  const resourcesPath = path.join(tempRoot, 'resources');
+  const resourcesPath = path.join(appDir, 'resources');
   const backupRoot = path.join(userDataDir, '.dsa-desktop-update-backup');
   const manifestPath = path.join(backupRoot, 'runtime-state.json');
 
@@ -1580,6 +1733,11 @@ test('createWindow startup path does not throw ReferenceError after restore resu
   fs.writeFileSync(path.join(backupRoot, '.env'), 'stale-backup-env\n', 'utf-8');
   fs.writeFileSync(manifestPath, JSON.stringify({ appVersion: '3.12.0', files: ['.env'] }), 'utf-8');
   fs.writeFileSync(path.join(resourcesPath, 'backend', 'stock_analysis', 'stock_analysis.exe'), '');
+  require('../runtime-integrity/runtimeIntegrity').writeWindowsRuntimeIntegrityManifest({
+    appOutDir: appDir,
+    platform: 'win32',
+    version: '3.12.0',
+  });
 
   const mainModule = loadMainModule(t, {
     platform: 'win32',

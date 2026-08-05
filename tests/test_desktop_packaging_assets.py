@@ -80,6 +80,32 @@ class DesktopPackagingAssetsTestCase(unittest.TestCase):
             workflow.index("-PackagedEntry $finalPackagedEntry"),
         )
 
+    def test_windows_builder_generates_post_sign_runtime_identity_manifest(self) -> None:
+        package_json = (
+            self.repo_root / "apps" / "dsa-desktop" / "package.json"
+        ).read_text(encoding="utf-8")
+        after_sign = (
+            self.repo_root
+            / "apps"
+            / "dsa-desktop"
+            / "scripts"
+            / "afterSignRuntimeIntegrity.js"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('"afterSign": "scripts/afterSignRuntimeIntegrity.js"', package_json)
+        self.assertIn('"runtime-integrity/**/*"', package_json)
+        self.assertIn("writeWindowsRuntimeIntegrityManifest", after_sign)
+        self.assertIn("context.electronPlatformName", after_sign)
+
+    def test_desktop_loading_failure_is_user_facing_chinese(self) -> None:
+        loading_page = (
+            self.repo_root / "apps" / "dsa-desktop" / "renderer" / "loading.html"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('lang="zh-CN"', loading_page)
+        self.assertIn("启动失败", loading_page)
+        self.assertNotIn("Error:", loading_page)
+
 
 if __name__ == "__main__":
     unittest.main()

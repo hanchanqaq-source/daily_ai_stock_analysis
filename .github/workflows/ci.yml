@@ -246,6 +246,10 @@ jobs:
           if (-not (Test-Path -LiteralPath $fakeUserAgentData -PathType Leaf)) {
             throw "Final portable ZIP is missing fake_useragent/data/browsers.jsonl: $fakeUserAgentData"
           }
+          node scripts/verify-windows-runtime-integrity.js $finalExtract $version
+          if ($LASTEXITCODE -ne 0) {
+            throw "Final portable ZIP runtime integrity verification failed with exit code $LASTEXITCODE."
+          }
           $finalPackagedEntry = Join-Path $finalExtract 'resources/backend/stock_analysis/stock_analysis.exe'
           powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/verify-frozen-backend.ps1 -PackagedEntry $finalPackagedEntry
           Remove-FinalExtractWithRetry -Path $finalExtract

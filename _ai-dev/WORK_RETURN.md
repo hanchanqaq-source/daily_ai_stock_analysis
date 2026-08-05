@@ -1,4 +1,49 @@
-# WORK-023 | PR #23 strict-acceptance repair return
+# WORK-024 | Windows runtime integrity guard return
+
+## Work24 current evidence
+
+```text
+BASE=e59c9d9e475d1f1149da01cceaa0cc79101497c7
+BRANCH=agent/pp02-runtime-integrity-guard
+RUNTIME_MANIFEST=IMPLEMENTED_POST_SIGN_CLOSED_TWO_ENTRY_SHA256
+DESKTOP_PRE_SPAWN=IMPLEMENTED_FAIL_CLOSED
+BACKEND_LAUNCH_CONTRACT=IMPLEMENTED_BEFORE_LOG_CONFIG_DATABASE
+DESKTOP_RELATED=PASS_99_OF_99
+PYTHON_LAUNCH_CONTRACT=PASS_24_OF_24
+PACKAGING_FINAL_ZIP=PASS_10_OF_10
+LOCAL_AUXILIARY=PASS_PY_COMPILE_AI_ASSETS_SYNTAX_DIFF
+FULL_LOCAL_GATE=PASS_APPLICABLE_SCOPED_BACKEND_AGGREGATE_DEFERRED_NETWORK_POLICY
+DRAFT_PR=PENDING
+REMOTE_FIXED_HEAD=PENDING
+REMOTE_CI=PENDING
+JUDGE=ACTIVE_DRAFT_HOLD
+```
+
+- RED evidence first proved the missing post-sign hook/verifier, packaged
+  Windows spawn-before-verification, absent stderr classification, absent
+  backend contract, and absent final-ZIP identity gates. GREEN now covers exact
+  two-entry generation, malformed/wrong product/version/role/path/size/digest
+  rejection, renamed Desktop and backend-path rejection, and no-spawn behavior.
+- Desktop mode is constrained to explicit loopback `serve-only` arguments with
+  a valid port and no analysis/schedule/backtest modes. Rejection returns `2`
+  with one bounded marker before logging, configuration, database, scheduler,
+  reports, or history. Packaged Desktop binds `127.0.0.1` even if an old `.env`
+  requests a public address.
+- The loading page and stable failure text are Chinese. Raw stderr is never sent
+  to the page; only a bounded sanitized tail is used to recognize the contract
+  marker. Generic crashes retain the existing numeric/signal diagnosis.
+- CI and Desktop Release now verify the final extracted no-install ZIP with the
+  same runtime identity module before the frozen-backend probe. Windows CI
+  remains the authority for the actual built artifacts and installed lifecycle.
+- No dependency declaration, version, signing identity, affected-machine file,
+  credential, real data, merge, Tag, or Release has changed. The cloud worker
+  could not fetch missing locked dependencies for the full backend aggregate,
+  so that gate is explicitly deferred to authoritative exact-Head CI. Draft PR
+  publication, fixed remote Head, and CI are still pending.
+
+---
+
+# Historical return | WORK-023 / PR #23 strict-acceptance repair
 
 ## Work23 current evidence
 

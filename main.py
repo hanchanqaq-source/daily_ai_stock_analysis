@@ -124,6 +124,7 @@ from src.brokers.futu.portfolio import FutuPortfolioError
 from data_provider.base import canonical_stock_code
 from src.services.stock_list_parser import split_stock_list
 from src.services.stock_code_utils import resolve_index_stock_code_for_analysis
+from src.core.desktop_launch_contract import enforce_desktop_launch_contract
 
 
 logger = logging.getLogger(__name__)
@@ -1398,6 +1399,10 @@ def main() -> int:
     """
     # 解析命令行参数
     args = parse_arguments()
+
+    desktop_contract_exit = enforce_desktop_launch_contract(args, os.environ)
+    if desktop_contract_exit is not None:
+        return desktop_contract_exit
 
     # 在配置加载前先初始化 bootstrap 日志，确保早期失败也能落盘
     try:
