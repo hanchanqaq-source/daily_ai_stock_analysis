@@ -250,8 +250,10 @@ def test_windows_jobs_execute_the_shared_installer_verifier() -> None:
         REPO_ROOT / ".github" / "workflows" / "desktop-release.yml"
     )
     verifier_call = "scripts/verify-windows-installer.ps1"
+    windows_job = _workflow_job(ci, "desktop-futu-package-windows")
 
     assert verifier_call in ci
+    assert "Windows candidate build failed with exit code $LASTEXITCODE." in windows_job
     assert "Validate Windows installer verifier contracts" in ci
     assert "Validate installed Windows lifecycle" in ci
     assert ci.index(verifier_call) < ci.index("Upload verified Windows candidate")

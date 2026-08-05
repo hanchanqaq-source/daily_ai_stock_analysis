@@ -14,10 +14,16 @@
   sanitized initial/final process-count evidence. The Windows contract must
   remove two exact owned processes and preserve an external same-name control.
 - Local recovery gates pass Python packaging `26/26`, Desktop `83/83`, AI
-  governance, and diff formatting. New exact-Head full CI, one-shot installed
+  governance, and diff formatting. Next exact-Head full CI, one-shot installed
   lifecycle, candidate byte size/SHA-256, and unsigned identity remain pending.
   PR #23 must stay Draft; Ready, merge, Tag, Release, real signing material, and
   Work22 real data/checkpoints remain prohibited.
+- Head `0eee6a7c…` / Run `30975730060` passed the new helper runtime contract,
+  proving exact owned-process cleanup and external same-name preservation. NSIS
+  then rejected an unused completion-label warning as fatal, while the candidate
+  step masked the failed child build until lifecycle setup. Local contracts now
+  require an explicit completion jump and immediate child-exit failure; next
+  exact-Head CI and the installed one-shot lifecycle remain pending.
 
 ## 2026-08-04 Work20 complete backup and period persistence
 

@@ -10,8 +10,8 @@ DRAFT_PR=23_OPEN_DRAFT
 WORK22_EVIDENCE_REPORT_SHA256=30AC65C81E3F86E4CADBAEC9D2DBA95B432BA4DF8DBE81F12015857B9E5E39BE
 WORK22_JUDGE=FAIL_LOCKED
 AUTHORITATIVE_VERSION=3.29.3
-REMOTE_FIXED_HEAD=CA2415B8_FAILED_SUPERSEDED_PENDING_NEW_HEAD
-REMOTE_CI=RUN_30949323920_AND_30952197181_FAILED_WINDOWS_LIVE_UNINSTALL
+REMOTE_FIXED_HEAD=0EEE6A7C_FAILED_SUPERSEDED_PENDING_NEXT_HEAD
+REMOTE_CI=RUN_30975730060_FAILED_NSIS_UNUSED_LABEL_AFTER_HELPER_CONTRACT_PASS
 JUDGE=ACTIVE_REWORK_DRAFT_HOLD
 ```
 
@@ -59,6 +59,12 @@ JUDGE=ACTIVE_REWORK_DRAFT_HOLD
   untouched.
 - Only a new exact-Head full CI can close this gate. Earlier 7/8 runs remain
   failure evidence and may not be reused as candidate approval.
+- `0eee6a7c…` / Run `30975730060` passed the new exact-path helper runtime
+  contract, then failed before installed lifecycle execution: NSIS warning 6012
+  identified an unused completion label in the required-uninstall expansion,
+  and the candidate workflow masked the non-zero `build-all.ps1` child exit.
+  The next Head must compile without that warning and fail immediately on any
+  future candidate-build child error before lifecycle or artifact steps.
 
 ---
 

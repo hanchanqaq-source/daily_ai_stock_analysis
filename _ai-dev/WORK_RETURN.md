@@ -14,9 +14,9 @@ DESKTOP=PASS_83_OF_83
 WINDOWS_PACKAGING=PASS_26_OF_26
 WEB=PASS_1076_2_SKIPPED_LINT_BUILD
 BACKEND_AGGREGATE=PASS_5327_4_DESELECTED_499_SUBTESTS_EXCLUDING_SANDBOX_BLOCKED_CRASH_FILE
-REMOTE_FIXED_HEAD=CA2415B8_FAILED_SUPERSEDED_PENDING_NEW_HEAD
-REMOTE_CI=RUN_30949323920_AND_30952197181_FAILED_WINDOWS_LIVE_UNINSTALL
-WINDOWS_CANDIDATE=PENDING_NEW_EXACT_HEAD_CI
+REMOTE_FIXED_HEAD=0EEE6A7C_FAILED_SUPERSEDED_PENDING_NEXT_HEAD
+REMOTE_CI=RUN_30975730060_FAILED_NSIS_UNUSED_LABEL_AFTER_HELPER_CONTRACT_PASS
+WINDOWS_CANDIDATE=PENDING_NEXT_EXACT_HEAD_CI
 SIGNING=READ_ONLY_GATE_NO_REAL_IDENTITY
 JUDGE=ACTIVE_REWORK_DRAFT_HOLD
 ```
@@ -52,9 +52,15 @@ JUDGE=ACTIVE_REWORK_DRAFT_HOLD
   into the already-owned diagnostic directory.
 - TDD recovery evidence: the new contracts first failed because the manifest
   and helper evidence were absent; GREEN is Python packaging `26/26`, Desktop
-  `83/83`, AI asset check, and diff check. The added Windows runtime contract is
-  pending the next fixed-Head CI and must prove two owned processes exit while
-  an external same-name control process survives.
+  `83/83`, AI asset check, and diff check. The Windows-only helper runtime
+  contract was deferred to exact-Head CI and is proven by the Run below.
+- Head `0eee6a7c…` / Run `30975730060` proved that runtime contract, but NSIS
+  rejected the installer with warning 6012 because the required-uninstall macro
+  did not explicitly jump to its completion label. The candidate workflow then
+  continued after the failed `build-all.ps1` child and surfaced the missing
+  installer only at lifecycle setup. New RED/GREEN contracts require both the
+  explicit label jump and an immediate child-exit check; the installed lifecycle
+  and candidate identity remain pending the next exact Head.
 
 ---
 

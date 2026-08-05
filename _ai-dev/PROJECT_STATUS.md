@@ -9,8 +9,8 @@ CHAT_ROLE=AUTO_TAKEOVER
 WORK_ID=WORK-023
 ROLE_LOCK=SUPERSEDED_BY_PP02-WORK-HANDOFF-002
 WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
-WORK_STATE=LOCAL_UNINSTALL_REWORK_PASS_REMOTE_RETEST_PENDING_DRAFT_HOLD
-EXECUTION_LOCK=NEW_EXACT_REMOTE_HEAD_CI_AND_WINDOWS_CANDIDATE_PENDING
+WORK_STATE=LOCAL_NSIS_BUILD_GATE_REWORK_PASS_REMOTE_RETEST_PENDING_DRAFT_HOLD
+EXECUTION_LOCK=NEXT_EXACT_REMOTE_HEAD_CI_AND_WINDOWS_CANDIDATE_PENDING
 APPLICATION_BASE_VERSION=3.29.3
 CURRENT_RELEASE_VERSION=3.29.2
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
@@ -18,9 +18,9 @@ PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
 ACTIVE_BASE=41fd6a6c76c3e3b56211ef5fb4483d869122b568
 ACTIVE_BRANCH=agent/pp02-work20-full-backup-period-persistence
 ACTIVE_PR=23_OPEN_DRAFT
-CURRENT_STAGE=Work23 self-contained uninstall identity rework passed local contracts; new exact remote Head CI pending
+CURRENT_STAGE=Work23 helper runtime contract passed remotely; NSIS label/fail-fast rework passed local contracts; next exact remote Head CI pending
 CURRENT_WORK=WORK-023 — PR #23 Windows strict-acceptance failure repairs
-ACTIVE_GOAL=push the manifest/self-locating uninstall rework, complete exact-Head CI, and record the next unsigned Windows candidate identity
+ACTIVE_GOAL=push the NSIS unused-label and masked-build-exit repair, complete exact-Head CI, and record the next unsigned Windows candidate identity
 PRODUCT_PR=20_MERGED
 PRODUCT_FIXED_HEAD=e11946f528c9cb64beeec8b626ada457c02b0034
 PRODUCT_MERGE_COMMIT=25de369f8e12438a1ec1f3511c68256c471243e4
@@ -55,15 +55,15 @@ WORK22_EVIDENCE_REPORT_SHA256=30AC65C81E3F86E4CADBAEC9D2DBA95B432BA4DF8DBE81F120
 WORK22_JUDGE=FAIL_LOCKED
 WORK23_AUTHORITATIVE_VERSION=3.29.3
 WORK23_DRAFT_PR=23_OPEN_DRAFT
-WORK23_REMOTE_FIXED_HEAD=CA2415B8_FAILED_SUPERSEDED_PENDING_NEW_HEAD
-WORK23_REMOTE_CI=RUN_30949323920_AND_30952197181_FAILED_WINDOWS_LIVE_UNINSTALL
+WORK23_REMOTE_FIXED_HEAD=0EEE6A7C_FAILED_SUPERSEDED_PENDING_NEXT_HEAD
+WORK23_REMOTE_CI=RUN_30975730060_FAILED_NSIS_UNUSED_LABEL_AFTER_HELPER_CONTRACT_PASS
 WORK23_WINDOWS_CANDIDATE=PENDING_NEW_EXACT_HEAD_CI
 WORK23_SIGNING=READ_ONLY_AUDIT_INTERFACE_NO_REAL_IDENTITY
 WORK23_JUDGE=ACTIVE_REWORK_DRAFT_HOLD
-CURRENT_STATUS=WORK23_LOCAL_UNINSTALL_REWORK_PASS_REMOTE_RETEST_PENDING_DRAFT_HOLD
-ACTIVE_BLOCKER=NEW_EXACT_REMOTE_HEAD_WINDOWS_RUNTIME_CONTRACT_AND_ARTIFACT_IDENTITY_PENDING
+CURRENT_STATUS=WORK23_LOCAL_NSIS_BUILD_GATE_REWORK_PASS_REMOTE_RETEST_PENDING_DRAFT_HOLD
+ACTIVE_BLOCKER=NEXT_EXACT_REMOTE_HEAD_NSIS_BUILD_WINDOWS_LIFECYCLE_AND_ARTIFACT_IDENTITY_PENDING
 NEXT_WORK=NONE
-NEXT_ACTION=COMMIT_AND_PUSH_EXISTING_PR23_BRANCH_THEN_VERIFY_NEW_EXACT_HEAD_CI_AND_ARTIFACT
+NEXT_ACTION=COMMIT_AND_PUSH_EXISTING_PR23_BRANCH_THEN_VERIFY_NEXT_EXACT_HEAD_CI_AND_ARTIFACT
 AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/TAG/RELEASE
 LAST_UPDATED=2026-08-05
 ```
@@ -111,9 +111,18 @@ LAST_UPDATED=2026-08-05
   plus an external same-name control process and requires only the owned pair
   to exit.
 - Fresh recovery verification passed Python packaging contracts `26/26`,
-  Desktop `83/83`, AI governance, and diff formatting. The Windows runtime
-  helper contract and one-shot installed lifecycle remain pending the new
-  exact-Head Actions run; neither failed remote Head is a candidate PASS.
+  Desktop `83/83`, AI governance, and diff formatting. Run `30975730060` now
+  supplies the Windows runtime-helper PASS; the one-shot installed lifecycle
+  remains pending the next exact-Head Actions run. No failed remote Head is a
+  candidate PASS.
+- Head `0eee6a7c…` / Run `30975730060` proved the Windows runtime helper
+  contract: two exact owned process paths exited and the external same-name
+  control survived. The Windows candidate build itself failed because NSIS
+  treats warning 6012 as fatal and the required-uninstall macro left its final
+  label without an explicit jump. The candidate step also masked the child
+  `build-all.ps1` exit code until the lifecycle could not find the installer.
+  Local RED/GREEN contracts now require the explicit label jump and immediate
+  `$LASTEXITCODE` failure; a next exact-Head CI is required.
 
 ## 2026-08-04 Work20 / complete backup and persisted period reports
 

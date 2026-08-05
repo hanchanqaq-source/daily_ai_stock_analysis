@@ -37,6 +37,7 @@ DsaOwnedProcessCheckResult_${SUFFIX}:
     SetErrorLevel 2
     Abort "PP02-owned processes did not exit safely."
   ${endif}
+  Goto DsaOwnedProcessCheckDone_${SUFFIX}
 
 DsaOwnedProcessCheckDone_${SUFFIX}:
 !macroend

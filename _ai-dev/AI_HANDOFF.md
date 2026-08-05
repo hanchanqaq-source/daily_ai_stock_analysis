@@ -4,25 +4,25 @@
 
 | Item | Current fact |
 | --- | --- |
-| State | `WORK23_LOCAL_UNINSTALL_REWORK_PASS_REMOTE_RETEST_PENDING_DRAFT_HOLD` |
+| State | `WORK23_LOCAL_NSIS_BUILD_GATE_REWORK_PASS_REMOTE_RETEST_PENDING_DRAFT_HOLD` |
 | Base | `main@41fd6a6c76c3e3b56211ef5fb4483d869122b568` (`v3.29.2`) |
 | Branch | `agent/pp02-work20-full-backup-period-persistence` |
 | Goal | Fix PR #23 Windows strict-acceptance blockers and produce the next exact-Head candidate identity |
 | Work22 evidence | Report SHA-256 `30AC65C81E3F86E4CADBAEC9D2DBA95B432BA4DF8DBE81F12015857B9E5E39BE`; Judge remains `FAIL` |
 | Draft PR | [#23](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/23), Open Draft |
 | Candidate version | Authoritative `3.29.3` |
-| Fixed-Head CI | Runs `30949323920` and `30952197181` failed Windows live uninstall; new Head pending |
+| Fixed-Head CI | Run `30975730060`: helper contract PASS, NSIS unused-label build failure; next Head pending |
 | Signing | Read-only audit/policy interface; real signing identity is a separate authorization gate |
 | Judge | `ACTIVE — DRAFT_HOLD` |
 | Prohibited | Ready, merge, `main`, another PR, Tag, Release, real signing material, Work22 real data/checkpoints |
 
-Continue by committing the self-contained uninstall identity rework, pushing
-only the existing PR #23 branch, and verifying all applicable Actions jobs for
-that new exact remote Head. The Windows contract must first prove two exact
-owned processes exit while an external same-name process survives; the installed
-lifecycle must then preserve helper evidence and reach zero after one official
-uninstall. Record the resulting Windows installer/ZIP filename, byte size, and
-SHA-256 without changing the fixed Head afterward.
+Continue by committing the NSIS unused-label and candidate-step exit-propagation
+repair, pushing only the existing PR #23 branch, and verifying all applicable
+Actions jobs for that next exact remote Head. Run `30975730060` already proved
+two exact owned processes exit while an external same-name process survives;
+the installed lifecycle must still preserve helper evidence and reach zero after
+one official uninstall. Record the resulting Windows installer/ZIP filename,
+byte size, and SHA-256 without changing the fixed Head afterward.
 
 The implementation requires a one-run exact-path uninstaller lifecycle,
 normalizes every candidate-version source to `3.29.3`, includes non-rebuildable

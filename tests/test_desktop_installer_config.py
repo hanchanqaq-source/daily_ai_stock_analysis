@@ -124,6 +124,7 @@ def test_official_uninstaller_closes_only_exact_product_owned_processes() -> Non
     assert "!macro customCheckAppRunning" in installer_script
     assert "!macro customUnInstall" in installer_script
     assert installer_script.count("!insertmacro _dsaCloseOwnedProcesses") == 2
+    assert installer_script.count("Goto DsaOwnedProcessCheckDone_${SUFFIX}") == 2
     assert "$INSTDIR\\resources\\close-owned-processes.ps1" in installer_script
     assert "$EXEDIR\\resources\\close-owned-processes.ps1" in installer_script
     assert "-InstallRoot" not in installer_script
