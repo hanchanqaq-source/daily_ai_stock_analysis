@@ -10,8 +10,8 @@ DRAFT_PR=23_OPEN_DRAFT
 WORK22_EVIDENCE_REPORT_SHA256=30AC65C81E3F86E4CADBAEC9D2DBA95B432BA4DF8DBE81F12015857B9E5E39BE
 WORK22_JUDGE=FAIL_LOCKED
 AUTHORITATIVE_VERSION=3.29.3
-REMOTE_FIXED_HEAD=0EEE6A7C_FAILED_SUPERSEDED_PENDING_NEXT_HEAD
-REMOTE_CI=RUN_30975730060_FAILED_NSIS_UNUSED_LABEL_AFTER_HELPER_CONTRACT_PASS
+REMOTE_FIXED_HEAD=976DB882_FAILED_SUPERSEDED_PENDING_NEXT_HEAD
+REMOTE_CI=RUN_30977516983_FAILED_HELPER_DUAL_PATH_IDENTITY_REVALIDATION
 JUDGE=ACTIVE_REWORK_DRAFT_HOLD
 ```
 
@@ -65,6 +65,11 @@ JUDGE=ACTIVE_REWORK_DRAFT_HOLD
   and the candidate workflow masked the non-zero `build-all.ps1` child exit.
   The next Head must compile without that warning and fail immediately on any
   future candidate-build child error before lifecycle or artifact steps.
+- `976db882…` / Run `30977516983` passed those build gates, then proved the
+  installed helper found five exact CIM-owned processes but acted on none after
+  a redundant `Get-Process.Path` recheck. The next Head must use one CIM exact
+  PID/path identity source before graceful and forced action, retain the external
+  same-name control, and produce helper PASS evidence with final zero.
 
 ---
 

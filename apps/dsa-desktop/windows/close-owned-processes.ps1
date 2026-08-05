@@ -95,6 +95,19 @@ function Get-ExactOwnedProcesses {
   return $matches
 }
 
+function Test-ExactOwnedProcessIdentity {
+  param(
+    [Parameter(Mandatory=$true)][int]$ProcessId,
+    [Parameter(Mandatory=$true)][string]$ExpectedPath
+  )
+
+  $matches = @(
+    Get-ExactOwnedProcesses -ExecutablePaths @($ExpectedPath) |
+      Where-Object { $_.ProcessId -eq $ProcessId }
+  )
+  return $matches.Count -eq 1
+}
+
 function Wait-ForExactOwnedProcessExit {
   param(
     [Parameter(Mandatory=$true)][string[]]$ExecutablePaths,
@@ -183,16 +196,15 @@ try {
     if (-not ($gracefulExecutablePaths -contains $owned.ExecutablePath)) {
       continue
     }
+    if (-not (Test-ExactOwnedProcessIdentity `
+        -ProcessId $owned.ProcessId `
+        -ExpectedPath $owned.ExecutablePath)) {
+      continue
+    }
     try {
       $process = Get-Process -Id $owned.ProcessId -ErrorAction Stop
-      if ([string]$process.Path -and
-          ([string]$process.Path).Equals(
-            $owned.ExecutablePath,
-            [StringComparison]::OrdinalIgnoreCase
-          )) {
-        $null = $process.CloseMainWindow()
-        $gracefulRequests += 1
-      }
+      $null = $process.CloseMainWindow()
+      $gracefulRequests += 1
     }
     catch {
       # Exit/access races are resolved by the exact-path recheck and final gate.
@@ -203,16 +215,14 @@ try {
       -ExecutablePaths $ownedExecutablePaths `
       -TimeoutSeconds $gracefulTimeoutSeconds)) {
     foreach ($owned in @(Get-ExactOwnedProcesses -ExecutablePaths $ownedExecutablePaths)) {
+      if (-not (Test-ExactOwnedProcessIdentity `
+          -ProcessId $owned.ProcessId `
+          -ExpectedPath $owned.ExecutablePath)) {
+        continue
+      }
       try {
-        $process = Get-Process -Id $owned.ProcessId -ErrorAction Stop
-        if ([string]$process.Path -and
-            ([string]$process.Path).Equals(
-              $owned.ExecutablePath,
-              [StringComparison]::OrdinalIgnoreCase
-            )) {
-          Stop-Process -Id $process.Id -Force -ErrorAction Stop
-          $forcedStops += 1
-        }
+        Stop-Process -Id $owned.ProcessId -Force -ErrorAction Stop
+        $forcedStops += 1
       }
       catch {
         # Exit/access races are resolved by the exact-path final gate below.

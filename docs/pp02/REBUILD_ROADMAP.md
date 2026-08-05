@@ -24,6 +24,12 @@
   step masked the failed child build until lifecycle setup. Local contracts now
   require an explicit completion jump and immediate child-exit failure; next
   exact-Head CI and the installed one-shot lifecycle remain pending.
+- Head `976db882…` / Run `30977516983` passed those build gates and the helper
+  isolation contract. Installed evidence then reported five CIM-owned processes
+  but zero graceful/forced actions, isolating the blocker to the redundant
+  `Get-Process.Path` recheck. The local repair now revalidates PID/path with the
+  same exact CIM source before acting; next exact-Head installed lifecycle and
+  candidate identity remain pending.
 
 ## 2026-08-04 Work20 complete backup and period persistence
 

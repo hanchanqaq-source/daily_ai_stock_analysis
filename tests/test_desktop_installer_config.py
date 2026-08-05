@@ -136,6 +136,9 @@ def test_official_uninstaller_closes_only_exact_product_owned_processes() -> Non
     assert "owned-process-cleanup-evidence.json" in helper
     assert "Get-CimInstance Win32_Process" in helper
     assert "[StringComparison]::OrdinalIgnoreCase" in helper
+    assert "function Test-ExactOwnedProcessIdentity" in helper
+    assert helper.count("Test-ExactOwnedProcessIdentity") == 3
+    assert "$process.Path" not in helper
     assert ".CloseMainWindow()" in helper
     assert "Stop-Process -Id" in helper
     assert "Get-Process -Name" not in helper

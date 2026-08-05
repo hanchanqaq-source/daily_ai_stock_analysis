@@ -9,7 +9,7 @@ CHAT_ROLE=AUTO_TAKEOVER
 WORK_ID=WORK-023
 ROLE_LOCK=SUPERSEDED_BY_PP02-WORK-HANDOFF-002
 WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
-WORK_STATE=LOCAL_NSIS_BUILD_GATE_REWORK_PASS_REMOTE_RETEST_PENDING_DRAFT_HOLD
+WORK_STATE=LOCAL_CIM_SINGLE_IDENTITY_REWORK_PASS_REMOTE_RETEST_PENDING_DRAFT_HOLD
 EXECUTION_LOCK=NEXT_EXACT_REMOTE_HEAD_CI_AND_WINDOWS_CANDIDATE_PENDING
 APPLICATION_BASE_VERSION=3.29.3
 CURRENT_RELEASE_VERSION=3.29.2
@@ -18,9 +18,9 @@ PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
 ACTIVE_BASE=41fd6a6c76c3e3b56211ef5fb4483d869122b568
 ACTIVE_BRANCH=agent/pp02-work20-full-backup-period-persistence
 ACTIVE_PR=23_OPEN_DRAFT
-CURRENT_STAGE=Work23 helper runtime contract passed remotely; NSIS label/fail-fast rework passed local contracts; next exact remote Head CI pending
+CURRENT_STAGE=Work23 real installed helper exposed dual path-identity recheck; single-CIM identity rework passed local contracts; next exact remote Head CI pending
 CURRENT_WORK=WORK-023 — PR #23 Windows strict-acceptance failure repairs
-ACTIVE_GOAL=push the NSIS unused-label and masked-build-exit repair, complete exact-Head CI, and record the next unsigned Windows candidate identity
+ACTIVE_GOAL=push the single-CIM PID/path revalidation repair, complete exact-Head CI, and record the next unsigned Windows candidate identity
 PRODUCT_PR=20_MERGED
 PRODUCT_FIXED_HEAD=e11946f528c9cb64beeec8b626ada457c02b0034
 PRODUCT_MERGE_COMMIT=25de369f8e12438a1ec1f3511c68256c471243e4
@@ -55,13 +55,13 @@ WORK22_EVIDENCE_REPORT_SHA256=30AC65C81E3F86E4CADBAEC9D2DBA95B432BA4DF8DBE81F120
 WORK22_JUDGE=FAIL_LOCKED
 WORK23_AUTHORITATIVE_VERSION=3.29.3
 WORK23_DRAFT_PR=23_OPEN_DRAFT
-WORK23_REMOTE_FIXED_HEAD=0EEE6A7C_FAILED_SUPERSEDED_PENDING_NEXT_HEAD
-WORK23_REMOTE_CI=RUN_30975730060_FAILED_NSIS_UNUSED_LABEL_AFTER_HELPER_CONTRACT_PASS
+WORK23_REMOTE_FIXED_HEAD=976DB882_FAILED_SUPERSEDED_PENDING_NEXT_HEAD
+WORK23_REMOTE_CI=RUN_30977516983_FAILED_HELPER_DUAL_PATH_IDENTITY_REVALIDATION
 WORK23_WINDOWS_CANDIDATE=PENDING_NEW_EXACT_HEAD_CI
 WORK23_SIGNING=READ_ONLY_AUDIT_INTERFACE_NO_REAL_IDENTITY
 WORK23_JUDGE=ACTIVE_REWORK_DRAFT_HOLD
-CURRENT_STATUS=WORK23_LOCAL_NSIS_BUILD_GATE_REWORK_PASS_REMOTE_RETEST_PENDING_DRAFT_HOLD
-ACTIVE_BLOCKER=NEXT_EXACT_REMOTE_HEAD_NSIS_BUILD_WINDOWS_LIFECYCLE_AND_ARTIFACT_IDENTITY_PENDING
+CURRENT_STATUS=WORK23_LOCAL_CIM_SINGLE_IDENTITY_REWORK_PASS_REMOTE_RETEST_PENDING_DRAFT_HOLD
+ACTIVE_BLOCKER=NEXT_EXACT_REMOTE_HEAD_INSTALLED_WINDOWS_LIFECYCLE_AND_ARTIFACT_IDENTITY_PENDING
 NEXT_WORK=NONE
 NEXT_ACTION=COMMIT_AND_PUSH_EXISTING_PR23_BRANCH_THEN_VERIFY_NEXT_EXACT_HEAD_CI_AND_ARTIFACT
 AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/TAG/RELEASE
@@ -123,6 +123,18 @@ LAST_UPDATED=2026-08-05
   `build-all.ps1` exit code until the lifecycle could not find the installer.
   Local RED/GREEN contracts now require the explicit label jump and immediate
   `$LASTEXITCODE` failure; a next exact-Head CI is required.
+- Head `976db882…` / Run `30977516983` passed that NSIS/fail-fast boundary,
+  rebuilt the candidate, and again passed the synthetic helper contract. The
+  installed lifecycle passed install/start/exit/restart, then one official
+  uninstaller returned `0`; helper evidence was `FAIL` with initial owned count
+  `5`, graceful/forced counts `0`, and final count `-1`. This proves the initial
+  CIM exact-path lookup succeeded while the later `Get-Process.Path` recheck
+  prevented every action on real Electron/backend processes. Diagnostic artifact
+  `8919511035` is Head/Run-bound with SHA-256
+  `1DE5397EBCD6B07314685E2C0C709FA7BFC75A84BC190701ABD2CBE9270CA1DC`.
+  Local RED/GREEN now requires one CIM PID/path identity source before both
+  graceful and forced actions; the next exact-Head installed lifecycle remains
+  authoritative.
 
 ## 2026-08-04 Work20 / complete backup and persisted period reports
 

@@ -16,8 +16,10 @@ ended 7/8 because the official uninstaller returned `0` while the live app
 remained. A self-locating manifest/evidence rework now passes local contracts;
 Run `30975730060` proved its exact-path helper contract but exposed an NSIS
 unused-label warning and a masked child build exit before installed lifecycle.
-The local label/fail-fast repair is awaiting next exact-Head CI and candidate
-identity. Judge remains
+Run `30977516983` passed that repair and candidate build, then showed the real
+helper's secondary `Get-Process.Path` check blocked all five CIM-discovered owned
+processes. A single-CIM identity rework is awaiting next exact-Head CI and
+candidate identity. Judge remains
 `DRAFT_HOLD`; there is no Ready, merge, Tag, or Release authorization.
 
 Work10 已完成 `v3.29.1` 发布；Work11 真机安装闭环裁决 `PASSED_WITH_RESIDUALS`。
@@ -42,7 +44,7 @@ Work15 已将 PR #20/#21 依序合入主线；PR #21 最终 Run `30825436318` su
 | R7｜主线与正式发布 | 完成 | `v3.29.1` annotated Tag/正式 Release；Run `30786838156` 5/5 success、7 assets |
 | R7-Hotfix 验收 | Work16 完成 / Draft Hold | PR #22 固定 Head CI 与 Windows 双层筹码探针通过；禁止自行 Ready、合并或发布 |
 | Work20｜Complete backup and period persistence | Local verification / Draft Hold | Remote Draft PR and exact fixed-Head CI pending controller; no merge, Tag, or Release |
-| Work23｜Windows strict-acceptance repairs | Local NSIS build-gate rework / Draft Hold | Existing PR #23 only; next exact-Head Windows lifecycle CI pending; no Ready, merge, Tag, or Release |
+| Work23｜Windows strict-acceptance repairs | Local single-CIM identity rework / Draft Hold | Existing PR #23 only; next exact-Head Windows lifecycle CI pending; no Ready, merge, Tag, or Release |
 
 ## Work 1｜官方稳定版干净底座建立（历史）
 

@@ -14,8 +14,8 @@ DESKTOP=PASS_83_OF_83
 WINDOWS_PACKAGING=PASS_26_OF_26
 WEB=PASS_1076_2_SKIPPED_LINT_BUILD
 BACKEND_AGGREGATE=PASS_5327_4_DESELECTED_499_SUBTESTS_EXCLUDING_SANDBOX_BLOCKED_CRASH_FILE
-REMOTE_FIXED_HEAD=0EEE6A7C_FAILED_SUPERSEDED_PENDING_NEXT_HEAD
-REMOTE_CI=RUN_30975730060_FAILED_NSIS_UNUSED_LABEL_AFTER_HELPER_CONTRACT_PASS
+REMOTE_FIXED_HEAD=976DB882_FAILED_SUPERSEDED_PENDING_NEXT_HEAD
+REMOTE_CI=RUN_30977516983_FAILED_HELPER_DUAL_PATH_IDENTITY_REVALIDATION
 WINDOWS_CANDIDATE=PENDING_NEXT_EXACT_HEAD_CI
 SIGNING=READ_ONLY_GATE_NO_REAL_IDENTITY
 JUDGE=ACTIVE_REWORK_DRAFT_HOLD
@@ -61,6 +61,16 @@ JUDGE=ACTIVE_REWORK_DRAFT_HOLD
   installer only at lifecycle setup. New RED/GREEN contracts require both the
   explicit label jump and an immediate child-exit check; the installed lifecycle
   and candidate identity remain pending the next exact Head.
+- Head `976db882…` / Run `30977516983` passed candidate build and both source/
+  synthetic helper contracts. Its installed lifecycle reached one official
+  uninstaller exit `0`, but the sanitized helper evidence was `FAIL` with
+  `initial=5`, `graceful=0`, `forced=0`, `remaining=-1`. The initial CIM exact
+  path discovery therefore worked, while the redundant `Get-Process.Path`
+  ownership recheck blocked every real process action. Diagnostic artifact
+  `8919511035` has SHA-256
+  `1DE5397EBCD6B07314685E2C0C709FA7BFC75A84BC190701ABD2CBE9270CA1DC`.
+  Local RED/GREEN now requires the same CIM PID/path source for revalidation;
+  the next exact-Head installed lifecycle remains pending.
 
 ---
 
