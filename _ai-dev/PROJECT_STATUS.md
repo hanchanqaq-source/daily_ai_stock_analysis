@@ -1,4 +1,4 @@
-<!-- WORK29_CI_TRIGGER_RECOVERY: lifecycle-embedded Defender gates; final browser-authored synchronize pending. -->
+<!-- WORK29_CI_TRIGGER_RECOVERY: browser-authored synchronize issued; final exact Head pending. -->
 # PP02 当前状态
 
 > 本文件是 PP02 唯一当前状态真源。其他文档出现冲突时，以本文件和可验证证据为准。
