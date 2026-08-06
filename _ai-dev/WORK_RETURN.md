@@ -14,7 +14,9 @@ DESKTOP_FULL=PASS_119_OF_119
 PYTHON_RELATED=PASS_31_DIRECT_RUNPY_PYTEST_UNAVAILABLE
 LOCAL_AUXILIARY=PASS_AI_ASSETS_NODE_SYNTAX_YAML_PARSE_DIFF
 REAL_DEFENDER=NOT_CLAIMED_LINUX_ENV_EXACT_HEAD_WINDOWS_CI_REQUIRED
-DRAFT_PR=PENDING
+DRAFT_PR=27_OPEN_DRAFT
+INITIAL_REMOTE_HEAD=d3f7d44b83c795324e22ec39cf562475c9546322_TREE_BF92DD919A59410366D1EA2B5990B5788727BD52_VERIFIED
+REMOTE_FIXED_HEAD=THIS_STATUS_SYNC_HEAD
 REMOTE_CI=PENDING
 CANDIDATE=PENDING
 JUDGE=ACTIVE_DRAFT_HOLD
@@ -36,8 +38,11 @@ JUDGE=ACTIVE_DRAFT_HOLD
   required. All 31 related Python contracts pass with direct `runpy`; AI assets,
   Node/YAML syntax and diff checks pass. Local pytest and Windows Defender are
   unavailable and therefore not claimed.
-- Draft PR identity, fixed Head, complete CI, Defender identities, artifact
-  hashes and download link remain pending. No real credential/data, dependency,
+- Draft PR [#27](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/27)
+  is Open Draft and mergeable. Initial remote Head `d3f7d44b…` has reviewed tree
+  `bf92dd91…`; the status-sync commit becomes the final Head. Complete CI,
+  Defender identities, artifact hashes and download link remain pending. No real
+  credential/data, dependency,
   Ready, merge, Tag or Release action occurred.
 
 ---

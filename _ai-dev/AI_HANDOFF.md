@@ -4,7 +4,7 @@
 
 | Item | Current fact |
 | --- | --- |
-| State | `WORK29_SAFE_CANDIDATE_IMPLEMENTED_LOCAL_VERIFICATION_AND_DRAFT_PR_PENDING` |
+| State | `WORK29_DRAFT_PR_OPEN_EXACT_HEAD_CI_PENDING` |
 | Base | `main@9a4a705d06370ddbebf669ab8efb0058ce9eb81a` |
 | Branch | `agent/pp02-work29-safe-candidate` |
 | Goal | Produce an unpublished source-consistent `3.29.5` Windows candidate that passes fail-closed Microsoft Defender gates |
@@ -12,7 +12,7 @@
 | Version gate | Root `VERSION` binds Desktop/Web/locks/backup; candidate must exceed latest stable Tag and release Tag must equal source |
 | Security gate | Defender intelligence/health plus installer, portable, extracted, unpacked, final-release and installed-root scans; only scanner exit `0` accepted |
 | Local | Desktop `119/119`; related Python `31/31` via direct `runpy`; Defender exit-2 mutation RED; AI assets, Node/YAML syntax and diff PASS; real Defender not claimed on Linux |
-| Draft PR / CI | Pending reviewed Head and exact-Head complete CI |
+| Draft PR / CI | [#27](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/27) Open Draft/mergeable; initial Head `d3f7d44b…`, tree `bf92dd91…` verified; status-sync final Head and CI pending |
 | Judge | `ACTIVE — DRAFT_HOLD` |
 | Prohibited | Ready, merge, `main`, Tag, Release, dependencies, database/user data, real credentials |
 
@@ -22,6 +22,9 @@ independent review, one Draft PR, fixed-Head CI, artifact/report cross-check and
 safe candidate link. A Linux unit contract is not a malware-clean verdict; only
 the Windows Job's bound Defender reports and candidate hashes may support that
 claim.
+
+The next action is one status-only final Head update on PR #27, then exact-Head
+complete CI. Do not accept the initial Head's run after the final Head exists.
 
 ---
 
