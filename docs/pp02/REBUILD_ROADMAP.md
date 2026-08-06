@@ -1,6 +1,27 @@
 # PP02 安全重建路线 R0–R7
 
-## 2026-08-05 Work25 Windows frozen-backend startup timeout repair
+## 2026-08-06 Work27 Windows Desktop AI configuration save validation repair
+
+- Fixed Base is `main@4322e7dd…`, after PR #25 fixed Head `bae6c0ff…` passed
+  Run `31037493697` and merged. Work27 uses one isolated branch and stops at a
+  Draft PR plus exact-Head CI.
+- The Desktop secure transaction dropped the pending secret before backend
+  persistence, while the vault did not commit until that persistence succeeded.
+  First-run channel saves therefore failed backend cross-field validation.
+- The Web client also read `issues` from the response top level although FastAPI
+  returns `detail.issues`, leaving only a generic failure message.
+- Four initial expected RED failures cover fresh AIHubMix, `codex_cli` with a
+  saved LiteLLM channel, historical default fields, and field-level error display;
+  review added two expected RED counterexamples for notification URLs and bounded
+  display. The LLM-only mask-placeholder/detail-unwrapping fix is GREEN at API `19/19` and Hook
+  `5/5`. Full Web is `1081` passed / `2` skipped; lint, build, AI assets, and
+  diff checks pass. Backend execution awaits exact-Head CI because the cloud
+  runtime lacks locked `requests`; Draft PR, fixed-Head CI, and Windows lifecycle
+  remain pending.
+- No database, history, watchlist, period report, dependency, version, real
+  credential, Ready, merge, Tag, or Release action is allowed.
+
+## Historical entry | 2026-08-05 Work25 Windows frozen-backend startup timeout repair
 
 - PR #24 fixed Head `f91576cb…` passed Run `31028088206` 8/8, then merged as
   `main@f813084…`. Main Run `31032267014` finished 7/8 and is not releaseable.

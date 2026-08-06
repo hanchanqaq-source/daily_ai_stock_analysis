@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { systemConfigApi } from '../systemConfig';
+import { SystemConfigValidationError, systemConfigApi } from '../systemConfig';
 
 const get = vi.hoisted(() => vi.fn());
 const post = vi.hoisted(() => vi.fn());
@@ -104,7 +104,10 @@ describe('systemConfigApi', () => {
       config_version: 'base-version',
       mask_token: '******',
       reload_now: false,
-      items: [{ key: 'LOG_LEVEL', value: 'DEBUG' }],
+      items: [
+        { key: 'OPENAI_API_KEY', value: '******' },
+        { key: 'LOG_LEVEL', value: 'DEBUG' },
+      ],
     });
     expect(commit).toHaveBeenCalledWith({
       transactionId: 'transaction-1',
@@ -116,6 +119,243 @@ describe('systemConfigApi', () => {
     expect(result.configVersion).toBe('final-version');
     expect(result.updatedKeys).toEqual(['LOG_LEVEL', 'OPENAI_API_KEY']);
     expect(result.reloadTriggered).toBe(true);
+  });
+
+  it.each([
+    {
+      name: 'first-run AIHubMix channel',
+      transactionId: 'transaction-aihubmix',
+      handledKey: 'LLM_AIHUBMIX_API_KEY',
+      plaintext: 'synthetic-aihubmix-key',
+      items: [
+        { key: 'LLM_CHANNELS', value: 'aihubmix' },
+        { key: 'LLM_AIHUBMIX_PROTOCOL', value: 'openai' },
+        { key: 'LLM_AIHUBMIX_BASE_URL', value: 'https://aihubmix.com/v1' },
+        { key: 'LLM_AIHUBMIX_API_KEY', value: 'synthetic-aihubmix-key' },
+        { key: 'LLM_AIHUBMIX_MODELS', value: 'openai/gpt-5.2' },
+      ],
+    },
+    {
+      name: 'codex_cli generation with a saved LiteLLM channel',
+      transactionId: 'transaction-codex-litellm',
+      handledKey: 'LLM_FALLBACK_API_KEY',
+      plaintext: 'synthetic-fallback-key',
+      items: [
+        { key: 'GENERATION_BACKEND', value: 'codex_cli' },
+        { key: 'LLM_CHANNELS', value: 'fallback' },
+        { key: 'LLM_FALLBACK_PROTOCOL', value: 'openai' },
+        { key: 'LLM_FALLBACK_BASE_URL', value: 'https://example.invalid/v1' },
+        { key: 'LLM_FALLBACK_API_KEY', value: 'synthetic-fallback-key' },
+        { key: 'LLM_FALLBACK_MODELS', value: 'openai/gpt-5.2' },
+      ],
+    },
+    {
+      name: 'historical default provider fields',
+      transactionId: 'transaction-legacy-defaults',
+      handledKey: 'OPENAI_API_KEY',
+      plaintext: 'synthetic-openai-key',
+      items: [
+        { key: 'LITELLM_MODEL', value: 'openai/gpt-4o-mini' },
+        { key: 'OPENAI_BASE_URL', value: 'https://api.openai.com/v1' },
+        { key: 'OPENAI_MODEL', value: 'gpt-4o-mini' },
+        { key: 'OPENAI_VISION_MODEL', value: 'gpt-4o-mini' },
+        { key: 'OPENAI_API_KEY', value: 'synthetic-openai-key' },
+      ],
+    },
+  ])('saves $name with a backend-safe pending credential placeholder', async ({
+    transactionId,
+    handledKey,
+    plaintext,
+    items,
+  }) => {
+    (window as typeof window & { dsaDesktop?: Record<string, unknown> }).dsaDesktop = {
+      version: '3.29.4',
+      prepareSecureCredentialUpdate: vi.fn().mockResolvedValue({
+        supported: true,
+        transactionId,
+        handledKeys: [handledKey],
+        changedKeys: [handledKey],
+        skippedMaskedKeys: [],
+      }),
+      commitSecureCredentialUpdate: vi.fn().mockResolvedValue({ committed: true }),
+      rollbackSecureCredentialUpdate: vi.fn().mockResolvedValue({ rolledBack: true }),
+      finalizeSecureCredentialUpdate: vi.fn().mockResolvedValue({ finalized: true }),
+    };
+    post.mockResolvedValueOnce({ data: { valid: true, issues: [] } });
+    put.mockResolvedValueOnce({
+      data: {
+        success: true,
+        config_version: 'pending-credential-version',
+        applied_count: items.length - 1,
+        skipped_masked_count: 0,
+        reload_triggered: false,
+        updated_keys: items.filter((item) => item.key !== handledKey).map((item) => item.key),
+        warnings: [],
+      },
+    });
+    get.mockResolvedValueOnce({
+      data: {
+        config_version: 'final-secure-version',
+        mask_token: '******',
+        items: [],
+        updated_at: null,
+      },
+    });
+
+    await systemConfigApi.update({
+      configVersion: 'empty-install-version',
+      maskToken: '******',
+      items,
+    });
+
+    const expectedBackendItems = items.map((item) => (
+      item.key === handledKey ? { key: handledKey, value: '******' } : item
+    ));
+    expect(put).toHaveBeenCalledWith('/api/v1/system/config', {
+      config_version: 'empty-install-version',
+      mask_token: '******',
+      reload_now: false,
+      items: expectedBackendItems,
+    });
+    expect(JSON.stringify(put.mock.calls[0]?.[1])).not.toContain(plaintext);
+  });
+
+  it('keeps format-validated non-LLM secrets out of the backend placeholder request', async () => {
+    const commit = vi.fn().mockResolvedValue({ committed: true });
+    (window as typeof window & { dsaDesktop?: Record<string, unknown> }).dsaDesktop = {
+      version: '3.29.4',
+      prepareSecureCredentialUpdate: vi.fn().mockResolvedValue({
+        supported: true,
+        transactionId: 'transaction-dingtalk',
+        handledKeys: ['DINGTALK_WEBHOOK_URL'],
+        changedKeys: ['DINGTALK_WEBHOOK_URL'],
+        skippedMaskedKeys: [],
+      }),
+      commitSecureCredentialUpdate: commit,
+      rollbackSecureCredentialUpdate: vi.fn().mockResolvedValue({ rolledBack: true }),
+      finalizeSecureCredentialUpdate: vi.fn().mockResolvedValue({ finalized: true }),
+    };
+    post.mockResolvedValueOnce({ data: { valid: true, issues: [] } });
+    put.mockResolvedValueOnce({
+      data: {
+        success: true,
+        config_version: 'notification-version',
+        applied_count: 1,
+        skipped_masked_count: 0,
+        reload_triggered: false,
+        updated_keys: ['NOTIFICATION_CHANNELS'],
+        warnings: [],
+      },
+    });
+    get.mockResolvedValueOnce({
+      data: {
+        config_version: 'final-notification-version',
+        mask_token: '******',
+        items: [],
+        updated_at: null,
+      },
+    });
+
+    await systemConfigApi.update({
+      configVersion: 'base-version',
+      maskToken: '******',
+      items: [
+        { key: 'DINGTALK_WEBHOOK_URL', value: 'https://example.invalid/robot/send?access_token=synthetic' },
+        { key: 'NOTIFICATION_CHANNELS', value: 'dingtalk' },
+      ],
+    });
+
+    expect(put).toHaveBeenCalledWith('/api/v1/system/config', {
+      config_version: 'base-version',
+      mask_token: '******',
+      reload_now: false,
+      items: [{ key: 'NOTIFICATION_CHANNELS', value: 'dingtalk' }],
+    });
+    expect(commit).toHaveBeenCalledWith({
+      transactionId: 'transaction-dingtalk',
+      configVersion: 'notification-version',
+    });
+  });
+
+  it('surfaces FastAPI validation detail with the exact field and reason', async () => {
+    const rollback = vi.fn().mockResolvedValue({ rolledBack: true });
+    (window as typeof window & { dsaDesktop?: Record<string, unknown> }).dsaDesktop = {
+      version: '3.29.4',
+      prepareSecureCredentialUpdate: vi.fn().mockResolvedValue({
+        supported: true,
+        transactionId: 'transaction-validation-error',
+        handledKeys: ['LLM_AIHUBMIX_API_KEY'],
+        changedKeys: ['LLM_AIHUBMIX_API_KEY'],
+        skippedMaskedKeys: [],
+      }),
+      commitSecureCredentialUpdate: vi.fn(),
+      rollbackSecureCredentialUpdate: rollback,
+      finalizeSecureCredentialUpdate: vi.fn(),
+    };
+    post.mockResolvedValueOnce({ data: { valid: true, issues: [] } });
+    put.mockRejectedValueOnce(Object.assign(new Error('Request failed'), {
+      response: {
+        status: 400,
+        data: {
+          detail: {
+            error: 'validation_failed',
+            message: 'System configuration validation failed',
+            issues: [{
+              key: 'LLM_AIHUBMIX_API_KEY',
+              code: 'missing_api_key',
+              message: 'AIHubMix API Key 不能为空',
+              severity: 'error',
+            }, {
+              key: 'LLM_AIHUBMIX_BASE_URL',
+              code: 'invalid_url',
+              message: 'Base URL 格式无效',
+              severity: 'error',
+            }, {
+              key: 'LLM_AIHUBMIX_MODELS',
+              code: 'missing_models',
+              message: '至少需要一个模型',
+              severity: 'error',
+            }, {
+              key: 'GENERATION_BACKEND',
+              code: 'invalid_backend',
+              message: '生成后端无效',
+              severity: 'error',
+            }, {
+              key: 'LITELLM_MODEL',
+              code: 'invalid_model',
+              message: '默认模型无效',
+              severity: 'error',
+            }],
+          },
+        },
+      },
+    }));
+
+    const error = await systemConfigApi.update({
+      configVersion: 'empty-install-version',
+      maskToken: '******',
+      items: [
+        { key: 'LLM_CHANNELS', value: 'aihubmix' },
+        { key: 'LLM_AIHUBMIX_API_KEY', value: 'synthetic-validation-key' },
+      ],
+    }).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(SystemConfigValidationError);
+    expect((error as SystemConfigValidationError).issues).toHaveLength(5);
+    expect((error as SystemConfigValidationError).issues[0]).toEqual(
+      expect.objectContaining({
+        key: 'LLM_AIHUBMIX_API_KEY',
+        code: 'missing_api_key',
+        message: 'AIHubMix API Key 不能为空',
+      }),
+    );
+    expect((error as SystemConfigValidationError).parsedError.message).toContain('LLM_AIHUBMIX_API_KEY');
+    expect((error as SystemConfigValidationError).parsedError.message).toContain('AIHubMix API Key 不能为空');
+    expect((error as SystemConfigValidationError).parsedError.message).toContain('另有 2 项校验错误');
+    expect((error as SystemConfigValidationError).parsedError.message).not.toContain('GENERATION_BACKEND');
+    expect((error as SystemConfigValidationError).parsedError.message).not.toContain('LITELLM_MODEL');
+    expect((error as SystemConfigValidationError).parsedError.message.length).toBeLessThanOrEqual(600);
+    expect(rollback).toHaveBeenCalledWith('transaction-validation-error');
   });
 
   it('abandons the Desktop vault transaction when backend persistence fails before commit', async () => {

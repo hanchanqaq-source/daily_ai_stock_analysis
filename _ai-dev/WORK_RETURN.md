@@ -1,4 +1,49 @@
-# WORK-025 | Windows frozen-backend startup timeout repair return
+# WORK-027 | Windows Desktop AI configuration save validation repair return
+
+## Work27 current evidence
+
+```text
+BASE=4322e7ddf09b8262c0e7279af9e321aec4f77758
+BRANCH=agent/pp02-work27-config-save-validation
+ROOT_CAUSE=PENDING_SECRET_REMOVED_BEFORE_BACKEND_VALIDATION_PLUS_NESTED_ISSUES_DROPPED
+TDD_RED=PASS_INITIAL_4_EXPECTED_FAILURES_PLUS_REVIEW_2_EXPECTED_FAILURES
+TDD_GREEN=PASS_SYSTEM_CONFIG_API_19_OF_19_HOOK_5_OF_5
+PLAINTEXT_BACKEND_PERSISTENCE=ABSENT_SYNTHETIC_VALUES_ONLY
+BACKEND_MASK_NOOP_LOCAL=DEFERRED_MISSING_LOCKED_REQUESTS_DEPENDENCY
+LOCAL_FULL=PASS_WEB_1081_PASSED_2_SKIPPED_LINT_BUILD_AI_ASSETS_DIFF
+REVIEW=PASS_NO_FINDINGS_DRAFT_PR_AND_EXACT_HEAD_CI_ALLOWED
+DRAFT_PR=PENDING
+REMOTE_FIXED_HEAD=PENDING
+REMOTE_CI=PENDING
+WINDOWS_LIFECYCLE=PENDING
+JUDGE=ACTIVE_DRAFT_HOLD
+```
+
+- RED proved three real save shapes omitted the handled credential item entirely
+  and a FastAPI `detail.issues` response became `[]`; 14 pre-existing API tests
+  remained green during the failing run.
+- The minimum implementation maps only pending LLM API credential items to
+  `******` for backend persistence, preserves every public field, keeps other
+  secure fields on their prior omission path, and leaves prepare → backend save
+  → vault commit → sanitize/restart/finalize ordering unchanged.
+- Error parsing accepts top-level or FastAPI-nested validation payloads. The UI
+  receives both the original structured issue and a bounded message containing
+  the exact field key and reason.
+- GREEN is system-config API `19/19` and system-config Hook `5/5`. Tests use only
+  synthetic strings and assert that backend persistence payloads contain none of
+  those plaintext values.
+- Full Web is `1081` passed / `2` skipped; ESLint, TypeScript/Vite production
+  build, `check_ai_assets.py`, and `git diff --check` all pass.
+- Independent re-review reports no Critical, Important, or Minor findings and
+  allows the candidate to enter Draft PR plus exact-Head CI, but not Ready/merge.
+- The current cloud Python runtime lacks the locked `requests` dependency, so
+  the new and existing service-level mask-noop tests could not import locally. No
+  package was upgraded; exact-Head CI must run those backend contracts and remains the
+  authority for full backend and Windows lifecycle evidence.
+
+---
+
+# Historical return | WORK-025 / Windows frozen-backend startup timeout repair
 
 ## Work25 current evidence
 

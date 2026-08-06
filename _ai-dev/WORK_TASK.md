@@ -1,4 +1,57 @@
-# WORK-025 | Windows frozen-backend startup timeout repair
+# WORK-027 | Windows Desktop AI configuration save validation repair
+
+## Work27 authorization and execution contract
+
+```text
+WORK_ID=WORK-027
+WORK_STATE=LOCAL_RELATED_VERIFICATION_PASS_DRAFT_PR_PENDING
+BASE=4322e7ddf09b8262c0e7279af9e321aec4f77758
+BRANCH=agent/pp02-work27-config-save-validation
+DRAFT_PR=PENDING
+REMOTE_FIXED_HEAD=PENDING
+REMOTE_CI=PENDING
+WINDOWS_LIFECYCLE=PENDING
+JUDGE=ACTIVE_DRAFT_HOLD
+```
+
+### Root cause and selected design
+
+- On Windows Desktop, the full draft passed pre-validation, but the renderer
+  removed vault-owned sensitive items before backend persistence. The DPAPI
+  transaction could only commit after backend success, so a first-run key was
+  absent from both backend runtime state and the save request.
+- FastAPI wraps validation metadata under `detail`; the client treated the
+  response as a top-level validation object and lost `issues`.
+- Keep the established transaction order. Replace only handled LLM API
+  credentials with the current mask token for backend validation; the existing
+  backend manager treats that token as a sensitive no-op and does not write it to
+  `.env`. Keep other handled secrets on their prior omission path. Unwrap nested
+  issues and show a bounded `field: reason` summary while retaining all structured
+  issues.
+
+### Required tests and acceptance
+
+1. First-run AIHubMix save sends all public channel fields plus a mask placeholder
+   and never sends the synthetic plaintext key to backend persistence.
+2. `GENERATION_BACKEND=codex_cli` can coexist with saving a LiteLLM channel.
+3. Historical default provider/model fields remain intact in the same save.
+4. A 400 FastAPI validation response exposes the exact issue key and message.
+5. A format-validated notification URL remains omitted from backend persistence;
+   a fresh LLM mask is accepted but neither the mask nor API-key field is stored.
+6. Exact-Head CI must pass all applicable Jobs. Windows must build the final
+   package and complete install, first start/health, exit, restart/health,
+   official uninstall, and zero-owned-process checks.
+
+### Scope and stop gates
+
+- Authorized: tests, minimum Web client fix, required control/changelog updates,
+  normal commits, push, one Draft PR, exact-Head CI, and in-scope CI repair.
+- Forbidden: database/user-data migration, real API keys, dependency/version
+  changes, Ready, merge, `main`, Tag, or Release.
+
+---
+
+# Historical contract | WORK-025 / Windows frozen-backend startup timeout repair
 
 ## Work25 authorization and execution contract
 

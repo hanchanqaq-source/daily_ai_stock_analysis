@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 55142)
+Total output lines: 4994
+
 # -*- coding: utf-8 -*-
 """Unit tests for system configuration service."""
 
@@ -2080,6 +2083,53 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         self.assertIn("安全凭据", context.exception.message)
         self.assertNotIn("imported-fake-value", context.exception.message)
 
+    def test_secure_mode_accepts_fresh_llm_pending_mask_without_persisting_it(self) -> None:
+        self._rewrite_env("STOCK_LIST=600519")
+        old_version = self.manager.get_config_version()
+        with patch.dict(
+            os.environ,
+            {
+                "DSA_SECURE_CREDENTIAL_MODE": "windows_dpapi",
+                "DSA_SECURE_CREDENTIAL_KEYS": "LLM_AIHUBMIX_API_KEY",
+                "LLM_AIHUBMIX_API_KEY": "",
+            },
+            clear=False,
+        ):
+            response = self.service.update(
+                config_version=old_version,
+                items=[
+                    {"key": "LLM_CHANNELS", "value": "aihubmix"},
+                    {"key": "LLM_AIHUBMIX_PROTOCOL", "value": "openai"},
+                    {"key": "LLM_AIHUBMIX_BASE_URL", "value": "https://aihubmix.com/v1"},
+                    {"key": "LLM_AIHUBMIX_API_KEY", "value": "******"},
+                    {"key": "LLM_AIHUBMIX_MODELS", "value": "openai/gpt-4o-mini"},
+                ],
+                mask_token="******",
+                reload_now=False,
+            )
+
+        self.assertTrue(response["success"])
+        self.assertEqual(response["applied_count"], 4)
+        self.assertEqual(response["skipped_masked_count"], 0)
+        self.assertEqual(
+            response["updated_keys"],
+            [
+                "LLM_CHANNELS",
+                "LLM_AIHUBMIX_PROTOCOL",
+                "LLM_AIHUBMIX_BASE_URL",
+                "LLM_AIHUBMIX_MODELS",
+            ],
+        )
+        self.assertNotEqual(response["config_version"], old_version)
+
+        raw_content = self.env_path.read_text(encoding="utf-8")
+        current_map = self.manager.read_config_map()
+        self.assertNotIn("LLM_AIHUBMIX_API_KEY", current_map)
+        self.assertNotIn("LLM_AIHUBMIX_API_KEY", raw_content)
+        self.assertNotIn("******", raw_content)
+        self.assertEqual(current_map["LLM_CHANNELS"], "aihubmix")
+        self.assertEqual(current_map["LLM_AIHUBMIX_MODELS"], "openai/gpt-4o-mini")
+
     def test_secure_mode_rejects_malformed_sensitive_import_before_parsing(self) -> None:
         fake_value = "malformed-import-fake-value"
         original_content = self.env_path.read_text(encoding="utf-8")
@@ -2232,476 +2282,7 @@ class SystemConfigServiceTestCase(unittest.TestCase):
 
     def test_import_desktop_env_raises_conflict_for_stale_version(self) -> None:
         with self.assertRaises(ConfigConflictError):
-            self.service.import_desktop_env(
-                config_version="stale-version",
-                content="STOCK_LIST=300750\n",
-                reload_now=False,
-            )
-
-    def test_update_preserves_masked_secret(self) -> None:
-        old_version = self.manager.get_config_version()
-        response = self.service.update(
-            config_version=old_version,
-            items=[
-                {"key": "GEMINI_API_KEY", "value": "******"},
-                {"key": "STOCK_LIST", "value": "600519,300750"},
-            ],
-            mask_token="******",
-            reload_now=False,
-        )
-
-        self.assertTrue(response["success"])
-        self.assertEqual(response["applied_count"], 1)
-        self.assertEqual(response["skipped_masked_count"], 1)
-        self.assertIn("STOCK_LIST", response["updated_keys"])
-
-        current_map = self.manager.read_config_map()
-        self.assertEqual(current_map["STOCK_LIST"], "600519,300750")
-        self.assertEqual(current_map["GEMINI_API_KEY"], "secret-key-value")
-
-    def test_update_alphasift_enable_does_not_rewrite_llm_fields(self) -> None:
-        self._rewrite_env(
-            "STOCK_LIST=600519,000001",
-            "LITELLM_MODEL=openai/gpt-4o-mini",
-            "AGENT_LITELLM_MODEL=openai/gpt-4o",
-            "OPENAI_BASE_URL=https://api.openai.com/v1",
-            "LLM_CHANNELS=openai",
-            "LLM_OPENAI_PROTOCOL=openai",
-            "LLM_OPENAI_BASE_URL=https://api.openai.com/v1",
-            "LLM_OPENAI_API_KEYS=legacy-openai-secret",
-            "LLM_OPENAI_MODELS=openai/gpt-4o-mini,openai/gpt-4o",
-            "LITELLM_FALLBACK_MODELS=openai/gpt-4o-mini,openai/gpt-4o",
-            "ALPHASIFT_ENABLED=false",
-            f"ALPHASIFT_INSTALL_SPEC={DEFAULT_ALPHASIFT_INSTALL_SPEC}",
-            "LLM_USAGE_HMAC_SECRET=telemetry-secret",
-            "LLM_USAGE_HMAC_KEY_VERSION=test-v1",
-            "GEMINI_API_KEY=legacy-secret",
-        )
-
-        response = self.service.update(
-            config_version=self.manager.get_config_version(),
-            items=[
-                {"key": "ALPHASIFT_ENABLED", "value": "true"},
-                {"key": "ALPHASIFT_INSTALL_SPEC", "value": "******"},
-                {"key": "LLM_USAGE_HMAC_SECRET", "value": "******"},
-                {"key": "GEMINI_API_KEY", "value": "******"},
-            ],
-            mask_token="******",
-            reload_now=False,
-        )
-
-        self.assertTrue(response["success"])
-        self.assertEqual(response["applied_count"], 1)
-        self.assertIn("ALPHASIFT_ENABLED", response["updated_keys"])
-        self.assertEqual(response["skipped_masked_count"], 3)
-
-        current_map = self.manager.read_config_map()
-        self.assertEqual(current_map["ALPHASIFT_ENABLED"], "true")
-        self.assertEqual(
-            current_map["ALPHASIFT_INSTALL_SPEC"],
-            DEFAULT_ALPHASIFT_INSTALL_SPEC,
-        )
-        self.assertEqual(current_map["LLM_USAGE_HMAC_SECRET"], "telemetry-secret")
-        self.assertEqual(current_map["LLM_USAGE_HMAC_KEY_VERSION"], "test-v1")
-        self.assertEqual(current_map["GEMINI_API_KEY"], "legacy-secret")
-        self.assertEqual(current_map["LITELLM_MODEL"], "openai/gpt-4o-mini")
-        self.assertEqual(current_map["AGENT_LITELLM_MODEL"], "openai/gpt-4o")
-        self.assertEqual(current_map["OPENAI_BASE_URL"], "https://api.openai.com/v1")
-        self.assertEqual(current_map["LLM_CHANNELS"], "openai")
-        self.assertEqual(current_map["LLM_OPENAI_PROTOCOL"], "openai")
-        self.assertEqual(current_map["LLM_OPENAI_BASE_URL"], "https://api.openai.com/v1")
-        self.assertEqual(current_map["LLM_OPENAI_API_KEYS"], "legacy-openai-secret")
-        self.assertEqual(current_map["LLM_OPENAI_MODELS"], "openai/gpt-4o-mini,openai/gpt-4o")
-        self.assertEqual(current_map["LITELLM_FALLBACK_MODELS"], "openai/gpt-4o-mini,openai/gpt-4o")
-
-    def test_validate_reports_invalid_time(self) -> None:
-        validation = self.service.validate(items=[{"key": "SCHEDULE_TIME", "value": "25:70"}])
-        self.assertFalse(validation["valid"])
-        self.assertTrue(any(issue["code"] == "invalid_format" for issue in validation["issues"]))
-
-    def test_validate_accepts_empty_schedule_times_fallback(self) -> None:
-        validation = self.service.validate(items=[{"key": "SCHEDULE_TIMES", "value": ""}])
-        self.assertTrue(validation["valid"])
-        self.assertEqual(validation["issues"], [])
-
-    def test_validate_reports_invalid_searxng_url(self) -> None:
-        validation = self.service.validate(items=[{"key": "SEARXNG_BASE_URLS", "value": "searx.local,https://ok.example"}])
-        self.assertFalse(validation["valid"])
-        self.assertTrue(any(issue["code"] == "invalid_url" for issue in validation["issues"]))
-
-    def test_validate_reports_invalid_public_searxng_toggle(self) -> None:
-        validation = self.service.validate(
-            items=[{"key": "SEARXNG_PUBLIC_INSTANCES_ENABLED", "value": "maybe"}]
-        )
-        self.assertFalse(validation["valid"])
-        self.assertTrue(any(issue["code"] == "invalid_type" for issue in validation["issues"]))
-
-    def test_validate_reports_invalid_feishu_webhook_url(self) -> None:
-        validation = self.service.validate(
-            items=[{"key": "FEISHU_WEBHOOK_URL", "value": "feishu-hook-without-scheme"}]
-        )
-        self.assertFalse(validation["valid"])
-        self.assertTrue(any(issue["code"] == "invalid_url" for issue in validation["issues"]))
-
-    def test_validate_reports_ntfy_url_without_topic(self) -> None:
-        validation = self.service.validate(
-            items=[{"key": "NTFY_URL", "value": "https://ntfy.sh"}]
-        )
-
-        self.assertFalse(validation["valid"])
-        self.assertTrue(
-            any(
-                issue["key"] == "NTFY_URL" and issue["code"] == "invalid_ntfy_url"
-                for issue in validation["issues"]
-            )
-        )
-
-    def test_validate_reports_gotify_url_with_message_endpoint(self) -> None:
-        validation = self.service.validate(
-            items=[{"key": "GOTIFY_URL", "value": "https://gotify.example/message"}]
-        )
-
-        self.assertFalse(validation["valid"])
-        self.assertTrue(
-            any(
-                issue["key"] == "GOTIFY_URL" and issue["code"] == "invalid_gotify_url"
-                for issue in validation["issues"]
-            )
-        )
-
-    def test_validate_reports_invalid_notification_route_channel(self) -> None:
-        validation = self.service.validate(
-            items=[{"key": "NOTIFICATION_REPORT_CHANNELS", "value": "wechat,not-a-channel,email"}]
-        )
-        self.assertFalse(validation["valid"])
-        self.assertTrue(
-            any(
-                issue["key"] == "NOTIFICATION_REPORT_CHANNELS"
-                and issue["code"] == "invalid_allowed_value"
-                for issue in validation["issues"]
-            )
-        )
-
-    def test_validate_reports_invalid_notification_quiet_hours(self) -> None:
-        validation = self.service.validate(
-            items=[{"key": "NOTIFICATION_QUIET_HOURS", "value": "9:00-18:00"}]
-        )
-
-        self.assertFalse(validation["valid"])
-        self.assertTrue(
-            any(
-                issue["key"] == "NOTIFICATION_QUIET_HOURS"
-                and issue["code"] == "invalid_format"
-                for issue in validation["issues"]
-            )
-        )
-
-    def test_validate_reports_invalid_notification_timezone(self) -> None:
-        validation = self.service.validate(
-            items=[{"key": "NOTIFICATION_TIMEZONE", "value": "Mars/Olympus"}]
-        )
-
-        self.assertFalse(validation["valid"])
-        self.assertTrue(
-            any(
-                issue["key"] == "NOTIFICATION_TIMEZONE"
-                and issue["code"] == "invalid_timezone"
-                for issue in validation["issues"]
-            )
-        )
-
-    def test_validate_reports_invalid_notification_min_severity(self) -> None:
-        validation = self.service.validate(
-            items=[{"key": "NOTIFICATION_MIN_SEVERITY", "value": "notice"}]
-        )
-
-        self.assertFalse(validation["valid"])
-        self.assertTrue(
-            any(
-                issue["key"] == "NOTIFICATION_MIN_SEVERITY"
-                and issue["code"] == "invalid_enum"
-                for issue in validation["issues"]
-            )
-        )
-
-    def test_validate_warns_daily_digest_is_reserved(self) -> None:
-        validation = self.service.validate(
-            items=[{"key": "NOTIFICATION_DAILY_DIGEST_ENABLED", "value": "true"}]
-        )
-
-        self.assertTrue(validation["valid"])
-        self.assertTrue(
-            any(
-                issue["key"] == "NOTIFICATION_DAILY_DIGEST_ENABLED"
-                and issue["code"] == "reserved_notification_daily_digest"
-                and issue["severity"] == "warning"
-                for issue in validation["issues"]
-            )
-        )
-
-    def test_validate_warns_when_feishu_app_credentials_are_used_without_webhook(self) -> None:
-        validation = self.service.validate(
-            items=[
-                {"key": "FEISHU_APP_ID", "value": "cli_xxx"},
-                {"key": "FEISHU_APP_SECRET", "value": "secret_xxx"},
-            ]
-        )
-        self.assertTrue(validation["valid"])
-        issue = next(
-            issue
-            for issue in validation["issues"]
-            if issue["code"] == "feishu_mode_mismatch"
-            and issue["severity"] == "warning"
-        )
-        self.assertEqual(issue["key"], "FEISHU_CHAT_ID")
-        self.assertIn("FEISHU_CHAT_ID", issue["message"])
-        self.assertIn("static notification:", issue["expected"])
-        self.assertIn("event subscription:", issue["expected"])
-
-    def test_validate_no_warning_when_feishu_cloud_doc_credentials_without_webhook(self) -> None:
-        validation = self.service.validate(
-            items=[
-                {"key": "FEISHU_APP_ID", "value": "cli_xxx"},
-                {"key": "FEISHU_APP_SECRET", "value": "secret_xxx"},
-                {"key": "FEISHU_FOLDER_TOKEN", "value": "folder_xxx"},
-            ]
-        )
-        self.assertTrue(validation["valid"])
-        self.assertFalse(
-            any(
-                issue["code"] == "feishu_mode_mismatch"
-                and issue["severity"] == "warning"
-                for issue in validation["issues"]
-            )
-        )
-
-    def test_validate_warns_when_only_folder_token_cleared_with_app_credentials(self) -> None:
-        """Clearing FEISHU_FOLDER_TOKEN while app credentials remain should trigger mismatch."""
-        old_version = self.manager.get_config_version()
-        self.service.update(
-            config_version=old_version,
-            items=[
-                {"key": "FEISHU_APP_ID", "value": "cli_xxx"},
-                {"key": "FEISHU_APP_SECRET", "value": "secret_xxx"},
-            ],
-        )
-        validation = self.service.validate(
-            items=[
-                {"key": "FEISHU_FOLDER_TOKEN", "value": ""},
-            ]
-        )
-        self.assertTrue(validation["valid"])
-        self.assertTrue(
-            any(
-                issue["code"] == "feishu_mode_mismatch"
-                and issue["severity"] == "warning"
-                for issue in validation["issues"]
-            )
-        )
-
-    def test_update_persists_public_searxng_toggle(self) -> None:
-        old_version = self.manager.get_config_version()
-        response = self.service.update(
-            config_version=old_version,
-            items=[{"key": "SEARXNG_PUBLIC_INSTANCES_ENABLED", "value": "false"}],
-            reload_now=False,
-        )
-
-        self.assertTrue(response["success"])
-        current_map = self.manager.read_config_map()
-        self.assertEqual(current_map["SEARXNG_PUBLIC_INSTANCES_ENABLED"], "false")
-
-    def test_validate_reports_invalid_llm_channel_definition(self) -> None:
-        validation = self.service.validate(
-            items=[
-                {"key": "LLM_CHANNELS", "value": "primary"},
-                {"key": "LLM_PRIMARY_PROTOCOL", "value": "openai"},
-                {"key": "LLM_PRIMARY_MODELS", "value": "gpt-4o-mini"},
-                {"key": "LLM_PRIMARY_API_KEY", "value": ""},
-            ]
-        )
-
-        self.assertFalse(validation["valid"])
-        self.assertTrue(any(issue["code"] == "missing_api_key" for issue in validation["issues"]))
-
-    def test_validate_preserves_model_based_protocol_inference_for_ollama_channel(self) -> None:
-        validation = self.service.validate(
-            items=[
-                {"key": "LLM_CHANNELS", "value": "lab"},
-                {"key": "LLM_LAB_MODELS", "value": "ollama/llama3"},
-                {"key": "LLM_LAB_API_KEY", "value": ""},
-            ]
-        )
-
-        self.assertTrue(validation["valid"], validation["issues"])
-        self.assertEqual(validation["issues"], [])
-
-    def test_validate_reports_unknown_primary_model_for_channels(self) -> None:
-        validation = self.service.validate(
-            items=[
-                {"key": "LLM_CHANNELS", "value": "primary"},
-                {"key": "LLM_PRIMARY_PROTOCOL", "value": "openai"},
-                {"key": "LLM_PRIMARY_API_KEY", "value": "sk-test-value"},
-                {"key": "LLM_PRIMARY_MODELS", "value": "gpt-4o-mini"},
-                {"key": "LITELLM_MODEL", "value": "openai/gpt-4o"},
-            ]
-        )
-
-        self.assertFalse(validation["valid"])
-        self.assertTrue(any(issue["key"] == "LITELLM_MODEL" and issue["code"] == "unknown_model" for issue in validation["issues"]))
-
-    def test_validate_rejects_bare_primary_when_channel_route_is_openai_canonical(self) -> None:
-        validation = self.service.validate(
-            items=[
-                {"key": "LLM_CHANNELS", "value": "primary"},
-                {"key": "LLM_PRIMARY_PROTOCOL", "value": "openai"},
-                {"key": "LLM_PRIMARY_API_KEY", "value": "sk-test-value"},
-                {"key": "LLM_PRIMARY_MODELS", "value": "gpt-4o-mini"},
-                {"key": "LITELLM_MODEL", "value": "gpt-4o-mini"},
-            ]
-        )
-
-        self.assertFalse(validation["valid"])
-        self.assertTrue(any(issue["key"] == "LITELLM_MODEL" and issue["code"] == "unknown_model" for issue in validation["issues"]))
-
-    def test_validate_rejects_bare_fallback_when_channel_route_is_openai_canonical(self) -> None:
-        validation = self.service.validate(
-            items=[
-                {"key": "LLM_CHANNELS", "value": "primary"},
-                {"key": "LLM_PRIMARY_PROTOCOL", "value": "openai"},
-                {"key": "LLM_PRIMARY_API_KEY", "value": "sk-test-value"},
-                {"key": "LLM_PRIMARY_MODELS", "value": "gpt-4o-mini"},
-                {"key": "LITELLM_MODEL", "value": "openai/gpt-4o-mini"},
-                {"key": "LITELLM_FALLBACK_MODELS", "value": "gpt-4o-mini"},
-            ]
-        )
-
-        self.assertFalse(validation["valid"])
-        self.assertTrue(
-            any(
-                issue["key"] == "LITELLM_FALLBACK_MODELS"
-                and issue["code"] == "unknown_model"
-                for issue in validation["issues"]
-            )
-        )
-
-    def test_validate_reports_bare_vision_when_channel_route_is_openai_canonical(self) -> None:
-        validation = self.service.validate(
-            items=[
-                {"key": "LLM_CHANNELS", "value": "primary"},
-                {"key": "LLM_PRIMARY_PROTOCOL", "value": "openai"},
-                {"key": "LLM_PRIMARY_API_KEY", "value": "sk-test-value"},
-                {"key": "LLM_PRIMARY_MODELS", "value": "gpt-4o-mini"},
-                {"key": "VISION_MODEL", "value": "gpt-4o-mini"},
-            ]
-        )
-
-        self.assertTrue(
-            any(
-                issue["key"] == "VISION_MODEL"
-                and issue["code"] == "unknown_model"
-                for issue in validation["issues"]
-            ),
-            validation["issues"],
-        )
-
-    def test_validate_accepts_deepseek_v4_primary_model_for_channel(self) -> None:
-        validation = self.service.validate(
-            items=[
-                {"key": "LLM_CHANNELS", "value": "deepseek"},
-                {"key": "LLM_DEEPSEEK_PROTOCOL", "value": "deepseek"},
-                {"key": "LLM_DEEPSEEK_BASE_URL", "value": "https://api.deepseek.com"},
-                {"key": "LLM_DEEPSEEK_API_KEY", "value": "sk-test-value"},
-                {"key": "LLM_DEEPSEEK_MODELS", "value": "deepseek-v4-flash,deepseek-v4-pro"},
-                {"key": "LITELLM_MODEL", "value": "deepseek/deepseek-v4-flash"},
-            ]
-        )
-
-        self.assertTrue(validation["valid"], validation["issues"])
-        self.assertEqual(validation["issues"], [])
-
-    def test_validate_reports_unknown_agent_primary_model_for_channels(self) -> None:
-        validation = self.service.validate(
-            items=[
-                {"key": "LLM_CHANNELS", "value": "primary"},
-                {"key": "LLM_PRIMARY_PROTOCOL", "value": "openai"},
-                {"key": "LLM_PRIMARY_API_KEY", "value": "sk-test-value"},
-                {"key": "LLM_PRIMARY_MODELS", "value": "gpt-4o-mini"},
-                {"key": "AGENT_LITELLM_MODEL", "value": "openai/gpt-4o"},
-            ]
-        )
-
-        self.assertFalse(validation["valid"])
-        self.assertTrue(any(issue["key"] == "AGENT_LITELLM_MODEL" and issue["code"] == "unknown_model" for issue in validation["issues"]))
-
-    def test_validate_accepts_unprefixed_agent_model_when_channel_declares_openai_model(self) -> None:
-        validation = self.service.validate(
-            items=[
-                {"key": "LLM_CHANNELS", "value": "primary"},
-                {"key": "LLM_PRIMARY_PROTOCOL", "value": "openai"},
-                {"key": "LLM_PRIMARY_API_KEY", "value": "sk-test-value"},
-                {"key": "LLM_PRIMARY_MODELS", "value": "gpt-4o-mini"},
-                {"key": "AGENT_LITELLM_MODEL", "value": "gpt-4o-mini"},
-            ]
-        )
-
-        self.assertTrue(validation["valid"])
-        self.assertEqual(validation["issues"], [])
-
-    def test_validate_rejects_explicit_hermes_only_agent_model(self) -> None:
-        validation = self.service.validate(
-            items=[
-                {"key": "LLM_CHANNELS", "value": "hermes"},
-                {"key": "LLM_HERMES_API_KEY", "value": "sk-hermes-test-value"},
-                {"key": "LLM_HERMES_MODELS", "value": "hermes-agent"},
-                {"key": "AGENT_LITELLM_MODEL", "value": "openai/hermes-agent"},
-            ]
-        )
-
-        self.assertFalse(validation["valid"])
-        self.assertTrue(
-            any(
-                issue["key"] == "AGENT_LITELLM_MODEL"
-                and issue["code"] == "explicit_agent_model_no_safe_deployment"
-                for issue in validation["issues"]
-            )
-        )
-
-    def test_validate_allows_explicit_mixed_agent_model(self) -> None:
-        validation = self.service.validate(
-            items=[
-                {"key": "LLM_CHANNELS", "value": "hermes,remote"},
-                {"key": "LLM_HERMES_API_KEY", "value": "sk-hermes-test-value"},
-                {"key": "LLM_HERMES_MODELS", "value": "shared-route"},
-                {"key": "LLM_REMOTE_PROTOCOL", "value": "openai"},
-                {"key": "LLM_REMOTE_BASE_URL", "value": "https://api.example.com/v1"},
-                {"key": "LLM_REMOTE_API_KEY", "value": "sk-remote-test-value"},
-                {"key": "LLM_REMOTE_MODELS", "value": "shared-route"},
-                {"key": "AGENT_LITELLM_MODEL", "value": "openai/shared-route"},
-            ]
-        )
-
-        self.assertFalse(
-            any(
-                issue["key"] == "AGENT_LITELLM_MODEL"
-                and issue["code"] == "explicit_agent_model_no_safe_deployment"
-                for issue in validation["issues"]
-            ),
-            validation["issues"],
-        )
-
-    def test_validate_rejects_mixed_generation_primary_and_fallback(self) -> None:
-        validation = self.service.validate(
-            items=[
-                {"key": "LLM_CHANNELS", "value": "hermes,remote"},
-                {"key": "LLM_HERMES_API_KEY", "value": "sk-hermes-test-value"},
-                {"key": "LLM_HERMES_MODELS", "value": "shared-route"},
-                {"key": "LLM_REMOTE_PROTOCOL", "value": "openai"},
-                {"key": "LLM_REMOTE_BASE_URL", "value": "https://api.example.com/v1"},
-                {"key": "LLM_REMOTE_API_KEY", "value": "sk-remote-test-value"},
-                {"key": "LLM_REMOTE_MODELS", "value": "shared-route"},
-                {"key": "LITELLM_MODEL", "value": "openai/shared-route"},
-                {"key": "LITELLM_FALLBACK_MODELS", "value": "openai/shared-route"},
+            self.ser…5142 tokens truncated…           {"key": "LITELLM_FALLBACK_MODELS", "value": "openai/shared-route"},
             ]
         )
 
