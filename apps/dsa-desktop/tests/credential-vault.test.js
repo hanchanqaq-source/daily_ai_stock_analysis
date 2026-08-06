@@ -107,6 +107,41 @@ test('vault commit stores ciphertext only and buildEnvironment decrypts in memor
   assert.equal(environment.values.OPENAI_API_KEY === value, true, 'decrypted value mismatch');
 });
 
+test('vault prepares a first-run dynamic LLM credential without writing plaintext before commit', (t) => {
+  const { vault, vaultPath } = createVault(t);
+  const llmCredential = `${fakeCredential()}-aihubmix`;
+  const notificationUrl = 'https://example.invalid/robot/send?access_token=synthetic';
+
+  const transaction = vault.prepare(
+    [
+      { key: 'LLM_AIHUBMIX_API_KEY', value: llmCredential },
+      { key: 'DINGTALK_WEBHOOK_URL', value: notificationUrl },
+      { key: 'LLM_CHANNELS', value: 'aihubmix' },
+    ],
+    MASK_TOKEN,
+  );
+
+  assert.deepEqual(transaction.handledKeys, [
+    'DINGTALK_WEBHOOK_URL',
+    'LLM_AIHUBMIX_API_KEY',
+  ]);
+  assert.deepEqual(transaction.changedKeys, [
+    'DINGTALK_WEBHOOK_URL',
+    'LLM_AIHUBMIX_API_KEY',
+  ]);
+  assert.deepEqual(transaction.skippedMaskedKeys, []);
+  assert.equal(fs.existsSync(vaultPath), false);
+
+  vault.commit(transaction, CONFIG_VERSION);
+  const rawVault = fs.readFileSync(vaultPath, 'utf8');
+  assert.equal(rawVault.includes(llmCredential), false);
+  assert.equal(rawVault.includes(notificationUrl), false);
+
+  const environment = vault.buildEnvironment(CONFIG_VERSION);
+  assert.equal(environment.values.LLM_AIHUBMIX_API_KEY, llmCredential);
+  assert.equal(environment.values.DINGTALK_WEBHOOK_URL, notificationUrl);
+});
+
 test('mask is a no-op, empty value deletes, and rollback restores committed state', (t) => {
   const { vault } = createVault(t);
   const original = fakeCredential();

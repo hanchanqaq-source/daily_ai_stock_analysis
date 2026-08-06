@@ -1,4 +1,63 @@
-# WORK-025 | Windows frozen-backend startup timeout repair
+# WORK-027 | Windows Desktop AI configuration save validation repair
+
+## Work27 authorization and execution contract
+
+```text
+WORK_ID=WORK-027
+WORK_STATE=DRAFT_PR_OPEN_DESKTOP_COVERAGE_FINAL_HEAD_CI_PENDING
+BASE=4322e7ddf09b8262c0e7279af9e321aec4f77758
+BRANCH=agent/pp02-work27-config-save-validation
+DRAFT_PR=26_OPEN_DRAFT
+INITIAL_REMOTE_HEAD=04a2259c11659ec51635a56ffde74981d55bf7dd_TREE_VERIFIED
+PRIOR_REMOTE_HEAD=9cb32d7fa663770d6cef18a9012c7518e6807ba6
+PRIOR_CI=RUN_31106977554_PASS_EXECUTED_5_OF_5_WINDOWS_AND_DESKTOP_PATH_SKIPPED_NOT_ACCEPTED
+REMOTE_FIXED_HEAD=THIS_DESKTOP_COVERAGE_FINAL_BRANCH_HEAD
+REMOTE_CI=PENDING_EXACT_NEW_FINAL_HEAD
+WINDOWS_LIFECYCLE=PENDING_NEW_FINAL_HEAD
+JUDGE=ACTIVE_DRAFT_HOLD
+```
+
+### Root cause and selected design
+
+- On Windows Desktop, the full draft passed pre-validation, but the renderer
+  removed vault-owned sensitive items before backend persistence. The DPAPI
+  transaction could only commit after backend success, so a first-run key was
+  absent from both backend runtime state and the save request.
+- FastAPI wraps validation metadata under `detail`; the client treated the
+  response as a top-level validation object and lost `issues`.
+- Keep the established transaction order. Replace only handled LLM API
+  credentials with the current mask token for backend validation; the existing
+  backend manager treats that token as a sensitive no-op and does not write it to
+  `.env`. Keep other handled secrets on their prior omission path. Unwrap nested
+  issues and show a bounded `field: reason` summary while retaining all structured
+  issues.
+
+### Required tests and acceptance
+
+1. First-run AIHubMix save sends all public channel fields plus a mask placeholder
+   and never sends the synthetic plaintext key to backend persistence.
+2. `GENERATION_BACKEND=codex_cli` can coexist with saving a LiteLLM channel.
+3. Historical default provider/model fields remain intact in the same save.
+4. A 400 FastAPI validation response exposes the exact issue key and message.
+5. A format-validated notification URL remains omitted from backend persistence;
+   a fresh LLM mask is accepted but neither the mask nor API-key field is stored.
+6. Desktop vault coverage proves a dynamic first-run LLM credential is handled
+   without a pre-commit write or plaintext vault storage. This related test path
+   must activate the Desktop and Windows CI gates.
+7. Exact-Head CI must pass all applicable Jobs. Windows must build the final
+   package and complete install, first start/health, exit, restart/health,
+   official uninstall, and zero-owned-process checks.
+
+### Scope and stop gates
+
+- Authorized: tests, minimum Web client fix, required control/changelog updates,
+  normal commits, push, one Draft PR, exact-Head CI, and in-scope CI repair.
+- Forbidden: database/user-data migration, real API keys, dependency/version
+  changes, Ready, merge, `main`, Tag, or Release.
+
+---
+
+# Historical contract | WORK-025 / Windows frozen-backend startup timeout repair
 
 ## Work25 authorization and execution contract
 

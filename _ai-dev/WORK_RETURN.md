@@ -1,4 +1,61 @@
-# WORK-025 | Windows frozen-backend startup timeout repair return
+# WORK-027 | Windows Desktop AI configuration save validation repair return
+
+## Work27 current evidence
+
+```text
+BASE=4322e7ddf09b8262c0e7279af9e321aec4f77758
+BRANCH=agent/pp02-work27-config-save-validation
+ROOT_CAUSE=PENDING_SECRET_REMOVED_BEFORE_BACKEND_VALIDATION_PLUS_NESTED_ISSUES_DROPPED
+TDD_RED=PASS_INITIAL_4_EXPECTED_FAILURES_PLUS_REVIEW_2_EXPECTED_FAILURES
+TDD_GREEN=PASS_SYSTEM_CONFIG_API_19_OF_19_HOOK_5_OF_5
+PLAINTEXT_BACKEND_PERSISTENCE=ABSENT_SYNTHETIC_VALUES_ONLY
+BACKEND_MASK_NOOP_LOCAL=DEFERRED_MISSING_LOCKED_REQUESTS_DEPENDENCY
+LOCAL_FULL=PASS_WEB_1081_PASSED_2_SKIPPED_DESKTOP_100_OF_100_LINT_BUILD_AI_ASSETS_DIFF
+REVIEW=PASS_THREE_ROUNDS_NO_FINDINGS_DRAFT_PR_AND_EXACT_HEAD_CI_ALLOWED
+DRAFT_PR=26_OPEN_DRAFT
+INITIAL_REMOTE_HEAD=04a2259c11659ec51635a56ffde74981d55bf7dd_TREE_VERIFIED
+PRIOR_REMOTE_HEAD=9cb32d7fa663770d6cef18a9012c7518e6807ba6
+PRIOR_CI=RUN_31106977554_PASS_EXECUTED_5_OF_5_WINDOWS_AND_DESKTOP_PATH_SKIPPED_NOT_ACCEPTED
+REMOTE_FIXED_HEAD=THIS_DESKTOP_COVERAGE_FINAL_BRANCH_HEAD
+REMOTE_CI=PENDING_EXACT_NEW_FINAL_HEAD
+WINDOWS_LIFECYCLE=PENDING_NEW_FINAL_HEAD
+JUDGE=ACTIVE_DRAFT_HOLD
+```
+
+- RED proved three real save shapes omitted the handled credential item entirely
+  and a FastAPI `detail.issues` response became `[]`; 14 pre-existing API tests
+  remained green during the failing run.
+- The minimum implementation maps only pending LLM API credential items to
+  `******` for backend persistence, preserves every public field, keeps other
+  secure fields on their prior omission path, and leaves prepare → backend save
+  → vault commit → sanitize/restart/finalize ordering unchanged.
+- Error parsing accepts top-level or FastAPI-nested validation payloads. The UI
+  receives both the original structured issue and a bounded message containing
+  the exact field key and reason.
+- GREEN is system-config API `19/19` and system-config Hook `5/5`. Tests use only
+  synthetic strings and assert that backend persistence payloads contain none of
+  those plaintext values.
+- Full Web is `1081` passed / `2` skipped; ESLint, TypeScript/Vite production
+  build, `check_ai_assets.py`, and `git diff --check` all pass.
+- The related Desktop vault regression uses production `CredentialVault` and a
+  real temporary file path to prove first-run prepare, ciphertext-only commit,
+  and in-memory restore; Desktop full passes `100/100`.
+- Independent re-review reports no Critical, Important, or Minor findings and
+  allows the candidate to enter Draft PR plus exact-Head CI, but not Ready/merge.
+- Draft PR [#26](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/26)
+  is Open Draft. Initial remote Head `04a2259c…` has tree `bd912914…`, exactly
+  matching the local candidate. Later Head `9cb32d7f…` passed all five executed
+  Jobs in Run `31106977554`, but Windows/Desktop/macOS were path-skipped and a
+  native rerun remained skipped, so the lifecycle gate was not accepted. This
+  reviewed Desktop coverage commit is the new frozen exact Head.
+- The current cloud Python runtime lacks the locked `requests` dependency, so
+  the new and existing service-level mask-noop tests could not import locally. No
+  package was upgraded; exact-Head CI must run those backend contracts and remains the
+  authority for full backend and Windows lifecycle evidence.
+
+---
+
+# Historical return | WORK-025 / Windows frozen-backend startup timeout repair
 
 ## Work25 current evidence
 

@@ -2080,6 +2080,53 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         self.assertIn("安全凭据", context.exception.message)
         self.assertNotIn("imported-fake-value", context.exception.message)
 
+    def test_secure_mode_accepts_fresh_llm_pending_mask_without_persisting_it(self) -> None:
+        self._rewrite_env("STOCK_LIST=600519")
+        old_version = self.manager.get_config_version()
+        with patch.dict(
+            os.environ,
+            {
+                "DSA_SECURE_CREDENTIAL_MODE": "windows_dpapi",
+                "DSA_SECURE_CREDENTIAL_KEYS": "LLM_AIHUBMIX_API_KEY",
+                "LLM_AIHUBMIX_API_KEY": "",
+            },
+            clear=False,
+        ):
+            response = self.service.update(
+                config_version=old_version,
+                items=[
+                    {"key": "LLM_CHANNELS", "value": "aihubmix"},
+                    {"key": "LLM_AIHUBMIX_PROTOCOL", "value": "openai"},
+                    {"key": "LLM_AIHUBMIX_BASE_URL", "value": "https://aihubmix.com/v1"},
+                    {"key": "LLM_AIHUBMIX_API_KEY", "value": "******"},
+                    {"key": "LLM_AIHUBMIX_MODELS", "value": "openai/gpt-4o-mini"},
+                ],
+                mask_token="******",
+                reload_now=False,
+            )
+
+        self.assertTrue(response["success"])
+        self.assertEqual(response["applied_count"], 4)
+        self.assertEqual(response["skipped_masked_count"], 0)
+        self.assertEqual(
+            response["updated_keys"],
+            [
+                "LLM_CHANNELS",
+                "LLM_AIHUBMIX_PROTOCOL",
+                "LLM_AIHUBMIX_BASE_URL",
+                "LLM_AIHUBMIX_MODELS",
+            ],
+        )
+        self.assertNotEqual(response["config_version"], old_version)
+
+        raw_content = self.env_path.read_text(encoding="utf-8")
+        current_map = self.manager.read_config_map()
+        self.assertNotIn("LLM_AIHUBMIX_API_KEY", current_map)
+        self.assertNotIn("LLM_AIHUBMIX_API_KEY", raw_content)
+        self.assertNotIn("******", raw_content)
+        self.assertEqual(current_map["LLM_CHANNELS"], "aihubmix")
+        self.assertEqual(current_map["LLM_AIHUBMIX_MODELS"], "openai/gpt-4o-mini")
+
     def test_secure_mode_rejects_malformed_sensitive_import_before_parsing(self) -> None:
         fake_value = "malformed-import-fake-value"
         original_content = self.env_path.read_text(encoding="utf-8")

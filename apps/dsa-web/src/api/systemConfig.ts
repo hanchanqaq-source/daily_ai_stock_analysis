@@ -86,6 +86,73 @@ interface DesktopSecureCredentialBridge {
   finalizeSecureCredentialUpdate(transactionId: string): Promise<unknown>;
 }
 
+type SystemConfigValidationErrorEnvelope = Partial<SystemConfigValidationErrorResponse> & {
+  detail?: Partial<SystemConfigValidationErrorResponse>;
+};
+
+const PENDING_LLM_CREDENTIAL_KEYS = new Set([
+  'AIHUBMIX_KEY',
+  'ANSPIRE_API_KEYS',
+  'ANTHROPIC_API_KEY',
+  'ANTHROPIC_API_KEYS',
+  'DEEPSEEK_API_KEY',
+  'DEEPSEEK_API_KEYS',
+  'GEMINI_API_KEY',
+  'GEMINI_API_KEYS',
+  'OPENAI_API_KEY',
+  'OPENAI_API_KEYS',
+]);
+const PENDING_LLM_CHANNEL_CREDENTIAL_RE = /^LLM_[A-Z0-9_]+_API_KEYS?$/;
+const DISPLAYED_VALIDATION_ISSUE_LIMIT = 3;
+const DISPLAYED_VALIDATION_MESSAGE_MAX_LENGTH = 600;
+
+function isPendingLLMCredentialKey(key: string): boolean {
+  const normalizedKey = key.toUpperCase();
+  return PENDING_LLM_CREDENTIAL_KEYS.has(normalizedKey)
+    || PENDING_LLM_CHANNEL_CREDENTIAL_RE.test(normalizedKey);
+}
+
+function truncateValidationMessage(message: string, maxLength: number): string {
+  return message.length <= maxLength ? message : `${message.slice(0, Math.max(0, maxLength - 1))}…`;
+}
+
+function parseSystemConfigValidationError(data: unknown): SystemConfigValidationErrorResponse {
+  const envelope = toCamelCase<SystemConfigValidationErrorEnvelope>(data ?? {});
+  const payload = envelope.detail ?? envelope;
+  return {
+    error: payload.error || 'validation_failed',
+    message: payload.message || 'System configuration validation failed',
+    issues: Array.isArray(payload.issues) ? payload.issues : [],
+  };
+}
+
+function createSystemConfigValidationError(
+  validation: Pick<SystemConfigValidationErrorResponse, 'message' | 'issues'>,
+  parsedError?: ParsedApiError,
+): SystemConfigValidationError {
+  const displayedIssues = validation.issues
+    .slice(0, DISPLAYED_VALIDATION_ISSUE_LIMIT)
+    .map((issue) => `${issue.key}：${issue.message}`)
+    .join('；');
+  const remainingIssueCount = validation.issues.length - DISPLAYED_VALIDATION_ISSUE_LIMIT;
+  const issueSuffix = remainingIssueCount > 0 ? `另有 ${remainingIssueCount} 项校验错误` : '';
+  const separator = displayedIssues && issueSuffix ? '；' : '';
+  const availableIssueLength = DISPLAYED_VALIDATION_MESSAGE_MAX_LENGTH - separator.length - issueSuffix.length;
+  const issueMessage = [
+    truncateValidationMessage(displayedIssues, availableIssueLength),
+    issueSuffix,
+  ].filter(Boolean).join(separator);
+  const message = issueMessage || parsedError?.message || validation.message || '配置校验失败';
+  const detailedError = createParsedApiError({
+    title: '配置校验失败',
+    message,
+    rawMessage: parsedError?.rawMessage || validation.message || message,
+    status: parsedError?.status ?? 400,
+    category: parsedError?.category ?? 'http_error',
+  });
+  return new SystemConfigValidationError(message, validation.issues, detailedError);
+}
+
 function getDesktopSecureCredentialBridge(): DesktopSecureCredentialBridge | null {
   if (typeof window === 'undefined') {
     return null;
@@ -381,10 +448,10 @@ export const systemConfigApi = {
         const maskToken = payload.maskToken ?? '******';
         const validation = await this.validate({ items: payload.items });
         if (!validation.valid) {
-          throw new SystemConfigValidationError(
-            '配置校验失败',
-            validation.issues,
-          );
+          throw createSystemConfigValidationError({
+            message: '配置校验失败',
+            issues: validation.issues,
+          });
         }
 
         const prepared = await desktopBridge.prepareSecureCredentialUpdate({
@@ -394,7 +461,14 @@ export const systemConfigApi = {
         if (prepared.supported && prepared.transactionId) {
           const transactionId = prepared.transactionId;
           const handledKeys = new Set(prepared.handledKeys.map((key) => key.toUpperCase()));
-          const publicItems = payload.items.filter((item) => !handledKeys.has(item.key.toUpperCase()));
+          const backendItems = payload.items.flatMap((item) => {
+            if (!handledKeys.has(item.key.toUpperCase())) {
+              return [item];
+            }
+            return isPendingLLMCredentialKey(item.key)
+              ? [{ key: item.key, value: maskToken }]
+              : [];
+          });
           let backendResult: UpdateSystemConfigResponse = {
             success: true,
             configVersion: payload.configVersion,
@@ -407,12 +481,12 @@ export const systemConfigApi = {
           let vaultCommitted = false;
 
           try {
-            if (publicItems.length > 0) {
+            if (backendItems.length > 0) {
               const response = await apiClient.put<Record<string, unknown>>(
                 '/api/v1/system/config',
                 toSnakeUpdatePayload({
                   ...payload,
-                  items: publicItems,
+                  items: backendItems,
                   reloadNow: false,
                 }),
               );
@@ -464,12 +538,8 @@ export const systemConfigApi = {
         const payloadData = (error as { response?: { data?: unknown } }).response?.data;
 
         if (status === 400) {
-          const validationError = toCamelCase<SystemConfigValidationErrorResponse>(payloadData ?? {});
-          throw new SystemConfigValidationError(
-            parsed.message || validationError.message || '配置校验失败',
-            validationError.issues || [],
-            parsed,
-          );
+          const validationError = parseSystemConfigValidationError(payloadData);
+          throw createSystemConfigValidationError(validationError, parsed);
         }
 
         if (status === 409) {

@@ -6,21 +6,21 @@
 PROJECT_ID=PP02
 PROJECT_NAME=AI 每日股票分析
 CHAT_ROLE=AUTO_TAKEOVER
-WORK_ID=WORK-025
+WORK_ID=WORK-027
 ROLE_LOCK=SUPERSEDED_BY_PP02-WORK-HANDOFF-002
 WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
-WORK_STATE=LOCAL_RELATED_VERIFICATION_PASS_DRAFT_PR_PENDING
-EXECUTION_LOCK=WORK25_MINIMAL_FIX_DRAFT_PR_AND_EXACT_HEAD_CI_ONLY
-APPLICATION_BASE_VERSION=3.29.3
-CURRENT_RELEASE_VERSION=3.29.3
+WORK_STATE=DRAFT_PR_OPEN_DESKTOP_COVERAGE_FINAL_HEAD_CI_PENDING
+EXECUTION_LOCK=WORK27_CONFIG_SAVE_MINIMAL_FIX_DRAFT_PR_AND_EXACT_HEAD_CI_ONLY
+APPLICATION_BASE_VERSION=3.29.4
+CURRENT_RELEASE_VERSION=3.29.4
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-ACTIVE_BASE=f813084944f7a9c5459312ef84da7956cda1a37f
-ACTIVE_BRANCH=agent/pp02-work25-windows-frozen-startup-timeout
-ACTIVE_PR=25_OPEN_DRAFT
-CURRENT_STAGE=Work25 Draft PR #25 published; status-sync Head and its exact complete CI pending
-CURRENT_WORK=WORK-025 — Windows frozen-backend startup timeout repair
-ACTIVE_GOAL=replace the conflicting fixed 3-second uvicorn startup deadline with one bounded condition-based wait, then publish one Draft PR and verify its exact Head CI
+ACTIVE_BASE=4322e7ddf09b8262c0e7279af9e321aec4f77758
+ACTIVE_BRANCH=agent/pp02-work27-config-save-validation
+ACTIVE_PR=26_OPEN_DRAFT
+CURRENT_STAGE=Work27 prior Head applicable CI passed but Windows was path-skipped; reviewed Desktop coverage final Head pending exact complete CI
+CURRENT_WORK=WORK-027 — Windows Desktop AI configuration save validation repair
+ACTIVE_GOAL=preserve pending LLM credentials as non-persisted mask placeholders and surface exact validation field reasons, then verify Draft PR 26 exact Head CI
 PRODUCT_PR=20_MERGED
 PRODUCT_FIXED_HEAD=e11946f528c9cb64beeec8b626ada457c02b0034
 PRODUCT_MERGE_COMMIT=25de369f8e12438a1ec1f3511c68256c471243e4
@@ -80,19 +80,74 @@ WORK25_TDD_GREEN=PASS_DELAYED_READY_AFTER_4_SECONDS
 WORK25_LOCAL_RELATED=PASS_32_OF_32
 WORK25_LOCAL_AUXILIARY=PASS_PY_COMPILE_AI_ASSETS_BOUNDARIES_DIFF
 WORK25_LOCAL_FULL_BACKEND=DEFERRED_EXISTING_ENV_MISSING_LOCKED_DEPS_AND_FLAKE8_REMOTE_CI_AUTHORITATIVE
-WORK25_DRAFT_PR=25_OPEN_DRAFT
-WORK25_REMOTE_FIXED_HEAD=65fddad28ce672a84813e5d422aa7b9d4f642a73_INITIAL_IMPLEMENTATION_PENDING_STATUS_SYNC_HEAD
-WORK25_REMOTE_CI=PENDING_FINAL_STATUS_SYNC_HEAD
-WORK25_JUDGE=ACTIVE_DRAFT_HOLD
-CURRENT_STATUS=WORK25_DRAFT_PR_OPEN_STATUS_SYNC_AND_EXACT_HEAD_CI_PENDING
-ACTIVE_BLOCKER=STATUS_SYNC_COMMIT_AND_FINAL_EXACT_REMOTE_HEAD_CI_PENDING
+WORK25_DRAFT_PR=25_MERGED
+WORK25_REMOTE_FIXED_HEAD=bae6c0ffa637ed443d4bb003a729fa2bba4ef042
+WORK25_REMOTE_CI=RUN_31037493697_PASS
+WORK25_JUDGE=PASS_MERGED_BY_SEPARATE_WORK26_AUTHORIZATION
+WORK26_MAIN=4322e7ddf09b8262c0e7279af9e321aec4f77758
+WORK26_ANNOTATED_TAG=V3_29_4_POINTS_TO_4322E7DDF09B8262C0E7279AF9E321AEC4F77758
+WORK27_BASE=4322e7ddf09b8262c0e7279af9e321aec4f77758
+WORK27_ROOT_CAUSE=DESKTOP_DROPPED_PENDING_SECRET_BEFORE_BACKEND_CROSS_FIELD_VALIDATION_AND_FRONTEND_READ_ISSUES_FROM_WRONG_LEVEL
+WORK27_TDD_RED=PASS_INITIAL_4_EXPECTED_FAILURES_PLUS_REVIEW_2_EXPECTED_FAILURES
+WORK27_TDD_GREEN=PASS_SYSTEM_CONFIG_API_19_OF_19_HOOK_5_OF_5
+WORK27_LOCAL_FULL=PASS_WEB_1081_PASSED_2_SKIPPED_DESKTOP_100_OF_100_LINT_BUILD_AI_ASSETS_DIFF
+WORK27_REVIEW=PASS_THREE_ROUNDS_NO_FINDINGS_DRAFT_PR_AND_EXACT_HEAD_CI_ALLOWED
+WORK27_DRAFT_PR=26_OPEN_DRAFT
+WORK27_INITIAL_REMOTE_HEAD=04a2259c11659ec51635a56ffde74981d55bf7dd_TREE_VERIFIED
+WORK27_PRIOR_REMOTE_HEAD=9cb32d7fa663770d6cef18a9012c7518e6807ba6
+WORK27_PRIOR_CI=RUN_31106977554_PASS_EXECUTED_5_OF_5_WINDOWS_AND_DESKTOP_PATH_SKIPPED_NOT_ACCEPTED
+WORK27_DESKTOP_COVERAGE=PASS_FIRST_RUN_DYNAMIC_LLM_VAULT_TEST_AND_DESKTOP_100_OF_100
+WORK27_REMOTE_FIXED_HEAD=THIS_DESKTOP_COVERAGE_FINAL_BRANCH_HEAD
+WORK27_REMOTE_CI=PENDING_EXACT_NEW_FINAL_HEAD
+WORK27_WINDOWS_LIFECYCLE=PENDING_NEW_FINAL_HEAD
+WORK27_JUDGE=ACTIVE_DRAFT_HOLD
+CURRENT_STATUS=WORK27_DRAFT_PR_OPEN_DESKTOP_COVERAGE_FINAL_HEAD_CI_PENDING
+ACTIVE_BLOCKER=NONE
 NEXT_WORK=NONE
-NEXT_ACTION=COMMIT_STATUS_SYNC_UPDATE_PR25_BRANCH_THEN_VERIFY_FINAL_EXACT_HEAD_CI
+NEXT_ACTION=LOCK_THIS_DESKTOP_COVERAGE_COMMIT_AS_FINAL_HEAD_THEN_WAIT_FOR_EXACT_HEAD_CI
 AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/TAG/RELEASE
-LAST_UPDATED=2026-08-05
+LAST_UPDATED=2026-08-06
 ```
 
-## 2026-08-05 Work25 / Windows frozen-backend startup timeout repair
+## 2026-08-06 Work27 / Windows Desktop AI configuration save validation repair
+
+- GitHub and fetched refs confirm Work25 is no longer active: PR #25 merged as
+  `main@4322e7dd…`; annotated `v3.29.4` peels to that exact commit. Work27 starts
+  from that fixed Base in `agent/pp02-work27-config-save-validation`.
+- Root cause 1: Desktop validates the full draft, then removed every vault-owned
+  secret before the backend save. A new key is not committed to DPAPI until that
+  save succeeds, so backend cross-field validation saw `missing_api_key`.
+- Root cause 2: FastAPI returns validation metadata under `detail.issues`, while
+  the Web client read top-level `issues`; the field errors became an empty array
+  and the UI showed only `System configuration validation failed`.
+- Initial TDD RED is four expected failures: first-run AIHubMix, `codex_cli` plus
+  a saved LiteLLM channel, historical default provider fields, and nested field
+  issues. Review added two more RED counterexamples for a notification URL and
+  bounded error display. The minimal client repair sends the existing mask token
+  only for pending LLM API credentials, keeps prior omission semantics for other
+  vault-owned secrets, and unwraps field issues into structured UI state plus a
+  bounded `field: reason` alert. Focused GREEN is API `19/19` and Hook `5/5`.
+- Full Web is `1081` passed / `2` skipped; lint, production build, AI-asset check,
+  and diff check pass. The cloud Python runtime lacks locked `requests`, so the
+  new backend characterization is deferred to exact-Head CI and is not claimed
+  locally. Independent re-review reports no Critical, Important, or Minor
+  findings and permits Draft PR plus exact-Head CI. No database, user data,
+  dependency, version, workflow, Tag, Release, or real credential was changed.
+  Draft PR identity, exact Head CI, and the
+  Windows installer lifecycle remain pending.
+- Draft PR [#26](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/26)
+  is Open Draft from initial remote Head `04a2259c…`. Its tree
+  `bd912914…` was compared against the local candidate tree and matches exactly.
+  Head `9cb32d7f…` completed Run `31106977554`: all five executed Jobs passed,
+  including backend offline tests, but Desktop/Windows/macOS were path-skipped.
+  A native rerun kept the same skip condition, so that Head is not accepted.
+- A related Desktop regression now proves first-run dynamic LLM credentials are
+  prepared without pre-commit disk writes, stored without plaintext, and restored
+  only in memory. Desktop full is `100/100`; third-round review has no findings.
+  This Desktop coverage commit is the new frozen CI Head and must run the Windows
+  install/start/restart/uninstall lifecycle before Work27 can pass.
+
+## Historical current entry | 2026-08-05 Work25 / Windows frozen-backend startup timeout repair
 
 - PR #24 fixed Head `f91576cb…` passed Run `31028088206` 8/8 and was merged as
   `main@f813084…`. The merge tree matches the PR tree, but main Run

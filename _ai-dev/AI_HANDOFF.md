@@ -1,6 +1,35 @@
 # PP02 handoff
 
-## Current takeover entry | WORK-025
+## Current takeover entry | WORK-027
+
+| Item | Current fact |
+| --- | --- |
+| State | `WORK27_DRAFT_PR_OPEN_DESKTOP_COVERAGE_FINAL_HEAD_CI_PENDING` |
+| Base | `main@4322e7ddf09b8262c0e7279af9e321aec4f77758` |
+| Branch | `agent/pp02-work27-config-save-validation` |
+| Goal | Repair first-run Desktop AI config save validation without plaintext `.env` storage |
+| Root cause | Pending vault secrets were deleted before backend validation; nested `detail.issues` was read from the wrong level |
+| TDD | RED initial `4` + review `2` expected failures; GREEN API `19/19`, Hook `5/5` |
+| Local | Web `1081` passed / `2` skipped; Desktop `100/100`; lint, build, AI assets, diff pass; backend local import deferred because locked `requests` is absent |
+| Review | PASS — three rounds, no Critical, Important, or Minor findings; Draft PR/exact-Head CI allowed |
+| Draft PR | [#26](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/26), Open Draft |
+| Prior CI | Head `9cb32d7f…`, Run `31106977554`: five executed Jobs passed; Windows/Desktop/macOS path-skipped, so lifecycle gate not accepted |
+| Remote | This reviewed Desktop coverage commit is the new frozen branch Head; exact-Head CI and Windows lifecycle pending |
+| Judge | `ACTIVE — DRAFT_HOLD` |
+| Prohibited | Ready, merge, `main`, Tag, Release, dependencies, database/user-data migration, real credentials |
+
+Lock this Desktop coverage commit as PR #26's final Head and wait for complete CI
+plus the Windows installer lifecycle. The cloud Python
+environment currently lacks locked dependency `requests`; do not treat that local import
+failure as a product failure or as backend PASS. Exact-Head CI is authoritative.
+
+Work25/Work26 history is closed: PR #25 fixed Head `bae6c0ff…` passed Run
+`31037493697`, merged as `main@4322e7dd…`, and annotated `v3.29.4` peels to that
+commit. Work27 does not reopen or modify the startup-timeout fix.
+
+---
+
+## Historical takeover entry | WORK-025
 
 | Item | Current fact |
 | --- | --- |
@@ -16,7 +45,7 @@
 | Judge | `ACTIVE — DRAFT_HOLD` |
 | Prohibited | Ready, merge, `main`, Tag, Release, version/dependency/config expansion, signing identity, real Windows data |
 
-Continue with one status-only synchronization commit on PR #25, then lock that
+Historical instruction: continue with one status-only synchronization commit on PR #25, then lock that
 final Head and wait for its complete Actions verification. The cloud environment lacks locked backend dependencies
 and flake8, so it did not claim the full local backend gate; remote CI is the
 authority for backend, Windows/macOS packaging, final ZIP, and lifecycle checks.
