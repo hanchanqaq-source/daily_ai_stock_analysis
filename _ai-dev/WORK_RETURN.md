@@ -10,13 +10,15 @@ TDD_RED=PASS_INITIAL_4_EXPECTED_FAILURES_PLUS_REVIEW_2_EXPECTED_FAILURES
 TDD_GREEN=PASS_SYSTEM_CONFIG_API_19_OF_19_HOOK_5_OF_5
 PLAINTEXT_BACKEND_PERSISTENCE=ABSENT_SYNTHETIC_VALUES_ONLY
 BACKEND_MASK_NOOP_LOCAL=DEFERRED_MISSING_LOCKED_REQUESTS_DEPENDENCY
-LOCAL_FULL=PASS_WEB_1081_PASSED_2_SKIPPED_LINT_BUILD_AI_ASSETS_DIFF
-REVIEW=PASS_NO_FINDINGS_DRAFT_PR_AND_EXACT_HEAD_CI_ALLOWED
+LOCAL_FULL=PASS_WEB_1081_PASSED_2_SKIPPED_DESKTOP_100_OF_100_LINT_BUILD_AI_ASSETS_DIFF
+REVIEW=PASS_THREE_ROUNDS_NO_FINDINGS_DRAFT_PR_AND_EXACT_HEAD_CI_ALLOWED
 DRAFT_PR=26_OPEN_DRAFT
 INITIAL_REMOTE_HEAD=04a2259c11659ec51635a56ffde74981d55bf7dd_TREE_VERIFIED
-REMOTE_FIXED_HEAD=THIS_FINAL_STATUS_SYNC_BRANCH_HEAD
-REMOTE_CI=PENDING_EXACT_FINAL_HEAD
-WINDOWS_LIFECYCLE=PENDING
+PRIOR_REMOTE_HEAD=9cb32d7fa663770d6cef18a9012c7518e6807ba6
+PRIOR_CI=RUN_31106977554_PASS_EXECUTED_5_OF_5_WINDOWS_AND_DESKTOP_PATH_SKIPPED_NOT_ACCEPTED
+REMOTE_FIXED_HEAD=THIS_DESKTOP_COVERAGE_FINAL_BRANCH_HEAD
+REMOTE_CI=PENDING_EXACT_NEW_FINAL_HEAD
+WINDOWS_LIFECYCLE=PENDING_NEW_FINAL_HEAD
 JUDGE=ACTIVE_DRAFT_HOLD
 ```
 
@@ -35,12 +37,17 @@ JUDGE=ACTIVE_DRAFT_HOLD
   those plaintext values.
 - Full Web is `1081` passed / `2` skipped; ESLint, TypeScript/Vite production
   build, `check_ai_assets.py`, and `git diff --check` all pass.
+- The related Desktop vault regression uses production `CredentialVault` and a
+  real temporary file path to prove first-run prepare, ciphertext-only commit,
+  and in-memory restore; Desktop full passes `100/100`.
 - Independent re-review reports no Critical, Important, or Minor findings and
   allows the candidate to enter Draft PR plus exact-Head CI, but not Ready/merge.
 - Draft PR [#26](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/26)
   is Open Draft. Initial remote Head `04a2259c…` has tree `bd912914…`, exactly
-  matching the local candidate. This final status-only synchronization commit is
-  the frozen exact Head used for CI; no later branch update is allowed first.
+  matching the local candidate. Later Head `9cb32d7f…` passed all five executed
+  Jobs in Run `31106977554`, but Windows/Desktop/macOS were path-skipped and a
+  native rerun remained skipped, so the lifecycle gate was not accepted. This
+  reviewed Desktop coverage commit is the new frozen exact Head.
 - The current cloud Python runtime lacks the locked `requests` dependency, so
   the new and existing service-level mask-noop tests could not import locally. No
   package was upgraded; exact-Head CI must run those backend contracts and remains the

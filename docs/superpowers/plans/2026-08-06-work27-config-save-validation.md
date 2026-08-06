@@ -163,6 +163,13 @@ Push `agent/pp02-work27-config-save-validation`, then create a Draft PR into `ma
 
 Require all applicable jobs to finish for exactly the final PR Head. In the Windows job, require final Web/Desktop packaging, candidate installer creation, install, first start/health, clean exit, restart/health, official uninstall, and zero owned-process residuals. Record artifact identity if exposed by the workflow.
 
+Head `9cb32d7f…` completed Run `31106977554` with all five executed Jobs
+successful, but path detection skipped Desktop/Windows/macOS; a native job rerun
+re-applied the skip. Add one directly related production-vault Desktop regression
+instead of changing workflow policy or making a meaningless touch. The new test
+must pass Desktop full locally, receive independent review, and make the next
+frozen Head run the complete Windows lifecycle.
+
 - [ ] **Step 6: Stop at Draft Hold**
 
 Report root cause, changed files, RED/GREEN and full validation results, exact PR Head/Run, and Windows candidate status. Do not mark Ready, merge, tag, or release.

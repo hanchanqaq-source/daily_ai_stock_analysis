@@ -4,14 +4,16 @@
 
 ```text
 WORK_ID=WORK-027
-WORK_STATE=DRAFT_PR_OPEN_EXACT_HEAD_CI_PENDING
+WORK_STATE=DRAFT_PR_OPEN_DESKTOP_COVERAGE_FINAL_HEAD_CI_PENDING
 BASE=4322e7ddf09b8262c0e7279af9e321aec4f77758
 BRANCH=agent/pp02-work27-config-save-validation
 DRAFT_PR=26_OPEN_DRAFT
 INITIAL_REMOTE_HEAD=04a2259c11659ec51635a56ffde74981d55bf7dd_TREE_VERIFIED
-REMOTE_FIXED_HEAD=THIS_FINAL_STATUS_SYNC_BRANCH_HEAD
-REMOTE_CI=PENDING_EXACT_FINAL_HEAD
-WINDOWS_LIFECYCLE=PENDING
+PRIOR_REMOTE_HEAD=9cb32d7fa663770d6cef18a9012c7518e6807ba6
+PRIOR_CI=RUN_31106977554_PASS_EXECUTED_5_OF_5_WINDOWS_AND_DESKTOP_PATH_SKIPPED_NOT_ACCEPTED
+REMOTE_FIXED_HEAD=THIS_DESKTOP_COVERAGE_FINAL_BRANCH_HEAD
+REMOTE_CI=PENDING_EXACT_NEW_FINAL_HEAD
+WINDOWS_LIFECYCLE=PENDING_NEW_FINAL_HEAD
 JUDGE=ACTIVE_DRAFT_HOLD
 ```
 
@@ -39,7 +41,10 @@ JUDGE=ACTIVE_DRAFT_HOLD
 4. A 400 FastAPI validation response exposes the exact issue key and message.
 5. A format-validated notification URL remains omitted from backend persistence;
    a fresh LLM mask is accepted but neither the mask nor API-key field is stored.
-6. Exact-Head CI must pass all applicable Jobs. Windows must build the final
+6. Desktop vault coverage proves a dynamic first-run LLM credential is handled
+   without a pre-commit write or plaintext vault storage. This related test path
+   must activate the Desktop and Windows CI gates.
+7. Exact-Head CI must pass all applicable Jobs. Windows must build the final
    package and complete install, first start/health, exit, restart/health,
    official uninstall, and zero-owned-process checks.
 
