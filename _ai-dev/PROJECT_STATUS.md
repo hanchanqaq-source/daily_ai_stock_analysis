@@ -1,3 +1,4 @@
+<!-- WORK29_CI_TRIGGER: GitHub Web synchronize event; implementation unchanged. -->
 # PP02 当前状态
 
 > 本文件是 PP02 唯一当前状态真源。其他文档出现冲突时，以本文件和可验证证据为准。
