@@ -1,6 +1,31 @@
 # PP02 handoff
 
-## Current takeover entry | WORK-027
+## Current takeover entry | WORK-029
+
+| Item | Current fact |
+| --- | --- |
+| State | `WORK29_SAFE_CANDIDATE_IMPLEMENTED_LOCAL_VERIFICATION_AND_DRAFT_PR_PENDING` |
+| Base | `main@9a4a705d06370ddbebf669ab8efb0058ce9eb81a` |
+| Branch | `agent/pp02-work29-safe-candidate` |
+| Goal | Produce an unpublished source-consistent `3.29.5` Windows candidate that passes fail-closed Microsoft Defender gates |
+| Release | Formal release remains `v3.29.4`; no Tag or Release is authorized |
+| Version gate | Root `VERSION` binds Desktop/Web/locks/backup; candidate must exceed latest stable Tag and release Tag must equal source |
+| Security gate | Defender intelligence/health plus installer, portable, extracted, unpacked, final-release and installed-root scans; only scanner exit `0` accepted |
+| Local | Desktop `119/119`; related Python `31/31` via direct `runpy`; Defender exit-2 mutation RED; AI assets, Node/YAML syntax and diff PASS; real Defender not claimed on Linux |
+| Draft PR / CI | Pending reviewed Head and exact-Head complete CI |
+| Judge | `ACTIVE — DRAFT_HOLD` |
+| Prohibited | Ready, merge, `main`, Tag, Release, dependencies, database/user data, real credentials |
+
+Work28 closed PR #26 at fixed Head `849dfaef…`, merge commit `9a4a705d…`, and
+main Run `31111163231` 8/8. Continue Work29 only through local verification,
+independent review, one Draft PR, fixed-Head CI, artifact/report cross-check and a
+safe candidate link. A Linux unit contract is not a malware-clean verdict; only
+the Windows Job's bound Defender reports and candidate hashes may support that
+claim.
+
+---
+
+## Historical takeover entry | WORK-027
 
 | Item | Current fact |
 | --- | --- |

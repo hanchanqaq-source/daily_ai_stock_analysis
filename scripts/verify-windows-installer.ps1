@@ -3,6 +3,8 @@ param(
   [Parameter(Mandatory=$true)][string]$ExpectedVersion,
   [Parameter(Mandatory=$true)][string]$InstallRoot,
   [Parameter(Mandatory=$true)][string]$DiagnosticRoot,
+  [Parameter(Mandatory=$true)][string]$MalwareScannerPath,
+  [Parameter(Mandatory=$true)][string]$MalwareReportPath,
   [string]$ExpectedCommitSha = '',
   [int]$StartupTimeoutSeconds = 120,
   [switch]$RequireValidSignature
@@ -780,6 +782,9 @@ if ([IO.Path]::GetExtension($installer) -ne '.exe') {
 $runnerTemp = Get-NormalizedDirectoryPath -Path $env:RUNNER_TEMP
 $ownedRoot = Get-NormalizedDirectoryPath -Path $InstallRoot
 $diagnosticRoot = Get-NormalizedDirectoryPath -Path $DiagnosticRoot
+$malwareScanner = [IO.Path]::GetFullPath($MalwareScannerPath)
+$malwareReport = [IO.Path]::GetFullPath($MalwareReportPath)
+$malwareReportRoot = Get-NormalizedDirectoryPath -Path (Split-Path -Parent $malwareReport)
 $ownedLeaf = Split-Path -Leaf $ownedRoot
 if (-not (Test-PathInsideRoot -Path $ownedRoot -Root $runnerTemp)) {
   throw 'InstallRoot must be a child of RUNNER_TEMP.'
@@ -799,6 +804,24 @@ if (-not $diagnosticLeaf.StartsWith('pp02-installer-diagnostics-', [StringCompar
 }
 if (Test-Path -LiteralPath $diagnosticRoot) {
   throw 'DiagnosticRoot must not exist before verification.'
+}
+if (-not (Test-Path -LiteralPath $malwareScanner -PathType Leaf)) {
+  throw 'MalwareScannerPath must identify the checked-in scanner.'
+}
+if (-not (Test-PathInsideRoot -Path $malwareReport -Root $runnerTemp)) {
+  throw 'MalwareReportPath must be a child of RUNNER_TEMP.'
+}
+if (-not (Split-Path -Leaf $malwareReportRoot).StartsWith(
+    'pp02-defender-reports-',
+    [StringComparison]::OrdinalIgnoreCase
+  )) {
+  throw 'MalwareReportPath must use a pp02-defender-reports-* parent.'
+}
+if (-not (Test-Path -LiteralPath $malwareReportRoot -PathType Container)) {
+  throw 'MalwareReportPath parent must exist before verification.'
+}
+if (Test-Path -LiteralPath $malwareReport) {
+  throw 'MalwareReportPath must not exist before verification.'
 }
 New-Item -ItemType Directory -Path $diagnosticRoot -Force | Out-Null
 $ownedProcessEvidencePath = Join-Path `
@@ -821,17 +844,15 @@ Set-Content `
 $stageReportPath = Join-Path $diagnosticRoot 'stage-report.txt'
 
 $expectedHead = $ExpectedCommitSha.Trim().ToLowerInvariant()
-if ($expectedHead) {
-  if ($expectedHead -notmatch '^[0-9a-f]{40}$') {
-    throw 'ExpectedCommitSha must be an exact 40-character Git commit SHA.'
-  }
-  $currentHead = (& git rev-parse HEAD).Trim().ToLowerInvariant()
-  if ($LASTEXITCODE -ne 0 -or $currentHead -notmatch '^[0-9a-f]{40}$') {
-    throw 'Unable to resolve the checked-out Git commit.'
-  }
-  if ($currentHead -ne $expectedHead) {
-    throw 'Checked-out commit does not match ExpectedCommitSha.'
-  }
+if ($expectedHead -notmatch '^[0-9a-f]{40}$') {
+  throw 'ExpectedCommitSha must be an exact 40-character Git commit SHA.'
+}
+$currentHead = (& git rev-parse HEAD).Trim().ToLowerInvariant()
+if ($LASTEXITCODE -ne 0 -or $currentHead -notmatch '^[0-9a-f]{40}$') {
+  throw 'Unable to resolve the checked-out Git commit.'
+}
+if ($currentHead -ne $expectedHead) {
+  throw 'Checked-out commit does not match ExpectedCommitSha.'
 }
 
 $appProcess = $null
@@ -848,9 +869,7 @@ $savedInstallerDiagnosticRoot = [Environment]::GetEnvironmentVariable(
 )
 try {
   Write-Output "WINDOWS_INSTALLER_EXPECTED_VERSION=$ExpectedVersion"
-  if ($expectedHead) {
-    Write-Output "WINDOWS_INSTALLER_HEAD=$expectedHead"
-  }
+  Write-Output "WINDOWS_INSTALLER_HEAD=$expectedHead"
   if ($RequireValidSignature) {
     Write-Output 'WINDOWS_SIGNATURE_POLICY=REQUIRE_VALID'
   }
@@ -954,6 +973,27 @@ try {
     throw "HKCU uninstall entry version does not match $ExpectedVersion."
   }
   Write-Output 'WINDOWS_INSTALLER_INSTALL_VALIDATION=PASS'
+
+  $failureStage = 'installed_payload_defender_scan'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
+  node $MalwareScannerPath `
+    --head $expectedHead `
+    --report $malwareReport `
+    --path $ownedRoot
+  if ($LASTEXITCODE -ne 0) {
+    throw "Microsoft Defender rejected the installed payload with exit code $LASTEXITCODE."
+  }
+  if (-not (Test-Path -LiteralPath $malwareReport -PathType Leaf)) {
+    throw 'Microsoft Defender did not preserve the installed-payload report.'
+  }
+  $malwareResult = Get-Content -LiteralPath $malwareReport -Raw |
+    ConvertFrom-Json
+  if ([string]$malwareResult.status -ne 'PASS' -or
+      [string]$malwareResult.head -ne $expectedHead) {
+    throw 'Microsoft Defender installed-payload report identity is invalid.'
+  }
+  Write-Output 'WINDOWS_INSTALLED_DEFENDER_SCAN=PASS'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'PASS'
 
   [Environment]::SetEnvironmentVariable('GITHUB_ACTIONS', 'false', 'Process')
   [Environment]::SetEnvironmentVariable(

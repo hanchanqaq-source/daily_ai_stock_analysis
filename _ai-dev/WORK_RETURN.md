@@ -1,4 +1,48 @@
-# WORK-027 | Windows Desktop AI configuration save validation repair return
+# WORK-029 | v3.29.5 safe unpublished Windows candidate return
+
+## Work29 current evidence
+
+```text
+BASE=9a4a705d06370ddbebf669ab8efb0058ce9eb81a
+BRANCH=agent/pp02-work29-safe-candidate
+ROOT_CAUSE=RUNNER_ONLY_RELEASE_VERSION_MUTATION_PLUS_NO_REAL_ANTIMALWARE_GATE
+SOURCE_VERSION=3.29.5
+FORMAL_RELEASE_REMAINS=3.29.4
+VERSION_TDD=PASS_7_OF_7
+DEFENDER_TDD=PASS_12_OF_12_WITH_EXIT_2_MUTATION_RED
+DESKTOP_FULL=PASS_119_OF_119
+PYTHON_RELATED=PASS_31_DIRECT_RUNPY_PYTEST_UNAVAILABLE
+LOCAL_AUXILIARY=PASS_AI_ASSETS_NODE_SYNTAX_YAML_PARSE_DIFF
+REAL_DEFENDER=NOT_CLAIMED_LINUX_ENV_EXACT_HEAD_WINDOWS_CI_REQUIRED
+DRAFT_PR=PENDING
+REMOTE_CI=PENDING
+CANDIDATE=PENDING
+JUDGE=ACTIVE_DRAFT_HOLD
+```
+
+- Work28 evidence is closed: PR #26 fixed Head `849dfaef…`, merged main
+  `9a4a705d…`, and push Run `31111163231` passed 8/8 without Tag or Release.
+- Root `VERSION=3.29.5` now binds Desktop/Web packages, both lockfile roots and
+  backup metadata. The release workflow no longer mutates versions at build time;
+  candidate/release/Auto Tag modes enforce the source-to-Tag relationship.
+- The Defender orchestrator updates intelligence, requires an enabled Normal-mode
+  engine with non-stale identity, invokes `MpCmdRun.exe` custom scans with
+  remediation disabled, accepts only exit `0`, and emits sanitized exact-Head JSON.
+- Candidate and formal-release paths place Defender ahead of artifact upload and
+  pass it into the installed lifecycle before first application launch. Reports
+  remain uploadable on failure while rejected installer artifacts do not.
+- Local Desktop passes 119/119, including 7 version and 12 Defender orchestration
+  tests. A mutation accepting scanner exit `2` fails the detection regression as
+  required. All 31 related Python contracts pass with direct `runpy`; AI assets,
+  Node/YAML syntax and diff checks pass. Local pytest and Windows Defender are
+  unavailable and therefore not claimed.
+- Draft PR identity, fixed Head, complete CI, Defender identities, artifact
+  hashes and download link remain pending. No real credential/data, dependency,
+  Ready, merge, Tag or Release action occurred.
+
+---
+
+# Historical return | WORK-027 / Windows Desktop AI configuration save validation repair
 
 ## Work27 current evidence
 

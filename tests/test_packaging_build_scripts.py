@@ -70,7 +70,88 @@ def test_windows_candidate_build_and_installer_verify_one_version_identity() -> 
     assert ".VersionInfo.ProductVersion" in verifier
     assert "build-info.json" in verifier
     assert "webBuildInfo.version" in verifier
-    assert 'DEFAULT_APPLICATION_VERSION = "3.29.3"' in backup_service
+    assert 'DEFAULT_APPLICATION_VERSION = "3.29.5"' in backup_service
+
+
+def test_candidate_and_release_workflows_enforce_checked_in_version() -> None:
+    ci_workflow = _read_text(REPO_ROOT / ".github" / "workflows" / "ci.yml")
+    release_workflow = _read_text(
+        REPO_ROOT / ".github" / "workflows" / "desktop-release.yml"
+    )
+    auto_tag_workflow = _read_text(
+        REPO_ROOT / ".github" / "workflows" / "auto-tag.yml"
+    )
+
+    assert "- 'VERSION'" in ci_workflow
+    assert "- 'scripts/verify-release-version.js'" in ci_workflow
+    assert ci_workflow.count(
+        "node scripts/verify-release-version.js candidate"
+    ) >= 3
+    assert ci_workflow.count("fetch-depth: 0") >= 3
+    assert "npm version" not in release_workflow
+    assert release_workflow.count(
+        'node scripts/verify-release-version.js release --tag "${RELEASE_TAG}"'
+    ) >= 2
+    assert "node scripts/verify-release-version.js auto-tag" in auto_tag_workflow
+    assert 'git tag -a "${release_tag}"' in auto_tag_workflow
+    assert "anothrNick/github-tag-action" not in auto_tag_workflow
+
+
+def test_windows_workflows_fail_closed_on_defender_before_upload_or_release() -> None:
+    ci_workflow = _read_text(REPO_ROOT / ".github" / "workflows" / "ci.yml")
+    release_workflow = _read_text(
+        REPO_ROOT / ".github" / "workflows" / "desktop-release.yml"
+    )
+    verifier = _read_text(REPO_ROOT / "scripts" / "verify-windows-installer.ps1")
+
+    assert "- 'scripts/windows-defender-scan.js'" in ci_workflow
+    assert "Scan Windows candidate with Microsoft Defender" in ci_workflow
+    assert "Upload Windows Defender reports" in ci_workflow
+    assert "--path $defenderExtract" in ci_workflow
+    assert "--path apps/dsa-desktop/dist/win-unpacked" in ci_workflow
+    assert "-MalwareScannerPath scripts/windows-defender-scan.js" in ci_workflow
+    assert "-MalwareReportPath $installedDefenderReport" in ci_workflow
+    assert ci_workflow.index(
+        "Scan Windows candidate with Microsoft Defender"
+    ) < ci_workflow.index("Validate installed Windows lifecycle")
+    assert ci_workflow.index(
+        "Validate installed Windows lifecycle"
+    ) < ci_workflow.index("Upload verified Windows candidate")
+    assert ci_workflow.index(
+        "Upload Windows Defender reports"
+    ) < ci_workflow.index("Upload verified Windows candidate")
+
+    assert "Scan Windows release assets with Microsoft Defender" in release_workflow
+    assert "-MalwareScannerPath scripts/windows-defender-scan.js" in release_workflow
+    assert release_workflow.index(
+        "Scan Windows release assets with Microsoft Defender"
+    ) < release_workflow.index("Validate installed Windows lifecycle")
+    assert release_workflow.index(
+        "Validate installed Windows lifecycle"
+    ) < release_workflow.index("Prepare release artifact (Windows)")
+    final_release_scan = release_workflow[
+        release_workflow.index(
+            "Scan final Windows release assets with Microsoft Defender"
+        ) : release_workflow.index("Upload Windows Defender reports")
+    ]
+    for target in (
+        "$installerTarget",
+        "$blockmapTarget",
+        "$latestTarget",
+        "$zipTarget",
+        "$checksumTarget",
+        "$defenderExtract",
+    ):
+        assert f"--path {target}" in final_release_scan
+    assert "--path dist/release-assets" not in final_release_scan
+
+    assert "[Parameter(Mandatory=$true)][string]$MalwareScannerPath" in verifier
+    assert "[Parameter(Mandatory=$true)][string]$MalwareReportPath" in verifier
+    assert "node $MalwareScannerPath" in verifier
+    assert "[string]$malwareResult.head -ne $expectedHead" in verifier
+    assert verifier.index("node $MalwareScannerPath") < verifier.index(
+        "$appProcess = Start-Process -FilePath $appExe"
+    )
 
 
 def test_windows_backend_collects_and_exercises_fake_useragent_runtime() -> None:

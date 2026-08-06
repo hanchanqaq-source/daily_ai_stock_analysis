@@ -19,12 +19,17 @@ $fixtureRoot = Join-Path ([IO.Path]::GetTempPath()) (
   'pp02-installer-contract-' + [guid]::NewGuid().ToString('N')
 )
 $fakeInstaller = Join-Path $fixtureRoot 'fake-installer.exe'
+$fakeMalwareScanner = Join-Path $fixtureRoot 'fake-malware-scanner.js'
 $installRoot = Join-Path $fixtureRoot (
   'pp02-installer-verify-contract-' + [guid]::NewGuid().ToString('N')
 )
 $diagnosticRoot = Join-Path $fixtureRoot (
   'pp02-installer-diagnostics-contract-' + [guid]::NewGuid().ToString('N')
 )
+$malwareReportRoot = Join-Path $fixtureRoot (
+  'pp02-defender-reports-contract-' + [guid]::NewGuid().ToString('N')
+)
+$malwareReportPath = Join-Path $malwareReportRoot 'installed.json'
 $parentSentinel = Join-Path $fixtureRoot 'parent-sentinel.txt'
 $previousRunnerTemp = [Environment]::GetEnvironmentVariable('RUNNER_TEMP', 'Process')
 $previousInstallerDiagnosticRoot = [Environment]::GetEnvironmentVariable(
@@ -91,6 +96,16 @@ try {
   Set-Content -LiteralPath $parentSentinel -Value 'preserve' -Encoding ASCII
   Add-Type -TypeDefinition $fakeInstallerSource -Language CSharp `
     -OutputAssembly $fakeInstaller -OutputType ConsoleApplication
+  New-Item -ItemType Directory -Path $malwareReportRoot -Force | Out-Null
+  Set-Content -LiteralPath $fakeMalwareScanner -Value @(
+    "'use strict';",
+    "process.stderr.write('contract scanner must not execute before installer failure\\n');",
+    'process.exit(93);'
+  ) -Encoding UTF8
+  $expectedCommitSha = (& git -C $repoRoot rev-parse HEAD).Trim().ToLowerInvariant()
+  if ($LASTEXITCODE -ne 0 -or $expectedCommitSha -notmatch '^[0-9a-f]{40}$') {
+    throw 'Unable to resolve contract fixture commit.'
+  }
 
   $contractStage = 'owned_process_helper'
   $powerShell = (Get-Process -Id $PID).Path
@@ -244,6 +259,12 @@ try {
     ('"{0}"' -f $installRoot)
     '-DiagnosticRoot'
     ('"{0}"' -f $diagnosticRoot)
+    '-ExpectedCommitSha'
+    $expectedCommitSha
+    '-MalwareScannerPath'
+    ('"{0}"' -f $fakeMalwareScanner)
+    '-MalwareReportPath'
+    ('"{0}"' -f $malwareReportPath)
   )
   $contractProcess = Start-Process `
     -FilePath $powerShell `

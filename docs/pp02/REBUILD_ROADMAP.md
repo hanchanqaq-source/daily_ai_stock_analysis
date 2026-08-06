@@ -1,6 +1,28 @@
 # PP02 安全重建路线 R0–R7
 
-## 2026-08-06 Work27 Windows Desktop AI configuration save validation repair
+## 2026-08-06 Work29 v3.29.5 safe unpublished Windows candidate
+
+- Work28 merged PR #26 at fixed Head `849dfaef…` into `main@9a4a705d…`; main
+  Run `31111163231` passed 8/8. Work29 starts from that exact Base and does not
+  reopen the configuration fix.
+- Root cause is a release-time runner-only version mutation: formal `v3.29.4`
+  artifacts were built with the Tag while checked-in sources remained `3.29.3`.
+  Ordinary main CI later produced a stale-numbered candidate, and neither path
+  had a real antivirus gate.
+- Work29 binds root `VERSION=3.29.5` to every source surface, requires candidates
+  to exceed the latest stable Tag, and makes release/Auto Tag use the checked-in
+  version without runtime package mutation.
+- Windows candidate and release flows update/validate Microsoft Defender and
+  scan the installer, metadata, portable ZIP, unpacked/fresh-extracted/final
+  payloads and real installed root. Anything other than a clean exit `0`, or any
+  unavailable/stale/misconfigured engine, blocks upload and preserves a bounded
+  exact-Head report.
+- Local Desktop passes 119/119 and all 31 related Python contracts pass through
+  direct `runpy`, including 7 version, 12 Defender cases and workflow ordering;
+  Linux cannot provide the real Defender verdict. One Draft PR and exact-Head
+  Windows CI are the authority. Ready, merge, Tag and Release remain forbidden.
+
+## Historical entry | 2026-08-06 Work27 Windows Desktop AI configuration save validation repair
 
 - Fixed Base is `main@4322e7dd…`, after PR #25 fixed Head `bae6c0ff…` passed
   Run `31037493697` and merged. Work27 uses one isolated branch and stops at a

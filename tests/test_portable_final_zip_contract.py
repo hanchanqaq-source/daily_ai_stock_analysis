@@ -37,7 +37,7 @@ def test_portable_stage_excludes_only_root_runtime_state(tmp_path: Path) -> None
             "node",
             "scripts/prepare-portable-release.js",
             "stage",
-            "v3.29.3",
+            "v3.29.5",
             str(source),
             str(stage),
         ],
@@ -80,6 +80,11 @@ def test_windows_ci_smokes_the_final_extracted_portable_zip() -> None:
         "node scripts/verify-windows-runtime-integrity.js $finalExtract $version"
     ) < workflow.index("-PackagedEntry $finalPackagedEntry")
     assert "win-unpacked/resources/backend/stock_analysis/stock_analysis.exe" not in workflow
+    assert "Expand-Archive -LiteralPath $zip -DestinationPath $defenderExtract" in workflow
+    assert "--path $defenderExtract" in workflow
+    assert workflow.index("--path $defenderExtract") < workflow.index(
+        "Upload verified Windows candidate"
+    )
 
 
 def test_windows_release_smokes_the_final_extracted_portable_zip() -> None:

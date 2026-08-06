@@ -10,7 +10,10 @@ DESKTOP_DIR = REPO_ROOT / "apps" / "dsa-desktop"
 WEB_DIR = REPO_ROOT / "apps" / "dsa-web"
 
 
-def test_work23_candidate_version_is_consistent() -> None:
+def test_work29_candidate_version_is_consistent() -> None:
+    authoritative_version = (REPO_ROOT / "VERSION").read_text(
+        encoding="utf-8"
+    ).strip()
     desktop = json.loads(
         (DESKTOP_DIR / "package.json").read_text(encoding="utf-8")
     )
@@ -22,7 +25,8 @@ def test_work23_candidate_version_is_consistent() -> None:
         (WEB_DIR / "package-lock.json").read_text(encoding="utf-8")
     )
 
-    assert desktop["version"] == "3.29.3"
+    assert authoritative_version == "3.29.5"
+    assert desktop["version"] == authoritative_version
     assert desktop_lock["version"] == desktop["version"]
     assert desktop_lock["packages"][""]["version"] == desktop["version"]
     assert web["version"] == desktop["version"]

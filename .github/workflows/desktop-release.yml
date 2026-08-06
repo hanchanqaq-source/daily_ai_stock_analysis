@@ -213,15 +213,11 @@ jobs:
             apps/dsa-web/package-lock.json
             apps/dsa-desktop/package-lock.json
 
-      - name: Sync desktop app version from release tag
+      - name: Verify checked-in release version
         shell: bash
         run: |
           set -euo pipefail
-          [[ "${RELEASE_TAG}" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
-          export VERSION="${RELEASE_TAG#v}"
-          cd apps/dsa-desktop
-          npm version "${VERSION}" --no-git-tag-version --allow-same-version
-          node -e "const pkg = require('./package.json'); if (pkg.version !== process.env.VERSION) throw new Error('package version mismatch: ' + pkg.version); console.log('desktop version:', pkg.version);"
+          node scripts/verify-release-version.js release --tag "${RELEASE_TAG}"
 
       - name: Build desktop package (Windows)
         shell: pwsh
@@ -237,6 +233,26 @@ jobs:
           powershell -ExecutionPolicy Bypass -File scripts/tests/verify-windows-installer-contract.ps1 `
             -ArtifactDiagnosticRoot $diagnosticRoot
 
+      - name: Scan Windows release assets with Microsoft Defender
+        shell: pwsh
+        run: |
+          $expectedVersion = $env:RELEASE_TAG.TrimStart('v')
+          $installer = "apps/dsa-desktop/dist/pp02-ai-daily-stock-analysis-windows-installer-$env:RELEASE_TAG.exe"
+          $blockmap = "$installer.blockmap"
+          $latest = 'apps/dsa-desktop/dist/latest.yml'
+          $defenderRoot = Join-Path $env:RUNNER_TEMP "pp02-defender-reports-$env:DSA_RELEASE_COMMIT_SHA-$env:GITHUB_RUN_ID"
+          New-Item -ItemType Directory -Path $defenderRoot -Force | Out-Null
+          node scripts/windows-defender-scan.js `
+            --head $env:DSA_RELEASE_COMMIT_SHA `
+            --report (Join-Path $defenderRoot 'preinstall.json') `
+            --path $installer `
+            --path $blockmap `
+            --path $latest `
+            --path apps/dsa-desktop/dist/win-unpacked
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Microsoft Defender rejected the Windows release build.'
+          }
+
       - name: Validate installed Windows lifecycle
         shell: pwsh
         run: |
@@ -245,12 +261,16 @@ jobs:
           $installer = Get-Item -LiteralPath $installerPath -ErrorAction Stop
           $installRoot = Join-Path $env:RUNNER_TEMP "pp02-installer-verify-$env:DSA_RELEASE_COMMIT_SHA"
           $diagnosticRoot = Join-Path $env:RUNNER_TEMP "pp02-installer-diagnostics-$env:DSA_RELEASE_COMMIT_SHA-$env:GITHUB_RUN_ID"
+          $defenderRoot = Join-Path $env:RUNNER_TEMP "pp02-defender-reports-$env:DSA_RELEASE_COMMIT_SHA-$env:GITHUB_RUN_ID"
+          $installedDefenderReport = Join-Path $defenderRoot 'installed.json'
           powershell -ExecutionPolicy Bypass -File scripts/verify-windows-installer.ps1 `
             -InstallerPath $installer.FullName `
             -ExpectedVersion $expectedVersion `
             -InstallRoot $installRoot `
             -DiagnosticRoot $diagnosticRoot `
-            -ExpectedCommitSha $env:DSA_RELEASE_COMMIT_SHA
+            -ExpectedCommitSha $env:DSA_RELEASE_COMMIT_SHA `
+            -MalwareScannerPath scripts/windows-defender-scan.js `
+            -MalwareReportPath $installedDefenderReport
 
       - name: Upload Windows installer diagnostics
         if: always()
@@ -388,6 +408,49 @@ jobs:
           }
           Get-ChildItem -Path 'dist/release-assets' -File | Sort-Object Name | Format-Table Name, Length
 
+      - name: Scan final Windows release assets with Microsoft Defender
+        shell: pwsh
+        run: |
+          $defenderRoot = Join-Path $env:RUNNER_TEMP "pp02-defender-reports-$env:DSA_RELEASE_COMMIT_SHA-$env:GITHUB_RUN_ID"
+          $installerTarget = "dist/release-assets/pp02-ai-daily-stock-analysis-windows-installer-$env:RELEASE_TAG.exe"
+          $blockmapTarget = "$installerTarget.blockmap"
+          $latestTarget = 'dist/release-assets/latest.yml'
+          $zipTarget = "dist/release-assets/pp02-ai-daily-stock-analysis-windows-noinstall-$env:RELEASE_TAG.zip"
+          $checksumTarget = "$zipTarget.sha256"
+          $defenderExtract = Join-Path $env:RUNNER_TEMP "pp02-defender-release-extract-$env:DSA_RELEASE_COMMIT_SHA-$env:GITHUB_RUN_ID"
+          if (Test-Path -LiteralPath $defenderExtract) {
+            Remove-Item -LiteralPath $defenderExtract -Recurse -Force
+          }
+          try {
+            Expand-Archive -LiteralPath $zipTarget -DestinationPath $defenderExtract
+            node scripts/windows-defender-scan.js `
+              --head $env:DSA_RELEASE_COMMIT_SHA `
+              --report (Join-Path $defenderRoot 'final-release.json') `
+              --path $installerTarget `
+              --path $blockmapTarget `
+              --path $latestTarget `
+              --path $zipTarget `
+              --path $checksumTarget `
+              --path $defenderExtract
+            if ($LASTEXITCODE -ne 0) {
+              throw 'Microsoft Defender rejected the final Windows release assets.'
+            }
+          }
+          finally {
+            if (Test-Path -LiteralPath $defenderExtract) {
+              Remove-Item -LiteralPath $defenderExtract -Recurse -Force
+            }
+          }
+
+      - name: Upload Windows Defender reports
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: pp02-windows-defender-reports-${{ env.DSA_RELEASE_COMMIT_SHA }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/pp02-defender-reports-${{ env.DSA_RELEASE_COMMIT_SHA }}-${{ github.run_id }}
+          if-no-files-found: error
+          retention-days: 14
+
       - uses: actions/upload-artifact@v6
         with:
           name: desktop-windows-${{ env.RELEASE_TAG }}
@@ -438,15 +501,11 @@ jobs:
             apps/dsa-web/package-lock.json
             apps/dsa-desktop/package-lock.json
 
-      - name: Sync desktop app version from release tag
+      - name: Verify checked-in release version
         shell: bash
         run: |
           set -euo pipefail
-          [[ "${RELEASE_TAG}" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
-          export VERSION="${RELEASE_TAG#v}"
-          cd apps/dsa-desktop
-          npm version "${VERSION}" --no-git-tag-version --allow-same-version
-          node -e "const pkg = require('./package.json'); if (pkg.version !== process.env.VERSION) throw new Error('package version mismatch: ' + pkg.version); console.log('desktop version:', pkg.version);"
+          node scripts/verify-release-version.js release --tag "${RELEASE_TAG}"
 
       - name: Cache Electron binaries
         uses: actions/cache@v5

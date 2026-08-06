@@ -30,13 +30,29 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Bump version and push tag
-        uses: anothrNick/github-tag-action@v1
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Verify source version and push annotated tag
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WITH_V: true
-          DEFAULT_BUMP: patch
-          INITIAL_VERSION: 2.1.0
-          PATCH_STRING_TOKEN: '#patch'
-          MINOR_STRING_TOKEN: '#minor'
-          MAJOR_STRING_TOKEN: '#major'
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          markers=()
+          [[ "${COMMIT_MESSAGE}" == *'#patch'* ]] && markers+=(patch)
+          [[ "${COMMIT_MESSAGE}" == *'#minor'* ]] && markers+=(minor)
+          [[ "${COMMIT_MESSAGE}" == *'#major'* ]] && markers+=(major)
+          if [[ "${#markers[@]}" -ne 1 ]]; then
+            echo 'Exactly one version bump marker is required.' >&2
+            exit 1
+          fi
+          bump="${markers[0]}"
+          node scripts/verify-release-version.js auto-tag --bump "${bump}"
+          release_version="$(tr -d '\r\n[:space:]' < VERSION)"
+          release_tag="v${release_version}"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a "${release_tag}" -m "Release ${release_tag}" "${GITHUB_SHA}"
+          git push origin "refs/tags/${release_tag}"
