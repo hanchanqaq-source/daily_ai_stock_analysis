@@ -26,6 +26,9 @@ concurrency:
 jobs:
   safe-candidate:
     if: github.event_name == 'workflow_dispatch' && startsWith(inputs.release_message, '[SAFE_CANDIDATE_ONLY]')
+    permissions:
+      contents: read
+      pull-requests: read
     uses: ./.github/workflows/ci.yml
     with:
       expected_head: ${{ inputs.release_commit }}

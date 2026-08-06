@@ -23,7 +23,9 @@
   Windows CI are the authority. Ready, merge, Tag and Release remain forbidden.
   If GitHub creates no PR Check Suite, Desktop Release's existing manual inputs
   may call the reusable CI only with `[SAFE_CANDIDATE_ONLY]`; normal release Jobs
-  are then skipped and cannot publish.
+  are then skipped and cannot publish. Run `31127507235` proved the call path but
+  stopped before Jobs until the outer caller explicitly delegated CI's two
+  read-only permissions; no write permission was added.
 
 ## Historical entry | 2026-08-06 Work27 Windows Desktop AI configuration save validation repair
 

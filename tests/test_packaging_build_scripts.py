@@ -126,8 +126,12 @@ def test_manual_safe_candidate_dispatch_reuses_ci_and_cannot_publish() -> None:
     safe_marker = "[SAFE_CANDIDATE_ONLY]"
     assert safe_marker in release_workflow
     assert "safe-candidate:" in release_workflow
-    assert "uses: ./.github/workflows/ci.yml" in release_workflow
-    assert "expected_head: ${{ inputs.release_commit }}" in release_workflow
+    safe_job = _workflow_job(release_workflow, "safe-candidate")
+    assert "uses: ./.github/workflows/ci.yml" in safe_job
+    assert "expected_head: ${{ inputs.release_commit }}" in safe_job
+    assert "permissions:" in safe_job
+    assert "contents: read" in safe_job
+    assert "pull-requests: read" in safe_job
     assert (
         "github.event_name == 'workflow_dispatch' && "
         f"startsWith(inputs.release_message, '{safe_marker}')"

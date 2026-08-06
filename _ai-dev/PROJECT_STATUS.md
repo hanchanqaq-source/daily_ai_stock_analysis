@@ -1,4 +1,4 @@
-<!-- WORK29_CI_TRIGGER_RECOVERY: pull_request Check Suite absent; exact-Head safe-candidate-only manual dispatch pending. -->
+<!-- WORK29_CI_TRIGGER_RECOVERY: Run 31127507235 startup permission failure fixed; exact-Head safe-candidate-only retry pending. -->
 # PP02 当前状态
 
 > 本文件是 PP02 唯一当前状态真源。其他文档出现冲突时，以本文件和可验证证据为准。
@@ -19,7 +19,7 @@ PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
 ACTIVE_BASE=9a4a705d06370ddbebf669ab8efb0058ce9eb81a
 ACTIVE_BRANCH=agent/pp02-work29-safe-candidate
 ACTIVE_PR=28_OPEN_DRAFT
-CURRENT_STAGE=Work29 Draft PR 28 open; browser-authored Head created no Check Suite; reviewed safe-candidate-only manual dispatch pending
+CURRENT_STAGE=Work29 Draft PR 28 open; safe-candidate Run 31127507235 stopped before Jobs on reusable permission; read-only permission fix pending exact-Head retry
 CURRENT_WORK=WORK-029 — v3.29.5 safe unpublished Windows candidate
 ACTIVE_GOAL=bind source and release versions, fail closed on Microsoft Defender, and return only an exact-Head clean candidate
 PRODUCT_PR=20_MERGED
@@ -117,14 +117,14 @@ WORK29_LOCAL_AUXILIARY=PASS_AI_ASSETS_NODE_SYNTAX_YAML_PARSE_DIFF
 WORK29_REAL_DEFENDER=NOT_CLAIMED_LINUX_ENV_EXACT_HEAD_WINDOWS_CI_REQUIRED
 WORK29_DRAFT_PR=28_OPEN_DRAFT
 WORK29_INITIAL_REMOTE_HEAD=b689e51188a373262e69414fc30f0014c6647796
-WORK29_REMOTE_FIXED_HEAD=257394866EBBB5772B47FDDF645FFEFA2447949D_NO_CHECK_SUITE_SUPERSEDED_BY_MANUAL_DISPATCH_HEAD_PENDING
+WORK29_REMOTE_FIXED_HEAD=3C227D125EB626BF256E10611513A1934EEF6D9B_RUN_31127507235_STARTUP_PERMISSION_FAILURE_SUPERSEDED_BY_FIX_HEAD_PENDING
 WORK29_CI_TRIGGER=PR27_PR28_OPENED_SYNCHRONIZE_REOPENED_AND_BROWSER_AUTHORED_FINAL_SYNCHRONIZE_CREATED_NO_RUN_MANUAL_SAFE_CANDIDATE_ONLY_DISPATCH_REQUIRED
-WORK29_REMOTE_CI=PENDING
+WORK29_REMOTE_CI=RUN_31127507235_STARTUP_FAIL_BEFORE_JOBS_REUSABLE_PULL_REQUESTS_READ_PERMISSION_FIXED_RETRY_PENDING
 WORK29_JUDGE=ACTIVE_DRAFT_HOLD
 CURRENT_STATUS=WORK29_DRAFT_PR_OPEN_EXACT_HEAD_CI_PENDING
 ACTIVE_BLOCKER=NONE
 NEXT_WORK=NONE
-NEXT_ACTION=PUSH_REVIEWED_MANUAL_DISPATCH_TREE_LOCK_HEAD_RUN_DESKTOP_RELEASE_SAFE_CANDIDATE_ONLY_AND_VERIFY_EXACT_HEAD_CI
+NEXT_ACTION=PUSH_READ_ONLY_PERMISSION_FIX_LOCK_HEAD_RERUN_DESKTOP_RELEASE_SAFE_CANDIDATE_ONLY_AND_VERIFY_EXACT_HEAD_CI
 AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/TAG/RELEASE
 LAST_UPDATED=2026-08-06
 ```
@@ -163,7 +163,11 @@ LAST_UPDATED=2026-08-06
   Suite. The bounded fallback reuses CI through Desktop Release's existing manual
   input surface only when the release message starts `[SAFE_CANDIDATE_ONLY]`.
   In that mode normal release preflight/build/publish Jobs are skipped, so no Tag
-  or Release path can execute; exact-Head CI is the only called workflow.
+  or Release path can execute; exact-Head CI is the only called workflow. The
+  first safe dispatch, Run `31127507235` at Head `3c227d12…`, failed at workflow
+  startup before any Job because the caller had not delegated CI's read-only
+  `pull-requests` permission. A RED/GREEN contract now requires the caller to
+  grant only `contents: read` and `pull-requests: read`; an exact-Head retry is pending.
 - Scope remains one Draft PR and exact-Head CI. No database/user data, real
   credential, dependency, Ready, merge, main write, Tag, or Release is authorized.
 

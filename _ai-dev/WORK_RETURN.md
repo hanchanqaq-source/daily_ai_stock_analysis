@@ -16,8 +16,8 @@ LOCAL_AUXILIARY=PASS_AI_ASSETS_NODE_SYNTAX_YAML_PARSE_DIFF
 REAL_DEFENDER=NOT_CLAIMED_LINUX_ENV_EXACT_HEAD_WINDOWS_CI_REQUIRED
 DRAFT_PR=28_OPEN_DRAFT
 INITIAL_REMOTE_HEAD=b689e51188a373262e69414fc30f0014c6647796
-REMOTE_FIXED_HEAD=257394866EBBB5772B47FDDF645FFEFA2447949D_NO_CHECK_SUITE_SUPERSEDED_BY_MANUAL_DISPATCH_HEAD_PENDING
-REMOTE_CI=PENDING
+REMOTE_FIXED_HEAD=3C227D125EB626BF256E10611513A1934EEF6D9B_RUN_31127507235_STARTUP_PERMISSION_FAILURE_SUPERSEDED_BY_FIX_HEAD_PENDING
+REMOTE_CI=RUN_31127507235_STARTUP_FAIL_BEFORE_JOBS_REUSABLE_PULL_REQUESTS_READ_PERMISSION_FIXED_RETRY_PENDING
 CANDIDATE=PENDING
 JUDGE=ACTIVE_DRAFT_HOLD
 ```
@@ -45,7 +45,10 @@ JUDGE=ACTIVE_DRAFT_HOLD
   browser-authored synchronization commit became Head `25739486…`, but GitHub
   still created no Check Suite. A bounded manual fallback calls the same CI only
   for `[SAFE_CANDIDATE_ONLY]` and structurally skips every release Job. Complete CI,
-  Defender identities, artifact hashes and download link remain pending. No real
+  Defender identities, artifact hashes and download link remain pending. Its
+  first Run `31127507235` stopped before Jobs because the reusable caller lacked
+  CI's read-only PR permission; a RED/GREEN fix grants only `contents: read` and
+  `pull-requests: read`, without adding any write or release authority. No real
   credential/data, dependency,
   Ready, merge, Tag or Release action occurred.
 

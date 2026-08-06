@@ -12,7 +12,7 @@
 | Version gate | Root `VERSION` binds Desktop/Web/locks/backup; candidate must exceed latest stable Tag and release Tag must equal source |
 | Security gate | Defender intelligence/health plus installer, portable, extracted, unpacked, final-release and installed-root scans; only scanner exit `0` accepted |
 | Local | Desktop `122/122`; related Python `34/34` via direct `runpy`; Defender exit-2 mutation RED; AI assets, Node/Actions syntax and diff PASS; real Defender not claimed on Linux |
-| Draft PR / CI | [#28](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/28) Open Draft; browser-authored Head `25739486…` also created no Check Suite; independent review has no Critical/Important; exact-Head `safe-candidate-only` manual CI dispatch pending |
+| Draft PR / CI | [#28](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/28) Open Draft; safe-candidate Run `31127507235` at `3c227d12…` stopped before Jobs because the caller lacked CI's read-only PR permission; RED/GREEN fix and exact-Head retry pending |
 | Judge | `ACTIVE — DRAFT_HOLD` |
 | Prohibited | Ready, merge, `main`, Tag, Release, dependencies, database/user data, real credentials |
 
@@ -23,10 +23,11 @@ safe candidate link. A Linux unit contract is not a malware-clean verdict; only
 the Windows Job's bound Defender reports and candidate hashes may support that
 claim.
 
-The next action is to upload the reviewed manual-dispatch tree to PR #28 and run
-Desktop Release from that exact branch Head with a `[SAFE_CANDIDATE_ONLY]`
-message. That mode calls CI and skips the entire release preflight/build/publish
-chain. Accept no older Head and create no Tag or Release.
+The next action is to upload the reviewed caller-permission fix to PR #28 and
+rerun Desktop Release from that exact branch Head with a
+`[SAFE_CANDIDATE_ONLY]` message. The caller grants only `contents: read` and
+`pull-requests: read`; safe mode still skips the entire release
+preflight/build/publish chain. Accept no older Head and create no Tag or Release.
 
 ---
 
