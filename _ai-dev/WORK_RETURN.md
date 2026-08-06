@@ -13,8 +13,9 @@ BACKEND_MASK_NOOP_LOCAL=DEFERRED_MISSING_LOCKED_REQUESTS_DEPENDENCY
 LOCAL_FULL=PASS_WEB_1081_PASSED_2_SKIPPED_LINT_BUILD_AI_ASSETS_DIFF
 REVIEW=PASS_NO_FINDINGS_DRAFT_PR_AND_EXACT_HEAD_CI_ALLOWED
 DRAFT_PR=26_OPEN_DRAFT
-REMOTE_FIXED_HEAD=04a2259c11659ec51635a56ffde74981d55bf7dd_INITIAL_TREE_VERIFIED_PENDING_STATUS_SYNC_HEAD
-REMOTE_CI=PENDING_FINAL_STATUS_SYNC_HEAD
+INITIAL_REMOTE_HEAD=04a2259c11659ec51635a56ffde74981d55bf7dd_TREE_VERIFIED
+REMOTE_FIXED_HEAD=THIS_FINAL_STATUS_SYNC_BRANCH_HEAD
+REMOTE_CI=PENDING_EXACT_FINAL_HEAD
 WINDOWS_LIFECYCLE=PENDING
 JUDGE=ACTIVE_DRAFT_HOLD
 ```
@@ -38,8 +39,8 @@ JUDGE=ACTIVE_DRAFT_HOLD
   allows the candidate to enter Draft PR plus exact-Head CI, but not Ready/merge.
 - Draft PR [#26](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/26)
   is Open Draft. Initial remote Head `04a2259c…` has tree `bd912914…`, exactly
-  matching the local candidate; a status-only synchronization commit will be the
-  final exact Head used for CI.
+  matching the local candidate. This final status-only synchronization commit is
+  the frozen exact Head used for CI; no later branch update is allowed first.
 - The current cloud Python runtime lacks the locked `requests` dependency, so
   the new and existing service-level mask-noop tests could not import locally. No
   package was upgraded; exact-Head CI must run those backend contracts and remains the

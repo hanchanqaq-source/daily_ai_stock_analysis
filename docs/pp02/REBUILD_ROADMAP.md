@@ -19,8 +19,8 @@
   diff checks pass. Backend execution awaits exact-Head CI because the cloud
   runtime lacks locked `requests`; Draft PR, fixed-Head CI, and Windows lifecycle
   remain pending. Draft PR #26 is Open Draft at initial Head `04a2259c…`; its
-  tree matches the local candidate exactly, and one status-only sync will establish
-  the final CI Head.
+  tree matches the local candidate exactly. This final status-only sync is the
+  frozen CI Head; no later branch update is allowed before complete exact-Head CI.
 - No database, history, watchlist, period report, dependency, version, real
   credential, Ready, merge, Tag, or Release action is allowed.
 
