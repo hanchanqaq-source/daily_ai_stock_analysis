@@ -4,7 +4,7 @@
 
 | Item | Current fact |
 | --- | --- |
-| State | `WORK27_LOCAL_RELATED_VERIFICATION_PASS_DRAFT_PR_PENDING` |
+| State | `WORK27_DRAFT_PR_OPEN_STATUS_SYNC_HEAD_PENDING` |
 | Base | `main@4322e7ddf09b8262c0e7279af9e321aec4f77758` |
 | Branch | `agent/pp02-work27-config-save-validation` |
 | Goal | Repair first-run Desktop AI config save validation without plaintext `.env` storage |
@@ -12,13 +12,14 @@
 | TDD | RED initial `4` + review `2` expected failures; GREEN API `19/19`, Hook `5/5` |
 | Local | Web `1081` passed / `2` skipped; lint, build, AI assets, diff pass; backend import deferred because locked `requests` is absent |
 | Review | PASS — no Critical, Important, or Minor findings; Draft PR/exact-Head CI allowed |
-| Draft PR / CI | Pending publication |
+| Draft PR | [#26](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/26), Open Draft |
+| Remote | Initial Head `04a2259c…`; tree `bd912914…` exactly matches local; status-sync final Head and CI pending |
 | Judge | `ACTIVE — DRAFT_HOLD` |
 | Prohibited | Ready, merge, `main`, Tag, Release, dependencies, database/user-data migration, real credentials |
 
-Commit and push only Work27 scope, create one Draft PR, lock its final Head, and wait for
-complete CI plus the Windows installer lifecycle. The cloud Python environment
-currently lacks locked dependency `requests`; do not treat that local import
+Commit and push only the status synchronization to PR #26, lock its final Head,
+and wait for complete CI plus the Windows installer lifecycle. The cloud Python
+environment currently lacks locked dependency `requests`; do not treat that local import
 failure as a product failure or as backend PASS. Exact-Head CI is authoritative.
 
 Work25/Work26 history is closed: PR #25 fixed Head `bae6c0ff…` passed Run

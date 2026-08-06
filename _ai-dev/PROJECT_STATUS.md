@@ -9,7 +9,7 @@ CHAT_ROLE=AUTO_TAKEOVER
 WORK_ID=WORK-027
 ROLE_LOCK=SUPERSEDED_BY_PP02-WORK-HANDOFF-002
 WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
-WORK_STATE=LOCAL_RELATED_VERIFICATION_PASS_DRAFT_PR_PENDING
+WORK_STATE=DRAFT_PR_OPEN_STATUS_SYNC_HEAD_PENDING
 EXECUTION_LOCK=WORK27_CONFIG_SAVE_MINIMAL_FIX_DRAFT_PR_AND_EXACT_HEAD_CI_ONLY
 APPLICATION_BASE_VERSION=3.29.4
 CURRENT_RELEASE_VERSION=3.29.4
@@ -17,10 +17,10 @@ FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
 ACTIVE_BASE=4322e7ddf09b8262c0e7279af9e321aec4f77758
 ACTIVE_BRANCH=agent/pp02-work27-config-save-validation
-ACTIVE_PR=PENDING_DRAFT
-CURRENT_STAGE=Work27 local related verification and independent review passed; Draft PR publication pending
+ACTIVE_PR=26_OPEN_DRAFT
+CURRENT_STAGE=Work27 Draft PR #26 published; status-sync final Head and exact complete CI pending
 CURRENT_WORK=WORK-027 — Windows Desktop AI configuration save validation repair
-ACTIVE_GOAL=preserve pending secure credentials as non-persisted mask placeholders and surface exact validation field reasons, then publish one Draft PR and verify its exact Head CI
+ACTIVE_GOAL=preserve pending LLM credentials as non-persisted mask placeholders and surface exact validation field reasons, then verify Draft PR 26 exact Head CI
 PRODUCT_PR=20_MERGED
 PRODUCT_FIXED_HEAD=e11946f528c9cb64beeec8b626ada457c02b0034
 PRODUCT_MERGE_COMMIT=25de369f8e12438a1ec1f3511c68256c471243e4
@@ -92,15 +92,15 @@ WORK27_TDD_RED=PASS_INITIAL_4_EXPECTED_FAILURES_PLUS_REVIEW_2_EXPECTED_FAILURES
 WORK27_TDD_GREEN=PASS_SYSTEM_CONFIG_API_19_OF_19_HOOK_5_OF_5
 WORK27_LOCAL_FULL=PASS_WEB_1081_PASSED_2_SKIPPED_LINT_BUILD_AI_ASSETS_DIFF
 WORK27_REVIEW=PASS_NO_FINDINGS_DRAFT_PR_AND_EXACT_HEAD_CI_ALLOWED
-WORK27_DRAFT_PR=PENDING
-WORK27_REMOTE_FIXED_HEAD=PENDING
-WORK27_REMOTE_CI=PENDING
+WORK27_DRAFT_PR=26_OPEN_DRAFT
+WORK27_REMOTE_FIXED_HEAD=04a2259c11659ec51635a56ffde74981d55bf7dd_INITIAL_TREE_VERIFIED_PENDING_STATUS_SYNC_HEAD
+WORK27_REMOTE_CI=PENDING_FINAL_STATUS_SYNC_HEAD
 WORK27_WINDOWS_LIFECYCLE=PENDING
 WORK27_JUDGE=ACTIVE_DRAFT_HOLD
-CURRENT_STATUS=WORK27_LOCAL_RELATED_VERIFICATION_PASS_DRAFT_PR_PENDING
+CURRENT_STATUS=WORK27_DRAFT_PR_OPEN_STATUS_SYNC_AND_EXACT_HEAD_CI_PENDING
 ACTIVE_BLOCKER=NONE
 NEXT_WORK=NONE
-NEXT_ACTION=COMMIT_PUSH_CREATE_DRAFT_PR_AND_VERIFY_EXACT_HEAD_CI
+NEXT_ACTION=COMMIT_STATUS_SYNC_TO_PR26_BRANCH_THEN_VERIFY_FINAL_EXACT_HEAD_CI
 AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/TAG/RELEASE
 LAST_UPDATED=2026-08-06
 ```
@@ -128,9 +128,13 @@ LAST_UPDATED=2026-08-06
   new backend characterization is deferred to exact-Head CI and is not claimed
   locally. Independent re-review reports no Critical, Important, or Minor
   findings and permits Draft PR plus exact-Head CI. No database, user data,
-  dependency, version, workflow, Tag, Release,
-  or real credential was changed. Draft PR identity, exact Head CI, and the
+  dependency, version, workflow, Tag, Release, or real credential was changed.
+  Draft PR identity, exact Head CI, and the
   Windows installer lifecycle remain pending.
+- Draft PR [#26](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/26)
+  is Open Draft from initial remote Head `04a2259c…`. Its tree
+  `bd912914…` was compared against the local candidate tree and matches exactly.
+  One status-only synchronization commit will become the final CI Head.
 
 ## Historical current entry | 2026-08-05 Work25 / Windows frozen-backend startup timeout repair
 

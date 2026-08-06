@@ -13,11 +13,14 @@
 - Four initial expected RED failures cover fresh AIHubMix, `codex_cli` with a
   saved LiteLLM channel, historical default fields, and field-level error display;
   review added two expected RED counterexamples for notification URLs and bounded
-  display. The LLM-only mask-placeholder/detail-unwrapping fix is GREEN at API `19/19` and Hook
-  `5/5`. Full Web is `1081` passed / `2` skipped; lint, build, AI assets, and
+  display. The LLM-only mask-placeholder/detail-unwrapping fix is GREEN at API
+  `19/19` and Hook `5/5`. Full Web is `1081` passed / `2` skipped; lint, build,
+  AI assets, and
   diff checks pass. Backend execution awaits exact-Head CI because the cloud
   runtime lacks locked `requests`; Draft PR, fixed-Head CI, and Windows lifecycle
-  remain pending.
+  remain pending. Draft PR #26 is Open Draft at initial Head `04a2259c…`; its
+  tree matches the local candidate exactly, and one status-only sync will establish
+  the final CI Head.
 - No database, history, watchlist, period report, dependency, version, real
   credential, Ready, merge, Tag, or Release action is allowed.
 

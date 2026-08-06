@@ -153,7 +153,7 @@ Also run the existing backend mask-noop contract when the locked Python dependen
 
 Inspect `git diff --stat`, `git diff`, and `git status -sb`; confirm there are no dependency-lock, database, `.env`, credential, version, workflow, Tag, or Release changes.
 
-- [ ] **Step 4: Commit, push, and create one Draft PR**
+- [x] **Step 4: Commit, push, and create one Draft PR**
 
 Commit message: `fix: preserve secure config validation context`
 
