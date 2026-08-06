@@ -24,7 +24,14 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  safe-candidate:
+    if: github.event_name == 'workflow_dispatch' && startsWith(inputs.release_message, '[SAFE_CANDIDATE_ONLY]')
+    uses: ./.github/workflows/ci.yml
+    with:
+      expected_head: ${{ inputs.release_commit }}
+
   preflight:
+    if: github.event_name != 'workflow_dispatch' || startsWith(inputs.release_message, '[SAFE_CANDIDATE_ONLY]') == false
     runs-on: ubuntu-latest
     permissions:
       contents: read

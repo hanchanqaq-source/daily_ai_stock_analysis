@@ -1,4 +1,4 @@
-<!-- WORK29_CI_TRIGGER_RECOVERY: browser-authored synchronize issued; final exact Head pending. -->
+<!-- WORK29_CI_TRIGGER_RECOVERY: pull_request Check Suite absent; exact-Head safe-candidate-only manual dispatch pending. -->
 # PP02 当前状态
 
 > 本文件是 PP02 唯一当前状态真源。其他文档出现冲突时，以本文件和可验证证据为准。
@@ -19,7 +19,7 @@ PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
 ACTIVE_BASE=9a4a705d06370ddbebf669ab8efb0058ce9eb81a
 ACTIVE_BRANCH=agent/pp02-work29-safe-candidate
 ACTIVE_PR=28_OPEN_DRAFT
-CURRENT_STAGE=Work29 Draft PR 28 open and mergeable; reviewed trigger recovery tree pending final Head and exact-Head Windows Defender CI
+CURRENT_STAGE=Work29 Draft PR 28 open; browser-authored Head created no Check Suite; reviewed safe-candidate-only manual dispatch pending
 CURRENT_WORK=WORK-029 — v3.29.5 safe unpublished Windows candidate
 ACTIVE_GOAL=bind source and release versions, fail closed on Microsoft Defender, and return only an exact-Head clean candidate
 PRODUCT_PR=20_MERGED
@@ -112,19 +112,19 @@ WORK29_ROOT_CAUSE=RELEASE_TAG_BUILD_MUTATED_VERSION_ONLY_IN_RUNNER_WHILE_MAIN_SO
 WORK29_LOCAL_VERSION_TESTS=PASS_10_OF_10
 WORK29_LOCAL_DEFENDER_ORCHESTRATION_TESTS=PASS_12_OF_12_WITH_EXIT_2_MUTATION_RED
 WORK29_LOCAL_DESKTOP=PASS_122_OF_122
-WORK29_LOCAL_PYTHON_CONTRACTS=PASS_33_DIRECT_RUNPY_PYTEST_UNAVAILABLE
+WORK29_LOCAL_PYTHON_CONTRACTS=PASS_34_DIRECT_RUNPY_PYTEST_UNAVAILABLE
 WORK29_LOCAL_AUXILIARY=PASS_AI_ASSETS_NODE_SYNTAX_YAML_PARSE_DIFF
 WORK29_REAL_DEFENDER=NOT_CLAIMED_LINUX_ENV_EXACT_HEAD_WINDOWS_CI_REQUIRED
 WORK29_DRAFT_PR=28_OPEN_DRAFT
 WORK29_INITIAL_REMOTE_HEAD=b689e51188a373262e69414fc30f0014c6647796
-WORK29_REMOTE_FIXED_HEAD=PENDING_REVIEWED_TREE_AND_BROWSER_SYNCHRONIZE
-WORK29_CI_TRIGGER=PR27_AND_INITIAL_PR28_EVENTS_CREATED_NO_RUN_TRIGGER_RECOVERY_EMBEDS_GATES_IN_EXISTING_LIFECYCLE_AND_KEEPS_MINIMAL_PATH_FILTER_VERSION_STEP
+WORK29_REMOTE_FIXED_HEAD=257394866EBBB5772B47FDDF645FFEFA2447949D_NO_CHECK_SUITE_SUPERSEDED_BY_MANUAL_DISPATCH_HEAD_PENDING
+WORK29_CI_TRIGGER=PR27_PR28_OPENED_SYNCHRONIZE_REOPENED_AND_BROWSER_AUTHORED_FINAL_SYNCHRONIZE_CREATED_NO_RUN_MANUAL_SAFE_CANDIDATE_ONLY_DISPATCH_REQUIRED
 WORK29_REMOTE_CI=PENDING
 WORK29_JUDGE=ACTIVE_DRAFT_HOLD
 CURRENT_STATUS=WORK29_DRAFT_PR_OPEN_EXACT_HEAD_CI_PENDING
 ACTIVE_BLOCKER=NONE
 NEXT_WORK=NONE
-NEXT_ACTION=PUSH_REVIEWED_TREE_CREATE_BROWSER_AUTHORED_SYNCHRONIZE_LOCK_FINAL_HEAD_THEN_WAIT_FOR_EXACT_HEAD_CI
+NEXT_ACTION=PUSH_REVIEWED_MANUAL_DISPATCH_TREE_LOCK_HEAD_RUN_DESKTOP_RELEASE_SAFE_CANDIDATE_ONLY_AND_VERIFY_EXACT_HEAD_CI
 AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/TAG/RELEASE
 LAST_UPDATED=2026-08-06
 ```
@@ -140,7 +140,7 @@ LAST_UPDATED=2026-08-06
   candidate. Existing CI also had no real antimalware gate.
 - Work29 makes root `VERSION=3.29.5` authoritative and binds both packages,
   lockfile roots, and backup metadata to it. Candidate builds must be newer than
-  the latest reachable stable Tag; release builds must exactly match the checked-in
+  every fetched canonical stable Tag; release builds must exactly match the checked-in
   version; Auto Tag may only create that annotated source Tag.
 - A fail-closed Windows orchestrator updates Defender intelligence, requires an
   enabled Normal-mode engine with current identity metadata, and runs non-remediating
@@ -149,7 +149,7 @@ LAST_UPDATED=2026-08-06
   scan error, stale/unavailable engine, missing input, or missing report blocks
   artifact upload.
 - Local Desktop passes 122/122, including 10/10 version and 12/12 Defender tests;
-  all 33 related Python contracts pass through direct `runpy`. Accepting
+  all 34 related Python contracts pass through direct `runpy`. Accepting
   `MpCmdRun` exit `2` was mutation-tested and correctly failed. Selected Python
   workflow contracts, YAML parsing, AI governance, Node syntax and diff checks
   pass. This Linux environment has neither
@@ -159,7 +159,11 @@ LAST_UPDATED=2026-08-06
   without CI after GitHub created no Check Suite for its normal events. The
   reviewed recovery keeps the main CI topology, embeds both Defender scans in
   the existing lifecycle verifier, directly gates the Windows Job on version,
-  and will use one browser-authored synchronization commit as the final CI Head.
+  and produced browser-authored Head `25739486…`; GitHub still created no Check
+  Suite. The bounded fallback reuses CI through Desktop Release's existing manual
+  input surface only when the release message starts `[SAFE_CANDIDATE_ONLY]`.
+  In that mode normal release preflight/build/publish Jobs are skipped, so no Tag
+  or Release path can execute; exact-Head CI is the only called workflow.
 - Scope remains one Draft PR and exact-Head CI. No database/user data, real
   credential, dependency, Ready, merge, main write, Tag, or Release is authorized.
 

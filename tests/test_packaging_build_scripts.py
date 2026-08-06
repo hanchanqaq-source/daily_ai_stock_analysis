@@ -109,6 +109,38 @@ def test_candidate_and_release_workflows_enforce_checked_in_version() -> None:
     assert "anothrNick/github-tag-action" not in auto_tag_workflow
 
 
+def test_manual_safe_candidate_dispatch_reuses_ci_and_cannot_publish() -> None:
+    ci_workflow = _read_text(REPO_ROOT / ".github" / "workflows" / "ci.yml")
+    release_workflow = _read_text(
+        REPO_ROOT / ".github" / "workflows" / "desktop-release.yml"
+    )
+
+    assert "workflow_call:" in ci_workflow
+    assert "expected_head:" in ci_workflow
+    assert "github.event_name == 'workflow_call'" not in ci_workflow
+    assert ci_workflow.count("inputs.expected_head != ''") >= 5
+    assert "inputs.expected_head" in ci_workflow
+    changes_job = _workflow_job(ci_workflow, "changes")
+    assert "if: inputs.expected_head == ''" in changes_job
+
+    safe_marker = "[SAFE_CANDIDATE_ONLY]"
+    assert safe_marker in release_workflow
+    assert "safe-candidate:" in release_workflow
+    assert "uses: ./.github/workflows/ci.yml" in release_workflow
+    assert "expected_head: ${{ inputs.release_commit }}" in release_workflow
+    assert (
+        "github.event_name == 'workflow_dispatch' && "
+        f"startsWith(inputs.release_message, '{safe_marker}')"
+    ) in release_workflow
+    assert (
+        "github.event_name != 'workflow_dispatch' || "
+        f"startsWith(inputs.release_message, '{safe_marker}') == false"
+    ) in release_workflow
+    publish_job = _workflow_job(release_workflow, "publish-release")
+    assert "needs: [preflight, build-windows, build-macos]" in publish_job
+    assert "safe-candidate" not in publish_job
+
+
 def test_windows_workflows_fail_closed_on_defender_before_upload_or_release() -> None:
     ci_workflow = _read_text(REPO_ROOT / ".github" / "workflows" / "ci.yml")
     release_workflow = _read_text(

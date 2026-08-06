@@ -17,10 +17,13 @@
   payloads and real installed root. Anything other than a clean exit `0`, or any
   unavailable/stale/misconfigured engine, blocks upload and preserves a bounded
   exact-Head report.
-- Local Desktop passes 122/122 and all 33 related Python contracts pass through
+- Local Desktop passes 122/122 and all 34 related Python contracts pass through
   direct `runpy`, including 10 version, 12 Defender cases and workflow ordering;
   Linux cannot provide the real Defender verdict. One Draft PR and exact-Head
   Windows CI are the authority. Ready, merge, Tag and Release remain forbidden.
+  If GitHub creates no PR Check Suite, Desktop Release's existing manual inputs
+  may call the reusable CI only with `[SAFE_CANDIDATE_ONLY]`; normal release Jobs
+  are then skipped and cannot publish.
 
 ## Historical entry | 2026-08-06 Work27 Windows Desktop AI configuration save validation repair
 

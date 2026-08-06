@@ -5,6 +5,12 @@ on:
     branches: [main]
   push:
     branches: [main]
+  workflow_call:
+    inputs:
+      expected_head:
+        description: Exact candidate commit SHA
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -24,7 +30,17 @@ jobs:
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v5
+      - name: 🔒 Verify manual candidate checkout identity
+        if: inputs.expected_head != ''
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ inputs.expected_head }}
+        run: |
+          set -euo pipefail
+          [[ "${EXPECTED_HEAD}" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$(git rev-parse HEAD)" == "${EXPECTED_HEAD}" ]]
       - name: 🧭 Filter paths
+        if: inputs.expected_head == ''
         id: filter
         uses: dorny/paths-filter@v3
         with:
@@ -145,7 +161,7 @@ jobs:
     name: desktop-test
     runs-on: ubuntu-latest
     needs: [changes, ai-governance]
-    if: github.event_name == 'push' || needs.changes.outputs.futu_packaging == 'true'
+    if: inputs.expected_head != '' || github.event_name == 'push' || needs.changes.outputs.futu_packaging == 'true'
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v6
@@ -164,9 +180,9 @@ jobs:
     name: desktop-futu-package-windows
     runs-on: windows-latest
     env:
-      DSA_EXPECTED_PR_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      DSA_EXPECTED_PR_HEAD_SHA: ${{ inputs.expected_head != '' && inputs.expected_head || github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
     needs: [changes, ai-governance]
-    if: github.event_name == 'push' || needs.changes.outputs.futu_packaging == 'true'
+    if: inputs.expected_head != '' || github.event_name == 'push' || needs.changes.outputs.futu_packaging == 'true'
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v5
@@ -334,7 +350,7 @@ jobs:
     name: desktop-futu-package-macos
     runs-on: macos-15
     needs: [changes, ai-governance]
-    if: github.event_name == 'push' || needs.changes.outputs.futu_packaging == 'true'
+    if: inputs.expected_head != '' || github.event_name == 'push' || needs.changes.outputs.futu_packaging == 'true'
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v5
@@ -361,7 +377,7 @@ jobs:
     name: web-gate
     runs-on: ubuntu-latest
     needs: [changes, ai-governance]
-    if: github.event_name == 'push' || needs.changes.outputs.frontend == 'true'
+    if: inputs.expected_head != '' || github.event_name == 'push' || needs.changes.outputs.frontend == 'true'
     defaults:
       run:
         working-directory: apps/dsa-web
