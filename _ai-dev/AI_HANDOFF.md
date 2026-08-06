@@ -11,8 +11,8 @@
 | Release | Formal release remains `v3.29.4`; no Tag or Release is authorized |
 | Version gate | Root `VERSION` binds Desktop/Web/locks/backup; candidate must exceed latest stable Tag and release Tag must equal source |
 | Security gate | Defender intelligence/health plus installer, portable, extracted, unpacked, final-release and installed-root scans; only scanner exit `0` accepted |
-| Local | Desktop `119/119`; related Python `31/31` via direct `runpy`; Defender exit-2 mutation RED; AI assets, Node/YAML syntax and diff PASS; real Defender not claimed on Linux |
-| Draft PR / CI | [#27](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/27) Open Draft/mergeable; initial Head `d3f7d44b…`, tree `bf92dd91…` verified; status-sync final Head and CI pending |
+| Local | Desktop `122/122`; related Python `33/33` via direct `runpy`; Defender exit-2 mutation RED; AI assets, Node/Actions syntax and diff PASS; real Defender not claimed on Linux |
+| Draft PR / CI | [#28](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/28) Open Draft/mergeable at initial Head `b689e511…`; independent re-review has no Critical/Important; reviewed recovery tree and browser-authored final Head CI pending |
 | Judge | `ACTIVE — DRAFT_HOLD` |
 | Prohibited | Ready, merge, `main`, Tag, Release, dependencies, database/user data, real credentials |
 
@@ -23,7 +23,8 @@ safe candidate link. A Linux unit contract is not a malware-clean verdict; only
 the Windows Job's bound Defender reports and candidate hashes may support that
 claim.
 
-The next action is one status-only final Head update on PR #27, then exact-Head
+The next action is to upload the reviewed recovery tree to PR #28, create one
+browser-authored synchronization commit, then run exact-Head
 complete CI. Do not accept the initial Head's run after the final Head exists.
 
 ---

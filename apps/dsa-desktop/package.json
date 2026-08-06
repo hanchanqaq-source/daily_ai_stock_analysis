@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "electron .",
     "build": "electron-builder",
-    "test": "node --test tests/*.test.js",
+    "test": "node ../../scripts/verify-release-version.js candidate && node --test tests/*.test.js",
     "test:windows-credentials": "electron tests/windows-secure-credential-harness.js"
   },
   "dependencies": {

@@ -58,10 +58,10 @@ function readVersionSources(root) {
   return { version, sources };
 }
 
-function getReachableStableTags(root) {
-  const output = execFileSync(
+function getAllStableTags(root, run = execFileSync) {
+  const output = run(
     'git',
-    ['tag', '--merged', 'HEAD', '--list', 'v*'],
+    ['tag', '--list', 'v*'],
     { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
   );
   return output
@@ -80,6 +80,22 @@ function getStableTagsPointingAtHead(root) {
     .split(/\r?\n/)
     .map((item) => item.trim())
     .filter((item) => STABLE_TAG_PATTERN.test(item));
+}
+
+function refreshStableTags(root, run = execFileSync) {
+  const shallow = run(
+    'git',
+    ['rev-parse', '--is-shallow-repository'],
+    { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+  ).trim() === 'true';
+  const fetchArguments = ['fetch', '--force', '--tags', '--quiet'];
+  if (shallow) fetchArguments.push('--unshallow');
+  fetchArguments.push('origin');
+  run(
+    'git',
+    fetchArguments,
+    { cwd: root, encoding: 'utf8', stdio: ['ignore', 'ignore', 'pipe'] },
+  );
 }
 
 function latestStableTag(stableTags) {
@@ -114,7 +130,7 @@ function verifyRepositoryVersion({
   let resolvedReleaseTag = releaseTag;
 
   if (mode === 'candidate' || mode === 'auto-tag') {
-    const tags = stableTags === undefined ? getReachableStableTags(resolvedRoot) : stableTags;
+    const tags = stableTags === undefined ? getAllStableTags(resolvedRoot) : stableTags;
     let comparisonTags = tags;
     if (mode === 'candidate') {
       const tagsAtHead = headTags === undefined
@@ -130,7 +146,7 @@ function verifyRepositoryVersion({
     }
     latest = latestStableTag(comparisonTags);
     if (!latest) {
-      throw new Error('No reachable stable release tag was found.');
+      throw new Error('No fetched stable release tag was found.');
     }
     if (compareStableVersions(sourceTag, latest) <= 0) {
       throw new Error(`Candidate source ${sourceTag} must be newer than latest stable tag ${latest}.`);
@@ -177,9 +193,14 @@ function parseArguments(argv) {
 }
 
 function main() {
+  const options = parseArguments(process.argv.slice(2));
+  const root = path.resolve(__dirname, '..');
+  if (options.mode === 'candidate' && process.env.GITHUB_ACTIONS === 'true') {
+    refreshStableTags(root);
+  }
   const result = verifyRepositoryVersion({
-    root: path.resolve(__dirname, '..'),
-    ...parseArguments(process.argv.slice(2)),
+    root,
+    ...options,
   });
   process.stdout.write('PP02_RELEASE_VERSION_GATE=PASS\n');
   process.stdout.write(`PP02_RELEASE_VERSION_MODE=${result.mode}\n`);
@@ -204,11 +225,12 @@ if (require.main === module) {
 
 module.exports = {
   compareStableVersions,
-  getReachableStableTags,
+  getAllStableTags,
   getStableTagsPointingAtHead,
   latestStableTag,
   parseStableVersion,
   readVersionSources,
+  refreshStableTags,
   successorTag,
   verifyRepositoryVersion,
 };

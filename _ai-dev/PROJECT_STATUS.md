@@ -1,4 +1,4 @@
-<!-- WORK29_CI_TRIGGER: GitHub Web synchronize event; implementation unchanged. -->
+<!-- WORK29_CI_TRIGGER_RECOVERY: lifecycle-embedded Defender gates; final browser-authored synchronize pending. -->
 # PP02 当前状态
 
 > 本文件是 PP02 唯一当前状态真源。其他文档出现冲突时，以本文件和可验证证据为准。
@@ -18,8 +18,8 @@ FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
 ACTIVE_BASE=9a4a705d06370ddbebf669ab8efb0058ce9eb81a
 ACTIVE_BRANCH=agent/pp02-work29-safe-candidate
-ACTIVE_PR=27_OPEN_DRAFT
-CURRENT_STAGE=Work29 Draft PR 27 open and mergeable; status-sync final Head and exact-Head Windows Defender CI pending
+ACTIVE_PR=28_OPEN_DRAFT
+CURRENT_STAGE=Work29 Draft PR 28 open and mergeable; reviewed trigger recovery tree pending final Head and exact-Head Windows Defender CI
 CURRENT_WORK=WORK-029 — v3.29.5 safe unpublished Windows candidate
 ACTIVE_GOAL=bind source and release versions, fail closed on Microsoft Defender, and return only an exact-Head clean candidate
 PRODUCT_PR=20_MERGED
@@ -109,22 +109,22 @@ WORK29_BASE=9a4a705d06370ddbebf669ab8efb0058ce9eb81a
 WORK29_SOURCE_VERSION=3.29.5
 WORK29_FORMAL_RELEASE_REMAINS=3.29.4
 WORK29_ROOT_CAUSE=RELEASE_TAG_BUILD_MUTATED_VERSION_ONLY_IN_RUNNER_WHILE_MAIN_SOURCES_REMAINED_3_29_3_AND_CI_LACKED_DEFENDER_GATE
-WORK29_LOCAL_VERSION_TESTS=PASS_7_OF_7
+WORK29_LOCAL_VERSION_TESTS=PASS_10_OF_10
 WORK29_LOCAL_DEFENDER_ORCHESTRATION_TESTS=PASS_12_OF_12_WITH_EXIT_2_MUTATION_RED
-WORK29_LOCAL_DESKTOP=PASS_119_OF_119
-WORK29_LOCAL_PYTHON_CONTRACTS=PASS_31_DIRECT_RUNPY_PYTEST_UNAVAILABLE
+WORK29_LOCAL_DESKTOP=PASS_122_OF_122
+WORK29_LOCAL_PYTHON_CONTRACTS=PASS_33_DIRECT_RUNPY_PYTEST_UNAVAILABLE
 WORK29_LOCAL_AUXILIARY=PASS_AI_ASSETS_NODE_SYNTAX_YAML_PARSE_DIFF
 WORK29_REAL_DEFENDER=NOT_CLAIMED_LINUX_ENV_EXACT_HEAD_WINDOWS_CI_REQUIRED
-WORK29_DRAFT_PR=27_OPEN_DRAFT
-WORK29_INITIAL_REMOTE_HEAD=d3f7d44b83c795324e22ec39cf562475c9546322_TREE_BF92DD919A59410366D1EA2B5990B5788727BD52_VERIFIED
-WORK29_REMOTE_FIXED_HEAD=THIS_STATUS_SYNC_HEAD
-WORK29_CI_TRIGGER=CONTENTS_API_SYNCHRONIZE_RETRY_AFTER_GIT_DATA_EVENT_CREATED_NO_RUN
+WORK29_DRAFT_PR=28_OPEN_DRAFT
+WORK29_INITIAL_REMOTE_HEAD=b689e51188a373262e69414fc30f0014c6647796
+WORK29_REMOTE_FIXED_HEAD=PENDING_REVIEWED_TREE_AND_BROWSER_SYNCHRONIZE
+WORK29_CI_TRIGGER=PR27_AND_INITIAL_PR28_EVENTS_CREATED_NO_RUN_TRIGGER_RECOVERY_EMBEDS_GATES_IN_EXISTING_LIFECYCLE_AND_KEEPS_MINIMAL_PATH_FILTER_VERSION_STEP
 WORK29_REMOTE_CI=PENDING
 WORK29_JUDGE=ACTIVE_DRAFT_HOLD
 CURRENT_STATUS=WORK29_DRAFT_PR_OPEN_EXACT_HEAD_CI_PENDING
 ACTIVE_BLOCKER=NONE
 NEXT_WORK=NONE
-NEXT_ACTION=LOCK_THIS_STATUS_SYNC_COMMIT_AS_FINAL_HEAD_THEN_WAIT_FOR_EXACT_HEAD_CI
+NEXT_ACTION=PUSH_REVIEWED_TREE_CREATE_BROWSER_AUTHORED_SYNCHRONIZE_LOCK_FINAL_HEAD_THEN_WAIT_FOR_EXACT_HEAD_CI
 AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/TAG/RELEASE
 LAST_UPDATED=2026-08-06
 ```
@@ -148,16 +148,18 @@ LAST_UPDATED=2026-08-06
   payloads, final release assets, and the actual installed directory. Any detection,
   scan error, stale/unavailable engine, missing input, or missing report blocks
   artifact upload.
-- Local Desktop passes 119/119, including 7/7 version and 12/12 Defender tests;
-  all 31 related Python contracts pass through direct `runpy`. Accepting
+- Local Desktop passes 122/122, including 10/10 version and 12/12 Defender tests;
+  all 33 related Python contracts pass through direct `runpy`. Accepting
   `MpCmdRun` exit `2` was mutation-tested and correctly failed. Selected Python
   workflow contracts, YAML parsing, AI governance, Node syntax and diff checks
   pass. This Linux environment has neither
   pytest nor Windows Defender, so it cannot claim the authoritative real scan.
-- Draft PR [#27](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/27)
-  is Open Draft and mergeable. Initial remote Head `d3f7d44b…` has tree
-  `bf92dd91…`, exactly matching the reviewed local candidate tree. This
-  status-only synchronization commit becomes the final CI Head.
+- Draft PR [#28](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/28)
+  is Open Draft and mergeable at initial Head `b689e511…`. PR #27 was closed
+  without CI after GitHub created no Check Suite for its normal events. The
+  reviewed recovery keeps the main CI topology, embeds both Defender scans in
+  the existing lifecycle verifier, directly gates the Windows Job on version,
+  and will use one browser-authored synchronization commit as the final CI Head.
 - Scope remains one Draft PR and exact-Head CI. No database/user data, real
   credential, dependency, Ready, merge, main write, Tag, or Release is authorized.
 

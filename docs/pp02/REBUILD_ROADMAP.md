@@ -17,8 +17,8 @@
   payloads and real installed root. Anything other than a clean exit `0`, or any
   unavailable/stale/misconfigured engine, blocks upload and preserves a bounded
   exact-Head report.
-- Local Desktop passes 119/119 and all 31 related Python contracts pass through
-  direct `runpy`, including 7 version, 12 Defender cases and workflow ordering;
+- Local Desktop passes 122/122 and all 33 related Python contracts pass through
+  direct `runpy`, including 10 version, 12 Defender cases and workflow ordering;
   Linux cannot provide the real Defender verdict. One Draft PR and exact-Head
   Windows CI are the authority. Ready, merge, Tag and Release remain forbidden.
 

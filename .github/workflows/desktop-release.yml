@@ -241,10 +241,11 @@ jobs:
           $blockmap = "$installer.blockmap"
           $latest = 'apps/dsa-desktop/dist/latest.yml'
           $defenderRoot = Join-Path $env:RUNNER_TEMP "pp02-defender-reports-$env:DSA_RELEASE_COMMIT_SHA-$env:GITHUB_RUN_ID"
+          $preinstallDefenderReport = Join-Path $defenderRoot 'preinstall.json'
           New-Item -ItemType Directory -Path $defenderRoot -Force | Out-Null
           node scripts/windows-defender-scan.js `
             --head $env:DSA_RELEASE_COMMIT_SHA `
-            --report (Join-Path $defenderRoot 'preinstall.json') `
+            --report $preinstallDefenderReport `
             --path $installer `
             --path $blockmap `
             --path $latest `
@@ -262,6 +263,7 @@ jobs:
           $installRoot = Join-Path $env:RUNNER_TEMP "pp02-installer-verify-$env:DSA_RELEASE_COMMIT_SHA"
           $diagnosticRoot = Join-Path $env:RUNNER_TEMP "pp02-installer-diagnostics-$env:DSA_RELEASE_COMMIT_SHA-$env:GITHUB_RUN_ID"
           $defenderRoot = Join-Path $env:RUNNER_TEMP "pp02-defender-reports-$env:DSA_RELEASE_COMMIT_SHA-$env:GITHUB_RUN_ID"
+          $preinstallDefenderReport = Join-Path $defenderRoot 'preinstall.json'
           $installedDefenderReport = Join-Path $defenderRoot 'installed.json'
           powershell -ExecutionPolicy Bypass -File scripts/verify-windows-installer.ps1 `
             -InstallerPath $installer.FullName `
@@ -270,7 +272,8 @@ jobs:
             -DiagnosticRoot $diagnosticRoot `
             -ExpectedCommitSha $env:DSA_RELEASE_COMMIT_SHA `
             -MalwareScannerPath scripts/windows-defender-scan.js `
-            -MalwareReportPath $installedDefenderReport
+            -MalwareReportPath $installedDefenderReport `
+            -PreinstallMalwareReportPath $preinstallDefenderReport
 
       - name: Upload Windows installer diagnostics
         if: always()

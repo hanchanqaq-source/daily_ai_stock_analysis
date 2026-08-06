@@ -6,7 +6,9 @@ const test = require('node:test');
 
 const {
   compareStableVersions,
+  getAllStableTags,
   parseStableVersion,
+  refreshStableTags,
   verifyRepositoryVersion,
 } = require('../../../scripts/verify-release-version');
 
@@ -46,6 +48,58 @@ test('stable version parsing rejects tags that are not canonical release SemVer'
   assert.equal(compareStableVersions('v3.28.99', 'v3.29.0'), -1);
 });
 
+test('candidate discovery compares every fetched stable tag, including divergent releases', () => {
+  const calls = [];
+  const tags = getAllStableTags('/tmp/pp02-version-root', (...args) => {
+    calls.push(args);
+    return 'v3.29.4\nv3.29.5\nv3.30.0-rc.1\n';
+  });
+  assert.deepEqual(tags, ['v3.29.4', 'v3.29.5']);
+  assert.deepEqual(calls, [[
+    'git',
+    ['tag', '--list', 'v*'],
+    {
+      cwd: '/tmp/pp02-version-root',
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    },
+  ]]);
+});
+
+test('GitHub candidate checkout refreshes stable tags without changing source files', () => {
+  const calls = [];
+  refreshStableTags('/tmp/pp02-version-root', (...args) => {
+    calls.push(args);
+    return calls.length === 1 ? 'true\n' : '';
+  });
+  assert.deepEqual(calls, [[
+    'git',
+    ['rev-parse', '--is-shallow-repository'],
+    {
+      cwd: '/tmp/pp02-version-root',
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    },
+  ], [
+    'git',
+    ['fetch', '--force', '--tags', '--quiet', '--unshallow', 'origin'],
+    {
+      cwd: '/tmp/pp02-version-root',
+      encoding: 'utf8',
+      stdio: ['ignore', 'ignore', 'pipe'],
+    },
+  ]]);
+});
+
+test('GitHub candidate tag refresh handles an already complete checkout', () => {
+  const calls = [];
+  refreshStableTags('/tmp/pp02-version-root', (...args) => {
+    calls.push(args);
+    return calls.length === 1 ? 'false\n' : '';
+  });
+  assert.deepEqual(calls[1][1], ['fetch', '--force', '--tags', '--quiet', 'origin']);
+});
+
 test('candidate verification binds every checked-in version surface and exceeds the latest tag', (t) => {
   const root = createVersionFixture();
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -74,6 +128,10 @@ test('candidate verification fails when source equals or trails the latest relea
   assert.throws(
     () => verifyRepositoryVersion({ root: staleRoot, mode: 'candidate', stableTags: ['v3.29.4'] }),
     /must be newer than latest stable tag v3\.29\.4/,
+  );
+  assert.throws(
+    () => verifyRepositoryVersion({ root: equalRoot, mode: 'candidate', stableTags: [] }),
+    /No fetched stable release tag was found/,
   );
 });
 
