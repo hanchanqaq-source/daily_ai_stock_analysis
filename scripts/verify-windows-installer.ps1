@@ -1010,7 +1010,22 @@ if (Test-Path -LiteralPath $acceptanceRoot) {
 }
 $acceptanceAppData = Join-Path $acceptanceRoot 'appdata'
 $acceptanceLocalAppData = Join-Path $acceptanceRoot 'localappdata'
-$acceptanceUserData = Join-Path $acceptanceAppData 'PP02 AI Daily Stock Analysis'
+$desktopPackageMetadataPath = Join-Path $repoRoot 'apps/dsa-desktop/package.json'
+$desktopPackageMetadata = Get-Content -LiteralPath $desktopPackageMetadataPath -Raw |
+  ConvertFrom-Json
+$desktopApplicationName = [string]$desktopPackageMetadata.productName
+if ([string]::IsNullOrWhiteSpace($desktopApplicationName)) {
+  $desktopApplicationName = [string]$desktopPackageMetadata.name
+}
+if ([string]::IsNullOrWhiteSpace($desktopApplicationName) -or
+    [IO.Path]::GetFileName($desktopApplicationName) -ne $desktopApplicationName -or
+    $desktopApplicationName -in @('.', '..')) {
+  throw 'Desktop package metadata does not define a safe Electron application name.'
+}
+$acceptanceUserData = Join-Path $acceptanceAppData $desktopApplicationName
+if (-not (Test-PathInsideRoot -Path $acceptanceUserData -Root $acceptanceAppData)) {
+  throw 'Desktop userData acceptance path must stay inside verifier-owned APPDATA.'
+}
 $acceptanceReadyPath = Join-Path $acceptanceRoot 'mock-ready.json'
 $acceptanceReceiptPath = Join-Path $acceptanceRoot 'mock-receipt.json'
 $acceptanceMockStdout = Join-Path $acceptanceRoot 'mock-stdout.log'

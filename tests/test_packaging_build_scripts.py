@@ -707,6 +707,16 @@ def test_windows_installed_configuration_acceptance_is_complete_and_ordered() ->
     assert "pp02-r37-[0-9a-f]{64}" in verifier
     assert "authorizationMatched" in verifier
     assert "credentials_excluded" in verifier
+    assert "$desktopPackageMetadata.productName" in verifier
+    assert "$desktopPackageMetadata.name" in verifier
+    assert (
+        "$acceptanceUserData = Join-Path $acceptanceAppData $desktopApplicationName"
+        in verifier
+    )
+    assert (
+        "$acceptanceUserData = Join-Path $acceptanceAppData 'PP02 AI Daily Stock Analysis'"
+        not in verifier
+    )
     assert "Get-DesktopBackendPort -DesktopLines $restartedDesktopLines" in verifier
     assert verifier.index("$restartedBackendPort = Get-DesktopBackendPort") < verifier.index(
         "WINDOWS_INSTALLED_CONFIG_MASKED_RESTART=PASS"

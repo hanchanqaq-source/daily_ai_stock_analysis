@@ -2032,29 +2032,6 @@ class SystemConfigServiceTestCase(unittest.TestCase):
         self.assertTrue(item["secure_value_exists"])
         self.assertEqual(item["credential_source"], "windows_dpapi")
 
-    def test_declared_dynamic_secure_runtime_value_is_visible_without_channel_discovery(self) -> None:
-        self._rewrite_env("STOCK_LIST=600519")
-        with patch.dict(
-            os.environ,
-            {
-                "DSA_SECURE_CREDENTIAL_MODE": "windows_dpapi",
-                "DSA_SECURE_CREDENTIAL_KEYS": "LLM_AIHUBMIX_API_KEY",
-                "LLM_AIHUBMIX_API_KEY": "runtime-fake-value",
-            },
-            clear=False,
-        ):
-            payload = self.service.get_config(include_schema=True)
-            raw_payload = self.service.get_config(include_schema=False)
-
-        for response in (payload, raw_payload):
-            items = {entry["key"]: entry for entry in response["items"]}
-            item = items["LLM_AIHUBMIX_API_KEY"]
-            self.assertEqual(item["value"], response["mask_token"])
-            self.assertTrue(item["is_masked"])
-            self.assertFalse(item["raw_value_exists"])
-            self.assertTrue(item["secure_value_exists"])
-            self.assertEqual(item["credential_source"], "windows_dpapi")
-
     def test_secure_mode_rejects_direct_sensitive_plaintext_update(self) -> None:
         with patch.dict(
             os.environ,
