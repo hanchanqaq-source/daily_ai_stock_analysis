@@ -1,4 +1,67 @@
-# WORK-027 | Windows Desktop AI configuration save validation repair
+# WORK-029 | v3.29.5 safe unpublished Windows candidate
+
+## Work29 authorization and execution contract
+
+```text
+WORK_ID=WORK-029
+WORK_STATE=DRAFT_PR_OPEN_DEFENDER_RUNNER_REPAIR_LOCAL_PASS
+BASE=9a4a705d06370ddbebf669ab8efb0058ce9eb81a
+BRANCH=agent/pp02-work29-safe-candidate
+SOURCE_VERSION=3.29.5
+FORMAL_RELEASE_VERSION=3.29.4
+DRAFT_PR=28_OPEN_DRAFT
+INITIAL_REMOTE_HEAD=b689e51188a373262e69414fc30f0014c6647796
+REMOTE_FIXED_HEAD=3c1e73b4d9443345cd34b849daed5f625e1130ea_SUPERSEDED_BY_DEFENDER_RUNNER_REPAIR_HEAD_PENDING
+REMOTE_CI=RUN_31168780911_FAIL_7_OF_8_SAFE_CANDIDATE_JOBS_PASS_WINDOWS_SIGNATURE_UPDATE_FAILED_TWICE
+JUDGE=ACTIVE_DRAFT_HOLD
+```
+
+### Root cause and selected design
+
+- `v3.29.4` release builds mutated package versions only on the runner and did
+  not update checked-in sources. Ordinary CI later rebuilt checked-in `3.29.3`.
+- Existing Windows gates covered identity, fake credentials and lifecycle, but
+  did not run an actual antimalware engine.
+- Add checked-in root `VERSION=3.29.5`, require all version surfaces to match,
+  require candidates to exceed the latest stable Tag, and require releases/Auto
+  Tag to use the exact source version without `npm version` mutation.
+- Update and validate Microsoft Defender, run non-remediating custom scans over
+  every closed candidate/release surface plus the installed root, keep exact-Head
+  reports, and fail closed before candidate upload.
+
+### Required tests and acceptance
+
+1. Pure version tests reject stale sources, mismatched package/lock/backup values,
+   mismatched release Tags and the wrong Auto Tag successor.
+2. Pure Defender tests reject unavailable/disabled/passive/stale engines, missing
+   identity/scanner/target/report paths, and every scan exit other than `0`.
+3. Windows CI scans installer metadata, portable ZIP, unpacked and fresh-extracted
+   payloads, then scans the actual installed directory before first launch.
+4. Exact-Head Windows CI must also pass fake-credential, runtime-integrity,
+   install/start/restart/health/uninstall/zero-residue gates and upload both the
+   candidate and Defender reports.
+5. Artifact hashes, Head, report Head, Defender engine/signature identity and
+   scan scope must cross-check before a download link is returned.
+6. After Run `31127543822`, signature update and status query failures must be
+   distinguishable through bounded reason/exit/signal/error-code fields without
+   preserving child stdout/stderr; the safe-candidate caller alone may retain
+   the required two read-only permissions.
+7. After Run `31168780911`, the disposable hosted runner must remove only exact
+   `C:\`/`D:\` exclusions, enable archive scanning, update through MMPC, and
+   prove each target is not excluded (`-CheckExclusion` exit `1`) before scan.
+
+### Scope and stop gates
+
+- Authorized: tests, minimum version/workflow/scanner/lifecycle changes, control
+  evidence, normal commits, push, one Draft PR, exact-Head CI, in-scope CI repair,
+  artifact verification, and a safe candidate link.
+- Forbidden: Ready, merge, main write, Tag, Release, dependency upgrades,
+  database/user-data changes, real credentials, and delivery of any failed or
+  warned candidate.
+
+---
+
+# Historical contract | WORK-027 / Windows Desktop AI configuration save validation repair
 
 ## Work27 authorization and execution contract
 

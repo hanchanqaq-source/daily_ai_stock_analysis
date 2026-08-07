@@ -37,7 +37,7 @@ def test_portable_stage_excludes_only_root_runtime_state(tmp_path: Path) -> None
             "node",
             "scripts/prepare-portable-release.js",
             "stage",
-            "v3.29.3",
+            "v3.29.5",
             str(source),
             str(stage),
         ],
@@ -64,6 +64,9 @@ def test_windows_ci_smokes_the_final_extracted_portable_zip() -> None:
     workflow = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(
         encoding="utf-8"
     )
+    verifier = (REPO_ROOT / "scripts" / "verify-windows-installer.ps1").read_text(
+        encoding="utf-8"
+    )
 
     assert "Expand-Archive -LiteralPath $zip -DestinationPath $finalExtract" in workflow
     assert "fake_useragent/data/browsers.jsonl" in workflow
@@ -80,6 +83,12 @@ def test_windows_ci_smokes_the_final_extracted_portable_zip() -> None:
         "node scripts/verify-windows-runtime-integrity.js $finalExtract $version"
     ) < workflow.index("-PackagedEntry $finalPackagedEntry")
     assert "win-unpacked/resources/backend/stock_analysis/stock_analysis.exe" not in workflow
+    assert "scripts/verify-windows-installer.ps1" in workflow
+    assert "Expand-Archive -LiteralPath $portableZip -DestinationPath $candidateExtract" in verifier
+    assert "--path $candidateExtract" in verifier
+    assert verifier.index("--path $candidateExtract") < verifier.index(
+        "$installProcess = Start-Process -FilePath $installer"
+    )
 
 
 def test_windows_release_smokes_the_final_extracted_portable_zip() -> None:

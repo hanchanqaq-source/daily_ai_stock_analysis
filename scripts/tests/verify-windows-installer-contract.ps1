@@ -19,12 +19,25 @@ $fixtureRoot = Join-Path ([IO.Path]::GetTempPath()) (
   'pp02-installer-contract-' + [guid]::NewGuid().ToString('N')
 )
 $fakeInstaller = Join-Path $fixtureRoot 'fake-installer.exe'
+$fakeMalwareScanner = Join-Path $fixtureRoot 'fake-malware-scanner.js'
+$neverMalwareScanner = Join-Path $fixtureRoot 'never-malware-scanner.js'
 $installRoot = Join-Path $fixtureRoot (
   'pp02-installer-verify-contract-' + [guid]::NewGuid().ToString('N')
 )
 $diagnosticRoot = Join-Path $fixtureRoot (
   'pp02-installer-diagnostics-contract-' + [guid]::NewGuid().ToString('N')
 )
+$malwareReportRoot = Join-Path $fixtureRoot (
+  'pp02-defender-reports-contract-' + [guid]::NewGuid().ToString('N')
+)
+$malwareReportPath = Join-Path $malwareReportRoot 'installed.json'
+$preinstallReportPath = Join-Path $malwareReportRoot 'defender-preinstall.json'
+$fakeBlockmap = "$fakeInstaller.blockmap"
+$fakeLatest = Join-Path $fixtureRoot 'latest.yml'
+$fakePortableZip = Join-Path $fixtureRoot 'fake-portable.zip'
+$fakePortableChecksum = "$fakePortableZip.sha256"
+$fakeWinUnpacked = Join-Path $fixtureRoot 'win-unpacked'
+$fakePortablePayload = Join-Path $fixtureRoot 'portable-payload'
 $parentSentinel = Join-Path $fixtureRoot 'parent-sentinel.txt'
 $previousRunnerTemp = [Environment]::GetEnvironmentVariable('RUNNER_TEMP', 'Process')
 $previousInstallerDiagnosticRoot = [Environment]::GetEnvironmentVariable(
@@ -91,6 +104,59 @@ try {
   Set-Content -LiteralPath $parentSentinel -Value 'preserve' -Encoding ASCII
   Add-Type -TypeDefinition $fakeInstallerSource -Language CSharp `
     -OutputAssembly $fakeInstaller -OutputType ConsoleApplication
+  New-Item -ItemType Directory -Path $malwareReportRoot -Force | Out-Null
+  foreach ($fixtureDirectory in @($fakeWinUnpacked, $fakePortablePayload)) {
+    New-Item -ItemType Directory -Path $fixtureDirectory -Force | Out-Null
+  }
+  Set-Content -LiteralPath $fakeBlockmap -Value 'contract-blockmap' -Encoding ASCII
+  Set-Content -LiteralPath $fakeLatest -Value 'version: 9.9.9' -Encoding ASCII
+  Set-Content `
+    -LiteralPath (Join-Path $fakeWinUnpacked 'contract.txt') `
+    -Value 'unpacked' `
+    -Encoding ASCII
+  Set-Content `
+    -LiteralPath (Join-Path $fakePortablePayload 'contract.txt') `
+    -Value 'portable' `
+    -Encoding ASCII
+  Compress-Archive `
+    -Path (Join-Path $fakePortablePayload '*') `
+    -DestinationPath $fakePortableZip
+  $portableHash = (Get-FileHash -LiteralPath $fakePortableZip -Algorithm SHA256).Hash.ToLowerInvariant()
+  Set-Content `
+    -LiteralPath $fakePortableChecksum `
+    -Value "$portableHash  $(Split-Path -Leaf $fakePortableZip)" `
+    -Encoding ASCII
+  $fakeMalwareScannerSource = @'
+'use strict';
+const fs = require('node:fs');
+const path = require('node:path');
+const args = process.argv.slice(2);
+function value(name) {
+  const index = args.indexOf(name);
+  return index >= 0 ? args[index + 1] : '';
+}
+const head = value('--head');
+const report = value('--report');
+const targets = [];
+for (let index = 0; index < args.length; index += 1) {
+  if (args[index] === '--path') targets.push(args[index + 1]);
+}
+if (!head || !report || targets.length === 0) process.exit(93);
+fs.mkdirSync(path.dirname(report), { recursive: true });
+fs.writeFileSync(report, JSON.stringify({ status: 'PASS', head, targets }, null, 2));
+'@
+  Set-Content `
+    -LiteralPath $fakeMalwareScanner `
+    -Value $fakeMalwareScannerSource `
+    -Encoding UTF8
+  Set-Content `
+    -LiteralPath $neverMalwareScanner `
+    -Value "'use strict'; process.exit(94);" `
+    -Encoding UTF8
+  $expectedCommitSha = (& git -C $repoRoot rev-parse HEAD).Trim().ToLowerInvariant()
+  if ($LASTEXITCODE -ne 0 -or $expectedCommitSha -notmatch '^[0-9a-f]{40}$') {
+    throw 'Unable to resolve contract fixture commit.'
+  }
 
   $contractStage = 'owned_process_helper'
   $powerShell = (Get-Process -Id $PID).Path
@@ -244,6 +310,14 @@ try {
     ('"{0}"' -f $installRoot)
     '-DiagnosticRoot'
     ('"{0}"' -f $diagnosticRoot)
+    '-ExpectedCommitSha'
+    $expectedCommitSha
+    '-MalwareScannerPath'
+    ('"{0}"' -f $fakeMalwareScanner)
+    '-MalwareReportPath'
+    ('"{0}"' -f $malwareReportPath)
+    '-PortableArchivePath'
+    ('"{0}"' -f $fakePortableZip)
   )
   $contractProcess = Start-Process `
     -FilePath $powerShell `
@@ -268,6 +342,18 @@ try {
   $contractStage = 'contract_assertions'
   if (-not ($contractOutput -contains 'WINDOWS_INSTALLER_VALIDATION=FAIL')) {
     throw 'Verifier did not emit its stable failure marker.'
+  }
+  if (-not ($contractOutput -contains 'WINDOWS_CANDIDATE_DEFENDER_SCAN=PASS')) {
+    throw 'Verifier did not pass its preinstall Defender orchestration contract.'
+  }
+  if (-not (Test-Path -LiteralPath $preinstallReportPath -PathType Leaf)) {
+    throw 'Verifier did not preserve its preinstall Defender report.'
+  }
+  $preinstallReport = Get-Content -LiteralPath $preinstallReportPath -Raw |
+    ConvertFrom-Json
+  if ([string]$preinstallReport.status -ne 'PASS' -or
+      [string]$preinstallReport.head -ne $expectedCommitSha) {
+    throw 'Verifier did not bind the preinstall Defender report to the checked-out Head.'
   }
   if (Test-Path -LiteralPath $installRoot) {
     throw 'Verifier did not clean its owned install root.'
@@ -303,6 +389,142 @@ try {
   }
   if ($diagnosticText.Contains('parent-sentinel') -or $diagnosticText.Contains('owned')) {
     throw 'Verifier copied unrelated fixture content into diagnostic evidence.'
+  }
+
+  function Invoke-ExternalPreinstallVerifier {
+    param(
+      [Parameter(Mandatory=$true)][string]$EvidenceStatus,
+      [Parameter(Mandatory=$true)][string]$EvidenceHead,
+      [switch]$MissingEvidence,
+      [switch]$WrongEvidenceRoot
+    )
+
+    $caseId = [guid]::NewGuid().ToString('N')
+    $caseReportRoot = Join-Path $fixtureRoot "pp02-defender-reports-external-$caseId"
+    $caseEvidenceRoot = $caseReportRoot
+    if ($WrongEvidenceRoot) {
+      $caseEvidenceRoot = Join-Path $fixtureRoot "pp02-defender-reports-wrong-$caseId"
+    }
+    foreach ($caseDirectory in @($caseReportRoot, $caseEvidenceRoot)) {
+      New-Item -ItemType Directory -Path $caseDirectory -Force | Out-Null
+    }
+    $casePreinstallReport = Join-Path $caseEvidenceRoot 'preinstall.json'
+    if (-not $MissingEvidence) {
+      [ordered]@{
+        status = $EvidenceStatus
+        head = $EvidenceHead
+      } | ConvertTo-Json | Set-Content `
+        -LiteralPath $casePreinstallReport `
+        -Encoding UTF8
+    }
+    $caseInstalledReport = Join-Path $caseReportRoot 'installed.json'
+    $caseInstallRoot = Join-Path $fixtureRoot "pp02-installer-verify-external-$caseId"
+    $caseDiagnosticRoot = Join-Path $fixtureRoot "pp02-installer-diagnostics-external-$caseId"
+    $caseStdoutPath = Join-Path $fixtureRoot "external-$caseId.stdout.log"
+    $caseStderrPath = Join-Path $fixtureRoot "external-$caseId.stderr.log"
+    $caseArguments = @(
+      '-NoLogo'
+      '-NoProfile'
+      '-NonInteractive'
+      '-ExecutionPolicy'
+      'Bypass'
+      '-File'
+      ('"{0}"' -f $verifier)
+      '-InstallerPath'
+      ('"{0}"' -f $fakeInstaller)
+      '-ExpectedVersion'
+      '9.9.9'
+      '-InstallRoot'
+      ('"{0}"' -f $caseInstallRoot)
+      '-DiagnosticRoot'
+      ('"{0}"' -f $caseDiagnosticRoot)
+      '-ExpectedCommitSha'
+      $expectedCommitSha
+      '-MalwareScannerPath'
+      ('"{0}"' -f $neverMalwareScanner)
+      '-MalwareReportPath'
+      ('"{0}"' -f $caseInstalledReport)
+      '-PreinstallMalwareReportPath'
+      ('"{0}"' -f $casePreinstallReport)
+    )
+    $caseProcess = Start-Process `
+      -FilePath $powerShell `
+      -ArgumentList $caseArguments `
+      -Wait `
+      -PassThru `
+      -RedirectStandardOutput $caseStdoutPath `
+      -RedirectStandardError $caseStderrPath
+    $caseOutput = @()
+    foreach ($caseStreamPath in @($caseStdoutPath, $caseStderrPath)) {
+      if (Test-Path -LiteralPath $caseStreamPath -PathType Leaf) {
+        $caseOutput += @(Get-Content -LiteralPath $caseStreamPath | ForEach-Object {
+          $_.ToString()
+        })
+      }
+    }
+    return [pscustomobject]@{
+      ExitCode = $caseProcess.ExitCode
+      Output = $caseOutput
+      InstallRoot = $caseInstallRoot
+      DiagnosticRoot = $caseDiagnosticRoot
+    }
+  }
+
+  $validExternalEvidence = Invoke-ExternalPreinstallVerifier `
+    -EvidenceStatus 'PASS' `
+    -EvidenceHead $expectedCommitSha
+  if ($validExternalEvidence.ExitCode -eq 0 -or
+      -not ($validExternalEvidence.Output -contains 'WINDOWS_CANDIDATE_DEFENDER_SCAN=PASS')) {
+    throw 'Valid external preinstall evidence did not reach the controlled installer failure.'
+  }
+  $validExternalDiagnostic = Join-Path `
+    $validExternalEvidence.DiagnosticRoot 'diagnostic-summary.txt'
+  if (-not (Test-Path -LiteralPath $validExternalDiagnostic -PathType Leaf) -or
+      -not (Get-Content -LiteralPath $validExternalDiagnostic -Raw).Contains(
+        'failure_stage=installer_process'
+      ) -or
+      (Test-Path -LiteralPath $validExternalEvidence.InstallRoot)) {
+    throw 'Valid external preinstall evidence did not preserve lifecycle and cleanup contracts.'
+  }
+  Write-Output 'EXTERNAL_PREINSTALL_EVIDENCE_VALIDATION=PASS'
+
+  $rejectionCases = @(
+    @{
+      Marker = 'EXTERNAL_PREINSTALL_EVIDENCE_FAIL_REJECTION=PASS'
+      Arguments = @{ EvidenceStatus = 'FAIL'; EvidenceHead = $expectedCommitSha }
+    },
+    @{
+      Marker = 'EXTERNAL_PREINSTALL_EVIDENCE_HEAD_REJECTION=PASS'
+      Arguments = @{
+        EvidenceStatus = 'PASS'
+        EvidenceHead = '0000000000000000000000000000000000000000'
+      }
+    },
+    @{
+      Marker = 'EXTERNAL_PREINSTALL_EVIDENCE_MISSING_REJECTION=PASS'
+      Arguments = @{
+        EvidenceStatus = 'PASS'
+        EvidenceHead = $expectedCommitSha
+        MissingEvidence = $true
+      }
+    },
+    @{
+      Marker = 'EXTERNAL_PREINSTALL_EVIDENCE_ROOT_REJECTION=PASS'
+      Arguments = @{
+        EvidenceStatus = 'PASS'
+        EvidenceHead = $expectedCommitSha
+        WrongEvidenceRoot = $true
+      }
+    }
+  )
+  foreach ($rejectionCase in $rejectionCases) {
+    $rejectionArguments = $rejectionCase.Arguments
+    $rejectedEvidence = Invoke-ExternalPreinstallVerifier @rejectionArguments
+    if ($rejectedEvidence.ExitCode -eq 0 -or
+        ($rejectedEvidence.Output -contains 'WINDOWS_CANDIDATE_DEFENDER_SCAN=PASS')) {
+      throw "Verifier accepted invalid external preinstall evidence: $($rejectionCase.Marker)."
+    }
+    Write-Output $rejectionCase.Marker
   }
   Write-Output 'WINDOWS_INSTALLER_CONTRACT_VALIDATION=PASS'
 }

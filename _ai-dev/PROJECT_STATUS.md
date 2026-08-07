@@ -1,3 +1,4 @@
+<!-- WORK29_DEFENDER_RUNNER_REPAIR: Run 31168780911 reproduced hosted-runner signature-update failure twice; exact drive-exclusion/MMPC/check-exclusion repair is focused GREEN and full verification is pending. -->
 # PP02 当前状态
 
 > 本文件是 PP02 唯一当前状态真源。其他文档出现冲突时，以本文件和可验证证据为准。
@@ -6,21 +7,21 @@
 PROJECT_ID=PP02
 PROJECT_NAME=AI 每日股票分析
 CHAT_ROLE=AUTO_TAKEOVER
-WORK_ID=WORK-027
+WORK_ID=WORK-029
 ROLE_LOCK=SUPERSEDED_BY_PP02-WORK-HANDOFF-002
 WORKFLOW=ONE_MAJOR_SEGMENT_PER_WORK
-WORK_STATE=DRAFT_PR_OPEN_DESKTOP_COVERAGE_FINAL_HEAD_CI_PENDING
-EXECUTION_LOCK=WORK27_CONFIG_SAVE_MINIMAL_FIX_DRAFT_PR_AND_EXACT_HEAD_CI_ONLY
-APPLICATION_BASE_VERSION=3.29.4
+WORK_STATE=DRAFT_PR_OPEN_DEFENDER_RUNNER_REPAIR_LOCAL_PASS
+EXECUTION_LOCK=WORK29_V3_29_5_SAFE_CANDIDATE_DRAFT_PR_AND_EXACT_HEAD_CI_ONLY
+APPLICATION_BASE_VERSION=3.29.5
 CURRENT_RELEASE_VERSION=3.29.4
 FRAMEWORK_TEMPLATE_VERSION=1.5.6
 PROJECT_WORK_VERSION=pp02-cloud-rebuild-work.1
-ACTIVE_BASE=4322e7ddf09b8262c0e7279af9e321aec4f77758
-ACTIVE_BRANCH=agent/pp02-work27-config-save-validation
-ACTIVE_PR=26_OPEN_DRAFT
-CURRENT_STAGE=Work27 prior Head applicable CI passed but Windows was path-skipped; reviewed Desktop coverage final Head pending exact complete CI
-CURRENT_WORK=WORK-027 — Windows Desktop AI configuration save validation repair
-ACTIVE_GOAL=preserve pending LLM credentials as non-persisted mask placeholders and surface exact validation field reasons, then verify Draft PR 26 exact Head CI
+ACTIVE_BASE=9a4a705d06370ddbebf669ab8efb0058ce9eb81a
+ACTIVE_BRANCH=agent/pp02-work29-safe-candidate
+ACTIVE_PR=28_OPEN_DRAFT
+CURRENT_STAGE=Work29 Draft PR 28 open; Run 31168780911 reproduced hosted-runner signature-update failure twice; exact exclusion/archive/MMPC repair passes mutation and complete local verification, new Head commit pending
+CURRENT_WORK=WORK-029 — v3.29.5 safe unpublished Windows candidate
+ACTIVE_GOAL=bind source and release versions, fail closed on Microsoft Defender, and return only an exact-Head clean candidate
 PRODUCT_PR=20_MERGED
 PRODUCT_FIXED_HEAD=e11946f528c9cb64beeec8b626ada457c02b0034
 PRODUCT_MERGE_COMMIT=25de369f8e12438a1ec1f3511c68256c471243e4
@@ -28,11 +29,11 @@ PRODUCT_MAIN_CI_RUN=30822458701
 PRODUCT_MAIN_CI_RESULT=PASS_8_OF_8
 STATUS_PR=21_MERGED
 STATUS_SYNC_MERGE_HEAD=25313cf0f23f0f4ab4922ea983bcd05b3577e23e
-UNPUBLISHED_CANDIDATE_VERSION=3.29.1
-UNPUBLISHED_INSTALLER_BYTES=217003814
-UNPUBLISHED_INSTALLER_SHA256=DAD0CE0CCF8FC34F7318CD4E4F0CC37347C68A1A03E98D0CA7B048E393B18B33
-UNPUBLISHED_INSTALLER_SIGNATURE=NotSigned
-WINDOWS_RELATED_TESTS=PASS_130_PYTHON_82_DESKTOP_PLUS_FROZEN_HEALTH
+UNPUBLISHED_CANDIDATE_VERSION=3.29.5_PENDING_EXACT_HEAD_CI
+UNPUBLISHED_INSTALLER_BYTES=PENDING
+UNPUBLISHED_INSTALLER_SHA256=PENDING
+UNPUBLISHED_INSTALLER_SIGNATURE=PENDING_EXPECTED_UNSIGNED
+WINDOWS_RELATED_TESTS=LOCAL_ORCHESTRATION_PASS_17_OF_17_REAL_WINDOWS_RUN_31168780911_REPRODUCED_SIGNATURE_UPDATE_FAILURE_TWICE_ALL_TARGETS_NOT_RUN
 FORMAL_HISTORY_QUERY_ID=1c4ae649232d40eaae7dcb6bb1b6981f
 FORMAL_HISTORY_ID=2
 FORMAL_HISTORY_STATUS=PASS_PERSISTED_AFTER_CANDIDATE_RESTART_AND_WORK12_RESTORE
@@ -92,24 +93,114 @@ WORK27_TDD_RED=PASS_INITIAL_4_EXPECTED_FAILURES_PLUS_REVIEW_2_EXPECTED_FAILURES
 WORK27_TDD_GREEN=PASS_SYSTEM_CONFIG_API_19_OF_19_HOOK_5_OF_5
 WORK27_LOCAL_FULL=PASS_WEB_1081_PASSED_2_SKIPPED_DESKTOP_100_OF_100_LINT_BUILD_AI_ASSETS_DIFF
 WORK27_REVIEW=PASS_THREE_ROUNDS_NO_FINDINGS_DRAFT_PR_AND_EXACT_HEAD_CI_ALLOWED
-WORK27_DRAFT_PR=26_OPEN_DRAFT
+WORK27_DRAFT_PR=26_MERGED
 WORK27_INITIAL_REMOTE_HEAD=04a2259c11659ec51635a56ffde74981d55bf7dd_TREE_VERIFIED
 WORK27_PRIOR_REMOTE_HEAD=9cb32d7fa663770d6cef18a9012c7518e6807ba6
 WORK27_PRIOR_CI=RUN_31106977554_PASS_EXECUTED_5_OF_5_WINDOWS_AND_DESKTOP_PATH_SKIPPED_NOT_ACCEPTED
 WORK27_DESKTOP_COVERAGE=PASS_FIRST_RUN_DYNAMIC_LLM_VAULT_TEST_AND_DESKTOP_100_OF_100
-WORK27_REMOTE_FIXED_HEAD=THIS_DESKTOP_COVERAGE_FINAL_BRANCH_HEAD
-WORK27_REMOTE_CI=PENDING_EXACT_NEW_FINAL_HEAD
-WORK27_WINDOWS_LIFECYCLE=PENDING_NEW_FINAL_HEAD
-WORK27_JUDGE=ACTIVE_DRAFT_HOLD
-CURRENT_STATUS=WORK27_DRAFT_PR_OPEN_DESKTOP_COVERAGE_FINAL_HEAD_CI_PENDING
-ACTIVE_BLOCKER=NONE
+WORK27_REMOTE_FIXED_HEAD=849dfaef4faa9c38f91e8e833262764c40369d3d
+WORK27_REMOTE_CI=RUN_31108033144_PASS_8_OF_8
+WORK27_WINDOWS_LIFECYCLE=PASS_RUN_31108033144
+WORK27_JUDGE=PASS_MERGED_BY_WORK28_AUTHORIZATION
+WORK28_MERGE_COMMIT=9a4a705d06370ddbebf669ab8efb0058ce9eb81a
+WORK28_MAIN_CI=RUN_31111163231_PASS_8_OF_8
+WORK28_JUDGE=PASS_MERGED_MAIN_CI_SUCCESS
+WORK29_BASE=9a4a705d06370ddbebf669ab8efb0058ce9eb81a
+WORK29_SOURCE_VERSION=3.29.5
+WORK29_FORMAL_RELEASE_REMAINS=3.29.4
+WORK29_ROOT_CAUSE=RELEASE_TAG_BUILD_MUTATED_VERSION_ONLY_IN_RUNNER_WHILE_MAIN_SOURCES_REMAINED_3_29_3_AND_CI_LACKED_DEFENDER_GATE
+WORK29_LOCAL_VERSION_TESTS=PASS_10_OF_10
+WORK29_LOCAL_DEFENDER_ORCHESTRATION_TESTS=PASS_17_OF_17_WITH_HOSTED_RUNNER_EXCLUSION_ARCHIVE_MMPC_AND_CHECK_EXCLUSION_GATES
+WORK29_LOCAL_DESKTOP=PASS_127_OF_127
+WORK29_LOCAL_PYTHON_CONTRACTS=PASS_38_DIRECT_RUNPY_PYTEST_UNAVAILABLE
+WORK29_LOCAL_AUXILIARY=PASS_AI_ASSETS_NODE_SYNTAX_YAML_PARSE_DIFF_DEPENDENCY_DATA_SECRET_BOUNDARIES
+WORK29_REAL_DEFENDER=NOT_CLAIMED_LINUX_ENV_EXACT_HEAD_WINDOWS_CI_REQUIRED
+WORK29_DRAFT_PR=28_OPEN_DRAFT
+WORK29_INITIAL_REMOTE_HEAD=b689e51188a373262e69414fc30f0014c6647796
+WORK29_REMOTE_FIXED_HEAD=3C1E73B4D9443345CD34B849DAED5F625E1130EA_RUN_31168780911_FAILED_WINDOWS_SIGNATURE_UPDATE_TWICE_SUPERSEDED_BY_DEFENDER_RUNNER_REPAIR_HEAD_PENDING
+WORK29_CI_TRIGGER=PR27_PR28_OPENED_SYNCHRONIZE_REOPENED_AND_BROWSER_AUTHORED_FINAL_SYNCHRONIZE_CREATED_NO_RUN_MANUAL_SAFE_CANDIDATE_ONLY_DISPATCH_REQUIRED
+WORK29_REMOTE_CI=RUN_31168780911_FAIL_SAFE_CANDIDATE_7_PASS_WINDOWS_SIGNATURE_UPDATE_EXIT_1_TWICE_SEVEN_TARGETS_NOT_RUN
+WORK29_JUDGE=ACTIVE_DRAFT_HOLD
+CURRENT_STATUS=WORK29_DRAFT_PR_OPEN_DEFENDER_RUNNER_REPAIR_LOCAL_PASS
+ACTIVE_BLOCKER=EXACT_HEAD_WINDOWS_DEFENDER_AND_COMPLETE_CI_RETRY_PENDING
 NEXT_WORK=NONE
-NEXT_ACTION=LOCK_THIS_DESKTOP_COVERAGE_COMMIT_AS_FINAL_HEAD_THEN_WAIT_FOR_EXACT_HEAD_CI
+NEXT_ACTION=COMMIT_DEFENDER_RUNNER_REPAIR_UPDATE_DRAFT_PR_LOCK_NEW_HEAD_RERUN_SAFE_CANDIDATE_ONLY_CI
 AUTHORIZATION_REQUIRED=TRUE_FOR_READY/MERGE/TAG/RELEASE
-LAST_UPDATED=2026-08-06
+LAST_UPDATED=2026-08-07
 ```
 
-## 2026-08-06 Work27 / Windows Desktop AI configuration save validation repair
+## 2026-08-06 Work29 / v3.29.5 safe unpublished Windows candidate
+
+- Work28 merged PR #26 without Head drift as `main@9a4a705d…`; its own push Run
+  `31111163231` passed 8/8 Jobs, including the full Windows install lifecycle.
+  No Tag or Release was created. Work29 starts from that exact fixed Base.
+- The current formal release is `v3.29.4`, but the release workflow had changed
+  package versions only inside its runner. Checked-in Desktop/Web sources remained
+  `3.29.3`, and ordinary main CI therefore produced a misleading `3.29.3`
+  candidate. Existing CI also had no real antimalware gate.
+- Work29 makes root `VERSION=3.29.5` authoritative and binds both packages,
+  lockfile roots, and backup metadata to it. Candidate builds must be newer than
+  every fetched canonical stable Tag; release builds must exactly match the checked-in
+  version; Auto Tag may only create that annotated source Tag.
+- A fail-closed Windows orchestrator updates Defender intelligence, requires an
+  enabled Normal-mode engine with current identity metadata, and runs non-remediating
+  custom scans over the installer, metadata, portable ZIP, unpacked/fresh-extracted
+  payloads, final release assets, and the actual installed directory. Any detection,
+  scan error, stale/unavailable engine, missing input, or missing report blocks
+  artifact upload.
+- Local Desktop passes 122/122, including 10/10 version and 12/12 Defender tests;
+  all 34 related Python contracts pass through direct `runpy`. Accepting
+  `MpCmdRun` exit `2` was mutation-tested and correctly failed. Selected Python
+  workflow contracts, YAML parsing, AI governance, Node syntax and diff checks
+  pass. This Linux environment has neither
+  pytest nor Windows Defender, so it cannot claim the authoritative real scan.
+- Draft PR [#28](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/28)
+  is Open Draft and mergeable at initial Head `b689e511…`. PR #27 was closed
+  without CI after GitHub created no Check Suite for its normal events. The
+  reviewed recovery keeps the main CI topology, embeds both Defender scans in
+  the existing lifecycle verifier, directly gates the Windows Job on version,
+  and produced browser-authored Head `25739486…`; GitHub still created no Check
+  Suite. The bounded fallback reuses CI through Desktop Release's existing manual
+  input surface only when the release message starts `[SAFE_CANDIDATE_ONLY]`.
+  In that mode normal release preflight/build/publish Jobs are skipped, so no Tag
+  or Release path can execute; exact-Head CI is the only called workflow. The
+  first safe dispatch, Run `31127507235` at Head `3c227d12…`, failed at workflow
+  startup before any Job because the caller had not delegated CI's read-only
+  `pull-requests` permission. A RED/GREEN contract now requires the caller to
+  grant only `contents: read` and `pull-requests: read`; an exact-Head retry is pending.
+- Scope remains one Draft PR and exact-Head CI. No database/user data, real
+  credential, dependency, Ready, merge, main write, Tag, or Release is authorized.
+- Safe-candidate Run `31127543822` at Head `33ec1eb…` ran the full topology: six
+  candidate Jobs passed; backend failed only because an older test still required
+  every non-publish Job to have exactly `contents: read`; Windows completed the
+  frozen backend, portable candidate and verifier contract, then stopped before
+  any Defender target scan because signature update and status query shared one
+  opaque PowerShell process. The diagnostic artifact is exact-Head bound and all
+  seven targets are `NOT_RUN`; it is not a malware verdict or deliverable.
+- The approved minimum correction keeps both Defender operations blocking but
+  runs them separately, records only bounded stage/exit/signal/error-code metadata,
+  and never records child stdout/stderr. The permission contract now grants only
+  the reusable caller's required `contents: read` plus `pull-requests: read` while
+  preserving every other Job's prior permission. RED/GREEN evidence is Desktop
+  `123/123` and related Python/Actions contracts `38/38`; a new exact-Head CI is
+  still required before any candidate can be accepted.
+- Run `31168780911` at Head `3c1e73b4…` then passed every candidate Job except
+  Windows. The original Windows attempt and the one permitted rerun both failed
+  at signature update with exit `1`; all seven targets remained `NOT_RUN`, and
+  install/start/restart/uninstall plus candidate upload did not execute. The
+  GitHub-hosted Windows Server 2025 image preconfigures exact `C:\` and `D:\`
+  whole-drive exclusions and disables archive scanning, so bypassing the update
+  would not establish a valid malware verdict.
+- The approved runner repair removes only those exact whole-drive exclusions when
+  present, enables and rechecks archive scanning, updates through the official
+  `MpCmdRun -SignatureUpdate -MMPC` path, and requires each target's
+  `-CheckExclusion` result to be exactly exit `1` before the existing custom scan.
+  Focused TDD produced 15 expected RED failures and `17/17` GREEN. The exclusion
+  mutation was detected; Desktop `127/127`, Python/Actions `38/38`, AI assets,
+  syntax, diff and scope boundaries pass. A new exact-Head Windows CI remains
+  pending; no malware PASS is claimed from Linux.
+
+## Historical current entry | 2026-08-06 Work27 / Windows Desktop AI configuration save validation repair
 
 - GitHub and fetched refs confirm Work25 is no longer active: PR #25 merged as
   `main@4322e7dd…`; annotated `v3.29.4` peels to that exact commit. Work27 starts

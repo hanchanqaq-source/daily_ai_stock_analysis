@@ -1,4 +1,83 @@
-# WORK-027 | Windows Desktop AI configuration save validation repair return
+# WORK-029 | v3.29.5 safe unpublished Windows candidate return
+
+## Work29 current evidence
+
+```text
+BASE=9a4a705d06370ddbebf669ab8efb0058ce9eb81a
+BRANCH=agent/pp02-work29-safe-candidate
+ROOT_CAUSE=RUNNER_ONLY_RELEASE_VERSION_MUTATION_PLUS_NO_REAL_ANTIMALWARE_GATE
+SOURCE_VERSION=3.29.5
+FORMAL_RELEASE_REMAINS=3.29.4
+VERSION_TDD=PASS_10_OF_10
+DEFENDER_TDD=PASS_17_OF_17_PLUS_EXCLUSION_ACCEPTANCE_MUTATION_RED
+DESKTOP_FULL=PASS_127_OF_127
+PYTHON_RELATED=PASS_38_DIRECT_RUNPY_PYTEST_UNAVAILABLE
+LOCAL_AUXILIARY=PASS_AI_ASSETS_NODE_SYNTAX_YAML_PARSE_DIFF_DEPENDENCY_DATA_SECRET_BOUNDARIES
+REAL_DEFENDER=NOT_CLAIMED_LINUX_ENV_EXACT_HEAD_WINDOWS_CI_REQUIRED
+DRAFT_PR=28_OPEN_DRAFT
+INITIAL_REMOTE_HEAD=b689e51188a373262e69414fc30f0014c6647796
+REMOTE_FIXED_HEAD=3C1E73B4D9443345CD34B849DAED5F625E1130EA_RUN_31168780911_FAILED_WINDOWS_SIGNATURE_UPDATE_TWICE_SUPERSEDED_BY_DEFENDER_RUNNER_REPAIR_HEAD_PENDING
+REMOTE_CI=RUN_31168780911_FAIL_7_OF_8_SAFE_CANDIDATE_JOBS_PASS_WINDOWS_SIGNATURE_UPDATE_EXIT_1_TWICE_ALL_TARGETS_NOT_RUN
+CANDIDATE=PENDING
+JUDGE=ACTIVE_DRAFT_HOLD
+```
+
+- Work28 evidence is closed: PR #26 fixed Head `849dfaef…`, merged main
+  `9a4a705d…`, and push Run `31111163231` passed 8/8 without Tag or Release.
+- Root `VERSION=3.29.5` now binds Desktop/Web packages, both lockfile roots and
+  backup metadata. The release workflow no longer mutates versions at build time;
+  candidate/release/Auto Tag modes enforce the source-to-Tag relationship.
+- The Defender orchestrator updates intelligence, requires an enabled Normal-mode
+  engine with non-stale identity, invokes `MpCmdRun.exe` custom scans with
+  remediation disabled, accepts only exit `0`, and emits sanitized exact-Head JSON.
+- Candidate and formal-release paths place Defender ahead of artifact upload and
+  pass it into the installed lifecycle before first application launch. Reports
+  remain uploadable on failure while rejected installer artifacts do not.
+- Local Desktop passes 122/122, including 10 version and 12 Defender orchestration
+  tests. A mutation accepting scanner exit `2` fails the detection regression as
+  required. All 34 related Python contracts pass with direct `runpy`; AI assets,
+  Node/YAML syntax and diff checks pass. Local pytest and Windows Defender are
+  unavailable and therefore not claimed.
+- Draft PR [#28](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/28)
+  is Open Draft and mergeable at initial Head `b689e511…`. PR #27 was closed after
+  GitHub created no Check Suite for its normal events. Independent recovery
+  review found no remaining Critical/Important issue; the reviewed tree plus one
+  browser-authored synchronization commit became Head `25739486…`, but GitHub
+  still created no Check Suite. A bounded manual fallback calls the same CI only
+  for `[SAFE_CANDIDATE_ONLY]` and structurally skips every release Job. Complete CI,
+  Defender identities, artifact hashes and download link remain pending. Its
+  first Run `31127507235` stopped before Jobs because the reusable caller lacked
+  CI's read-only PR permission; a RED/GREEN fix grants only `contents: read` and
+  `pull-requests: read`, without adding any write or release authority. No real
+  credential/data, dependency,
+  Ready, merge, Tag or Release action occurred.
+- Run `31127543822` passed six of eight safe-candidate Jobs. Backend's only
+  failure was the stale assertion that every non-publish Job had exactly one
+  read permission. Windows completed the frozen backend, portable package and
+  installer-verifier contract, then produced an exact-Head diagnostic report
+  with seven targets marked `NOT_RUN`; the combined Defender update/status
+  process had exited `1`, so no malware scan or install lifecycle ran.
+- The minimum correction separates signature update from status query while
+  preserving both as blocking gates. Failure reports retain only stage, exit
+  code, bounded signal and bounded error code; child stdout/stderr is discarded.
+  Desktop `123/123` and related Python/Actions contracts `38/38` pass locally.
+  The new exact-Head Windows CI remains authoritative and pending.
+- Run `31168780911` passed seven candidate Jobs. Its Windows Job and one permitted
+  rerun both stopped at signature update exit `1`; every scan target was
+  `NOT_RUN`, installation never started, and no candidate uploaded. This stable
+  reproduction plus the hosted-image configuration proves the scanner was
+  operating inside whole-drive exclusions with archive scanning disabled.
+- The approved repair removes only exact `C:\`/`D:\` runner exclusions, enables
+  archive scanning, updates with `MpCmdRun -SignatureUpdate -MMPC`, and requires
+  `-CheckExclusion` exit `1` before every custom scan. Focused RED was 15 expected
+  failures and focused GREEN is `17/17`; the exclusion-acceptance mutation fails
+  as required. Desktop `127/127`, Python/Actions `38/38`, governance, syntax,
+  diff and scope checks pass. Exact-Head Windows CI is pending, so no malware-clean
+  result is claimed yet.
+
+---
+
+# Historical return | WORK-027 / Windows Desktop AI configuration save validation repair
 
 ## Work27 current evidence
 

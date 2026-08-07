@@ -70,7 +70,166 @@ def test_windows_candidate_build_and_installer_verify_one_version_identity() -> 
     assert ".VersionInfo.ProductVersion" in verifier
     assert "build-info.json" in verifier
     assert "webBuildInfo.version" in verifier
-    assert 'DEFAULT_APPLICATION_VERSION = "3.29.3"' in backup_service
+    assert 'DEFAULT_APPLICATION_VERSION = "3.29.5"' in backup_service
+
+
+def test_candidate_and_release_workflows_enforce_checked_in_version() -> None:
+    ci_workflow = _read_text(REPO_ROOT / ".github" / "workflows" / "ci.yml")
+    desktop_package = json.loads(
+        _read_text(REPO_ROOT / "apps" / "dsa-desktop" / "package.json")
+    )
+    release_workflow = _read_text(
+        REPO_ROOT / ".github" / "workflows" / "desktop-release.yml"
+    )
+    auto_tag_workflow = _read_text(
+        REPO_ROOT / ".github" / "workflows" / "auto-tag.yml"
+    )
+
+    assert "npm test --prefix apps/dsa-desktop" in ci_workflow
+    for security_path in (
+        "VERSION",
+        "scripts/verify-release-version.js",
+        "scripts/windows-defender-scan.js",
+    ):
+        assert f"- '{security_path}'" in ci_workflow
+    windows_job = _workflow_job(ci_workflow, "desktop-futu-package-windows")
+    assert "node scripts/verify-release-version.js candidate" in windows_job
+    assert windows_job.index(
+        "node scripts/verify-release-version.js candidate"
+    ) < windows_job.index("powershell -ExecutionPolicy Bypass -File scripts/build-all.ps1")
+    assert desktop_package["scripts"]["test"].startswith(
+        "node ../../scripts/verify-release-version.js candidate && "
+    )
+    assert "npm version" not in release_workflow
+    assert release_workflow.count(
+        'node scripts/verify-release-version.js release --tag "${RELEASE_TAG}"'
+    ) >= 2
+    assert "node scripts/verify-release-version.js auto-tag" in auto_tag_workflow
+    assert 'git tag -a "${release_tag}"' in auto_tag_workflow
+    assert "anothrNick/github-tag-action" not in auto_tag_workflow
+
+
+def test_manual_safe_candidate_dispatch_reuses_ci_and_cannot_publish() -> None:
+    ci_workflow = _read_text(REPO_ROOT / ".github" / "workflows" / "ci.yml")
+    release_workflow = _read_text(
+        REPO_ROOT / ".github" / "workflows" / "desktop-release.yml"
+    )
+
+    assert "workflow_call:" in ci_workflow
+    assert "expected_head:" in ci_workflow
+    assert "github.event_name == 'workflow_call'" not in ci_workflow
+    assert ci_workflow.count("inputs.expected_head != ''") >= 5
+    assert "inputs.expected_head" in ci_workflow
+    changes_job = _workflow_job(ci_workflow, "changes")
+    assert "if: inputs.expected_head == ''" in changes_job
+
+    safe_marker = "[SAFE_CANDIDATE_ONLY]"
+    assert safe_marker in release_workflow
+    assert "safe-candidate:" in release_workflow
+    safe_job = _workflow_job(release_workflow, "safe-candidate")
+    assert "uses: ./.github/workflows/ci.yml" in safe_job
+    assert "expected_head: ${{ inputs.release_commit }}" in safe_job
+    assert "permissions:" in safe_job
+    assert "contents: read" in safe_job
+    assert "pull-requests: read" in safe_job
+    assert (
+        "github.event_name == 'workflow_dispatch' && "
+        f"startsWith(inputs.release_message, '{safe_marker}')"
+    ) in release_workflow
+    assert (
+        "github.event_name != 'workflow_dispatch' || "
+        f"startsWith(inputs.release_message, '{safe_marker}') == false"
+    ) in release_workflow
+    publish_job = _workflow_job(release_workflow, "publish-release")
+    assert "needs: [preflight, build-windows, build-macos]" in publish_job
+    assert "safe-candidate" not in publish_job
+
+
+def test_windows_workflows_fail_closed_on_defender_before_upload_or_release() -> None:
+    ci_workflow = _read_text(REPO_ROOT / ".github" / "workflows" / "ci.yml")
+    release_workflow = _read_text(
+        REPO_ROOT / ".github" / "workflows" / "desktop-release.yml"
+    )
+    verifier = _read_text(REPO_ROOT / "scripts" / "verify-windows-installer.ps1")
+    verifier_contract = _read_text(
+        REPO_ROOT / "scripts" / "tests" / "verify-windows-installer-contract.ps1"
+    )
+    windows_job = _workflow_job(ci_workflow, "desktop-futu-package-windows")
+
+    assert "Scan Windows candidate with Microsoft Defender" not in windows_job
+    assert "Upload Windows Defender reports" not in windows_job
+    assert "-MalwareScannerPath" not in windows_job
+    assert "-MalwareReportPath" not in windows_job
+    assert "-PreinstallMalwareReportPath" not in windows_job
+    assert windows_job.index(
+        "Validate installed Windows lifecycle"
+    ) < windows_job.index("Scan Windows fake credential leakage")
+    assert windows_job.index(
+        "Scan Windows fake credential leakage"
+    ) < windows_job.index("Upload verified Windows candidate")
+
+    assert "Scan Windows release assets with Microsoft Defender" in release_workflow
+    assert "$preinstallDefenderReport = Join-Path $defenderRoot 'preinstall.json'" in release_workflow
+    assert "--report $preinstallDefenderReport" in release_workflow
+    assert "-PreinstallMalwareReportPath $preinstallDefenderReport" in release_workflow
+    assert "-MalwareScannerPath scripts/windows-defender-scan.js" in release_workflow
+    assert release_workflow.index(
+        "Scan Windows release assets with Microsoft Defender"
+    ) < release_workflow.index("Validate installed Windows lifecycle")
+    assert release_workflow.index(
+        "Validate installed Windows lifecycle"
+    ) < release_workflow.index("Prepare release artifact (Windows)")
+    final_release_scan = release_workflow[
+        release_workflow.index(
+            "Scan final Windows release assets with Microsoft Defender"
+        ) : release_workflow.index("Upload Windows Defender reports")
+    ]
+    for target in (
+        "$installerTarget",
+        "$blockmapTarget",
+        "$latestTarget",
+        "$zipTarget",
+        "$checksumTarget",
+        "$defenderExtract",
+    ):
+        assert f"--path {target}" in final_release_scan
+    assert "--path dist/release-assets" not in final_release_scan
+
+    assert "[string]$MalwareScannerPath = ''" in verifier
+    assert "[string]$MalwareReportPath = ''" in verifier
+    assert "[string]$PreinstallMalwareReportPath = ''" in verifier
+    assert "$preinstallEvidenceProvided" in verifier
+    assert "candidate_payload_defender_scan" in verifier
+    assert "installed_payload_defender_scan" in verifier
+    assert "$preinstallReport" in verifier
+    assert "$candidateExtract" in verifier
+    assert "Expand-Archive -LiteralPath $portableZip" in verifier
+    for target in (
+        "$installer",
+        "$blockmap",
+        "$latest",
+        "$portableZip",
+        "$checksum",
+        "$winUnpacked",
+        "$candidateExtract",
+    ):
+        assert f"--path {target}" in verifier
+    assert verifier.count("node $malwareScanner") == 2
+    assert "[string]$malwareResult.head -ne $expectedHead" in verifier
+    assert verifier.index("candidate_payload_defender_scan") < verifier.index(
+        "$installProcess = Start-Process -FilePath $installer"
+    )
+    assert verifier.index("installed_payload_defender_scan") < verifier.index(
+        "$appProcess = Start-Process -FilePath $appExe"
+    )
+    for evidence_marker in (
+        "EXTERNAL_PREINSTALL_EVIDENCE_VALIDATION=PASS",
+        "EXTERNAL_PREINSTALL_EVIDENCE_FAIL_REJECTION=PASS",
+        "EXTERNAL_PREINSTALL_EVIDENCE_HEAD_REJECTION=PASS",
+        "EXTERNAL_PREINSTALL_EVIDENCE_MISSING_REJECTION=PASS",
+        "EXTERNAL_PREINSTALL_EVIDENCE_ROOT_REJECTION=PASS",
+    ):
+        assert evidence_marker in verifier_contract
 
 
 def test_windows_backend_collects_and_exercises_fake_useragent_runtime() -> None:
