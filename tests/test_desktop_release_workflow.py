@@ -184,3 +184,35 @@ def test_windows_final_zip_cleanup_retries_locked_files_and_fails_closed() -> No
         "Remove-Item -LiteralPath $releaseFinalExtract -Recurse -Force"
         not in script
     )
+
+
+def test_pre_lifecycle_failure_does_not_add_diagnostic_upload_error() -> None:
+    windows_steps = _workflow()["jobs"]["build-windows"]["steps"]
+    installer_diagnostics = next(
+        step
+        for step in windows_steps
+        if step.get("name") == "Upload Windows installer diagnostics"
+    )
+    defender_reports = next(
+        step
+        for step in windows_steps
+        if step.get("name") == "Upload Windows Defender reports"
+    )
+
+    assert installer_diagnostics["if"] == "always()"
+    assert installer_diagnostics["with"]["if-no-files-found"] == "warn"
+    assert defender_reports["if"] == "always()"
+    assert defender_reports["with"]["if-no-files-found"] == "error"
+
+    ci_workflow_path = REPO_ROOT / ".github" / "workflows" / "ci.yml"
+    ci_workflow = yaml.load(
+        ci_workflow_path.read_text(encoding="utf-8"),
+        Loader=yaml.BaseLoader,
+    )
+    ci_windows_steps = ci_workflow["jobs"]["desktop-futu-package-windows"]["steps"]
+    ci_installer_diagnostics = next(
+        step
+        for step in ci_windows_steps
+        if step.get("name") == "📤 Upload Windows installer diagnostics"
+    )
+    assert ci_installer_diagnostics["with"]["if-no-files-found"] == "error"

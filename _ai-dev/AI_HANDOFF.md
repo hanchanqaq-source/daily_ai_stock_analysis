@@ -1,6 +1,32 @@
 # PP02 handoff
 
-## Current takeover entry | WORK-029
+## Current takeover entry | WORK-030
+
+| Item | Current fact |
+| --- | --- |
+| State | `WORK30_DRAFT_PR_OPEN_INITIAL_CI_PASS_STATUS_SYNC_PENDING` |
+| Base | `main@ed44a6a3dfa366d595eed1a6999e089d65207cbc` |
+| Branch | `agent/pp02-work30-defender-retry` |
+| Failure | Formal release Run `31191357654`, Windows Job `92909068724`: MMPC intelligence update exited `2` before any scan |
+| Root cause | The external MMPC update had one attempt; the expected absent pre-lifecycle diagnostic directory was also uploaded with `if-no-files-found: error` |
+| Repair | At most three MMPC attempts with fixed sleeps, exact exit `0` required; attempts plus bounded process metadata only; release installer diagnostics warn while Defender reports and ordinary CI remain hard errors |
+| TDD | RED: Defender `16 pass / 3 expected fail`, workflow `1 expected fail`; GREEN/review fixes: Defender `21/21`, workflow contract PASS |
+| Local | Final suite: Defender `21/21`, Desktop `131/131`, Python/Actions `24/24`, YAML/version/AI assets/diff/dependency/data boundaries PASS |
+| Review | PASS — no Critical or Important findings; prior test/status gaps verified closed |
+| Draft PR / CI | [#29](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/29) Open Draft; initial Head `97109cce…` Run `31194859300` passed 7 applicable Jobs with Web path-skipped and Windows lifecycle PASS; docs-only status-sync Head CI pending |
+| Judge | `ACTIVE — DRAFT_HOLD` |
+| Prohibited | Ready, merge, direct `main`, Tag, Release, dependencies, database/user data, real credentials |
+
+The repair is deliberately limited to the flaky external intelligence update.
+It never retries a scan, engine-health failure, exclusion failure or malware
+verdict, and it never records Defender stdout/stderr. Exhaustion still fails
+closed before status or scan calls. Independent re-review passed. PR #29 remains
+Draft. The initial reviewed remote tree passed complete applicable CI; the next
+action is to wait for the docs-only status-sync Head's complete CI result.
+
+---
+
+## Historical takeover entry | WORK-029
 
 | Item | Current fact |
 | --- | --- |

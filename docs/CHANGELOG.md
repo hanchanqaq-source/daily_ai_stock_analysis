@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 <!-- 新条目格式：- [类型] 描述（类型取值：新功能/改进/修复/文档/测试/chore）-->
 <!-- 每条独立一行追加到本段末尾，无需分类标题，合并时冲突最小 -->
+- [修复] Windows 正式发布对 Microsoft Defender MMPC 情报更新增加最多三次尝试（两次重试）并记录尝试次数；预扫描阻断导致安装生命周期未运行时不再因缺少安装诊断目录产生第二个失败，Defender 报告仍强制上传。
 - [修复] 统一 `3.29.5` 源码版本真源并阻止候选低于最新正式 Tag 或发布 Tag 与源码不一致；Windows 候选和正式发布在上传前新增 Microsoft Defender 更新、健康、产物、解压目录及安装目录的失败关闭扫描与 Head 绑定报告。
 - [测试] Microsoft Defender 签名更新与状态查询改为独立失败关闭步骤，诊断仅保留有界阶段、退出码、信号和错误码；同步安全候选调用者所需的两项只读权限契约。
 - [修复] Windows 安全候选在一次性 Hosted Runner 中仅移除预设的 `C:\`/`D:\` 整盘 Defender 排除、启用归档扫描并改用 MMPC 更新；每个目标必须先证明未被排除才允许执行扫描和安装。

@@ -4,6 +4,8 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const MAX_SIGNATURE_AGE_DAYS = 1;
+const SIGNATURE_UPDATE_MAX_ATTEMPTS = 3;
+const SIGNATURE_UPDATE_RETRY_DELAY_MS = 5000;
 const HEAD_PATTERN = /^[0-9a-f]{40}$/i;
 
 class MalwareScanError extends Error {
@@ -170,13 +172,15 @@ function boundedProcessToken(value) {
   return /^[a-z0-9._-]{1,64}$/i.test(token) ? token : 'UNRECOGNIZED';
 }
 
-function describeProcessFailure(stage, result) {
-  return {
+function describeProcessFailure(stage, result, attempts = null) {
+  const failure = {
     stage,
     exitCode: Number.isInteger(result?.status) ? result.status : null,
     signal: boundedProcessToken(result?.signal),
     errorCode: boundedProcessToken(result?.error?.code),
   };
+  if (Number.isInteger(attempts) && attempts > 0) failure.attempts = attempts;
+  return failure;
 }
 
 function runProcessSafely(run) {
@@ -187,8 +191,12 @@ function runProcessSafely(run) {
   }
 }
 
-function failProcess(reasonCode, message, stage, result) {
-  throw new MalwareScanError(reasonCode, message, describeProcessFailure(stage, result));
+function failProcess(reasonCode, message, stage, result, attempts = null) {
+  throw new MalwareScanError(
+    reasonCode,
+    message,
+    describeProcessFailure(stage, result, attempts),
+  );
 }
 
 function defaultRunScanner(scannerPath, args) {
@@ -198,6 +206,24 @@ function defaultRunScanner(scannerPath, args) {
     timeout: 60 * 60 * 1000,
     windowsHide: true,
   });
+}
+
+function defaultSleep(milliseconds) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
+}
+
+function updateDefenderSignatures(runScanner, scannerPath, sleep) {
+  let result = null;
+  for (let attempt = 1; attempt <= SIGNATURE_UPDATE_MAX_ATTEMPTS; attempt += 1) {
+    result = runProcessSafely(
+      () => runScanner(scannerPath, ['-SignatureUpdate', '-MMPC']),
+    );
+    if (result?.status === 0) return { attempts: attempt, result };
+    if (attempt < SIGNATURE_UPDATE_MAX_ATTEMPTS) {
+      sleep(SIGNATURE_UPDATE_RETRY_DELAY_MS);
+    }
+  }
+  return { attempts: SIGNATURE_UPDATE_MAX_ATTEMPTS, result };
 }
 
 function validateDefenderStatus(status) {
@@ -302,6 +328,7 @@ function runWindowsDefenderScan(options, dependencies = {}) {
   const runStatusQuery = dependencies.runStatusQuery ||
     ((script) => defaultRunPowerShell(script));
   const runScanner = dependencies.runScanner || defaultRunScanner;
+  const sleep = dependencies.sleep || defaultSleep;
   const head = String(options.head || '').toLowerCase();
   const startedAtUtc = now().toISOString();
   const baseReport = {
@@ -353,15 +380,19 @@ function runWindowsDefenderScan(options, dependencies = {}) {
       archiveScanningEnabled: prepared.archiveScanningEnabled,
       removedWholeDriveExclusions: prepared.removedWholeDriveExclusions,
     };
-    const updateResult = runProcessSafely(
-      () => runScanner(prepared.scannerPath, ['-SignatureUpdate', '-MMPC']),
+    const signatureUpdate = updateDefenderSignatures(
+      runScanner,
+      prepared.scannerPath,
+      sleep,
     );
-    if (!updateResult || updateResult.status !== 0) {
+    environment.signatureUpdateAttempts = signatureUpdate.attempts;
+    if (!signatureUpdate.result || signatureUpdate.result.status !== 0) {
       failProcess(
         'defender_signature_update_failed',
         'Microsoft Defender security intelligence update failed.',
         'mmpc_signature_update',
-        updateResult,
+        signatureUpdate.result,
+        signatureUpdate.attempts,
       );
     }
     const statusResult = runProcessSafely(() => runStatusQuery(defenderStatusScript()));

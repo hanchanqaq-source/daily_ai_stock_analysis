@@ -42,6 +42,9 @@ function healthyStatus(scannerPath, overrides = {}) {
 function dependencies(status, options = {}) {
   const calls = [];
   const powerShellCalls = [];
+  const sleepCalls = [];
+  const events = [];
+  let signatureUpdateIndex = 0;
   const preparation = {
     archiveScanningDisabled: false,
     removedWholeDriveExclusions: 2,
@@ -51,10 +54,17 @@ function dependencies(status, options = {}) {
   return {
     calls,
     powerShellCalls,
+    sleepCalls,
+    events,
     value: {
       now: () => new Date('2026-08-06T12:00:00.000Z'),
+      sleep: (milliseconds) => {
+        sleepCalls.push(milliseconds);
+        events.push(`sleep:${milliseconds}`);
+      },
       runEnvironmentPreparation: (script) => {
         powerShellCalls.push({ stage: 'environment_prepare', script });
+        events.push('environment_prepare');
         return options.preparationResult || {
           status: 0,
           stdout: JSON.stringify(preparation),
@@ -62,16 +72,26 @@ function dependencies(status, options = {}) {
       },
       runStatusQuery: (script) => {
         powerShellCalls.push({ stage: 'status_query', script });
+        events.push('status_query');
         return { status: 0, stdout: JSON.stringify(status) };
       },
       runScanner: (scannerPath, args) => {
         calls.push({ scannerPath, args });
         if (args[0] === '-SignatureUpdate') {
+          events.push('signature_update');
+          if (options.signatureUpdateResults) {
+            const result = options.signatureUpdateResults[signatureUpdateIndex];
+            signatureUpdateIndex += 1;
+            if (result instanceof Error) throw result;
+            return result;
+          }
           return options.signatureUpdateResult || { status: 0 };
         }
         if (args[0] === '-CheckExclusion') {
+          events.push('check_exclusion');
           return options.exclusionCheckResult || { status: 1 };
         }
+        events.push('scan');
         return { status: options.scannerExitCode || 0 };
       },
     },
@@ -123,6 +143,7 @@ test('clean scan repairs hosted-runner exclusions, updates from MMPC, proves tar
   assert.deepEqual(report.environment, {
     archiveScanningEnabled: true,
     removedWholeDriveExclusions: 2,
+    signatureUpdateAttempts: 1,
   });
   assert.equal(report.targets[0].name, 'candidate.exe');
   assert.equal(report.targets[0].kind, 'file');
@@ -198,8 +219,11 @@ test('MMPC signature update failure is reported separately without child output'
     }, deps.value),
     (error) => error.reasonCode === 'defender_signature_update_failed',
   );
-  assert.equal(deps.calls.length, 1);
-  assert.deepEqual(deps.calls[0].args, ['-SignatureUpdate', '-MMPC']);
+  assert.equal(deps.calls.length, 3);
+  assert.deepEqual(
+    deps.calls.map((call) => call.args),
+    Array(3).fill(['-SignatureUpdate', '-MMPC']),
+  );
   const reportText = fs.readFileSync(fixture.reportPath, 'utf8');
   const report = JSON.parse(reportText);
   assert.equal(report.reasonCode, 'defender_signature_update_failed');
@@ -208,9 +232,144 @@ test('MMPC signature update failure is reported separately without child output'
     exitCode: 1,
     signal: null,
     errorCode: null,
+    attempts: 3,
   });
   assert.equal(reportText.includes('synthetic-sensitive-update-output'), false);
   assert.equal(reportText.includes('synthetic-sensitive-update-error'), false);
+});
+
+test('transient MMPC exit 2 is retried once before status validation and scanning', (t) => {
+  const fixture = createFixture(t);
+  const deps = dependencies(healthyStatus(fixture.scannerPath), {
+    signatureUpdateResults: [{ status: 2 }, { status: 0 }],
+  });
+
+  const result = runWindowsDefenderScan({
+    platform: 'win32', head: HEAD, targets: [fixture.target], reportPath: fixture.reportPath,
+  }, deps.value);
+
+  assert.equal(result.status, 'PASS');
+  assert.deepEqual(deps.calls.map((call) => call.args[0]), [
+    '-SignatureUpdate',
+    '-SignatureUpdate',
+    '-CheckExclusion',
+    '-Scan',
+  ]);
+  assert.deepEqual(deps.sleepCalls, [5000]);
+  assert.deepEqual(deps.events, [
+    'environment_prepare',
+    'signature_update',
+    'sleep:5000',
+    'signature_update',
+    'status_query',
+    'check_exclusion',
+    'scan',
+  ]);
+  assert.equal(result.environment.signatureUpdateAttempts, 2);
+});
+
+test('MMPC update exhaustion stays fail closed after three attempts', (t) => {
+  const fixture = createFixture(t);
+  const deps = dependencies(healthyStatus(fixture.scannerPath), {
+    signatureUpdateResults: [{ status: 2 }, { status: 2 }, { status: 2 }],
+  });
+
+  assert.throws(
+    () => runWindowsDefenderScan({
+      platform: 'win32', head: HEAD, targets: [fixture.target], reportPath: fixture.reportPath,
+    }, deps.value),
+    (error) => error.reasonCode === 'defender_signature_update_failed',
+  );
+
+  assert.deepEqual(deps.calls.map((call) => call.args[0]), [
+    '-SignatureUpdate',
+    '-SignatureUpdate',
+    '-SignatureUpdate',
+  ]);
+  assert.deepEqual(deps.sleepCalls, [5000, 5000]);
+  assert.deepEqual(deps.events, [
+    'environment_prepare',
+    'signature_update',
+    'sleep:5000',
+    'signature_update',
+    'sleep:5000',
+    'signature_update',
+  ]);
+  const report = readReport(fixture.reportPath);
+  assert.deepEqual(report.processFailure, {
+    stage: 'mmpc_signature_update',
+    exitCode: 2,
+    signal: null,
+    errorCode: null,
+    attempts: 3,
+  });
+  assert.equal(report.targets[0].scanStatus, 'NOT_RUN');
+});
+
+test('thrown MMPC process failure is retried before a successful update', (t) => {
+  const fixture = createFixture(t);
+  const transientError = new Error('synthetic-sensitive-thrown-update-error');
+  transientError.code = 'ETIMEDOUT';
+  const deps = dependencies(healthyStatus(fixture.scannerPath), {
+    signatureUpdateResults: [transientError, { status: 0 }],
+  });
+
+  const result = runWindowsDefenderScan({
+    platform: 'win32', head: HEAD, targets: [fixture.target], reportPath: fixture.reportPath,
+  }, deps.value);
+
+  assert.equal(result.status, 'PASS');
+  assert.equal(result.environment.signatureUpdateAttempts, 2);
+  assert.deepEqual(deps.events, [
+    'environment_prepare',
+    'signature_update',
+    'sleep:5000',
+    'signature_update',
+    'status_query',
+    'check_exclusion',
+    'scan',
+  ]);
+  assert.equal(fs.readFileSync(fixture.reportPath, 'utf8').includes(transientError.message), false);
+});
+
+test('timeout-like MMPC exhaustion records bounded metadata without child output', (t) => {
+  const fixture = createFixture(t);
+  const timeoutResult = {
+    status: null,
+    error: { code: 'ETIMEDOUT' },
+    stdout: 'synthetic-sensitive-timeout-output',
+    stderr: 'synthetic-sensitive-timeout-error',
+  };
+  const deps = dependencies(healthyStatus(fixture.scannerPath), {
+    signatureUpdateResults: [timeoutResult, timeoutResult, timeoutResult],
+  });
+
+  assert.throws(
+    () => runWindowsDefenderScan({
+      platform: 'win32', head: HEAD, targets: [fixture.target], reportPath: fixture.reportPath,
+    }, deps.value),
+    (error) => error.reasonCode === 'defender_signature_update_failed',
+  );
+
+  assert.deepEqual(deps.events, [
+    'environment_prepare',
+    'signature_update',
+    'sleep:5000',
+    'signature_update',
+    'sleep:5000',
+    'signature_update',
+  ]);
+  const reportText = fs.readFileSync(fixture.reportPath, 'utf8');
+  const report = JSON.parse(reportText);
+  assert.deepEqual(report.processFailure, {
+    stage: 'mmpc_signature_update',
+    exitCode: null,
+    signal: null,
+    errorCode: 'ETIMEDOUT',
+    attempts: 3,
+  });
+  assert.equal(reportText.includes(timeoutResult.stdout), false);
+  assert.equal(reportText.includes(timeoutResult.stderr), false);
 });
 
 test('Defender status failure is reported separately with bounded process metadata', (t) => {

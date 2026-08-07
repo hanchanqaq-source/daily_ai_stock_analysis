@@ -1,5 +1,27 @@
 # PP02 安全重建路线 R0–R7
 
+## 2026-08-07 Work30 Defender intelligence bounded retry and diagnostics repair
+
+- Formal release Run `31191357654` reached the Windows Defender gate and failed
+  closed because `MpCmdRun -SignatureUpdate -MMPC` returned transient exit `2`
+  before any target scan. The release workflow then added a secondary upload
+  error because pre-lifecycle installer diagnostics did not yet exist.
+- Work30 starts from exact `main@ed44a6a3…` and retries only the external MMPC
+  update: at most three total attempts, two fixed waits and exact exit `0`
+  required. Exhaustion stops before health, exclusion and scan operations;
+  scans and verdicts are never retried.
+- Sanitized evidence adds the attempt count but no stdout/stderr. Defender report
+  upload remains a hard error. Only release installer diagnostics tolerate the
+  expected missing pre-lifecycle directory; ordinary CI remains strict.
+- TDD moved from three Defender retry failures plus one workflow failure to
+  Defender `21/21` and the workflow contract passing, including unified call
+  order, thrown-error, timeout-like exhaustion, redaction and ordinary-CI gates.
+  Final full local verification and independent re-review pass with no Critical
+  or Important findings. Draft PR #29 initial Head `97109cce…` then passed Run
+  `31194859300`: seven applicable Jobs succeeded, Web was path-skipped and the
+  Windows installed lifecycle passed. Only the docs-only status-sync Head's
+  complete CI remains required. Ready, merge, Tag and Release are forbidden.
+
 ## 2026-08-06 Work29 v3.29.5 safe unpublished Windows candidate
 
 - Work28 merged PR #26 at fixed Head `849dfaef…` into `main@9a4a705d…`; main
