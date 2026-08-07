@@ -1,4 +1,71 @@
-# WORK-029 | v3.29.5 safe unpublished Windows candidate
+# WORK-030 | bounded Defender intelligence retry and diagnostic upload repair
+
+## Work30 authorization and execution contract
+
+```text
+WORK_ID=WORK-030
+WORK_STATE=LOCAL_REVIEW_PASS_DRAFT_PR_PENDING
+BASE=ed44a6a3dfa366d595eed1a6999e089d65207cbc
+BRANCH=agent/pp02-work30-defender-retry
+SOURCE_VERSION=3.29.5
+FORMAL_RELEASE_VERSION=3.29.4
+FAILURE_RUN=31191357654
+FAILURE_JOB=92909068724
+DRAFT_PR=PENDING
+JUDGE=ACTIVE_DRAFT_HOLD
+```
+
+### Root cause and selected design
+
+- Formal release Run `31191357654` built the Windows package and passed the
+  installer contracts, then `MpCmdRun -SignatureUpdate -MMPC` returned exit `2`
+  after about 2.5 seconds. All four targets remained `NOT_RUN`; no malware
+  verdict was produced.
+- The scanner treats every non-zero update result as a final failure after one
+  attempt. A transient external intelligence-service failure therefore blocks
+  an otherwise valid run without a bounded recovery opportunity.
+- Retry only the MMPC intelligence update. Keep a fixed maximum attempt count
+  and fixed bounded delay, then continue to status validation and scanning only
+  after an update returns `0`. Exhaustion remains fail-closed.
+- Record only attempt count plus the existing bounded final exit/signal/error
+  metadata. Never persist child stdout/stderr or relax engine, exclusion,
+  freshness, identity, target, or scan exit gates.
+- If an earlier Defender step prevents the installer lifecycle from starting,
+  the absent installer-diagnostics directory is expected. Its `always()` upload
+  must not add a second Job failure; the separately required Defender report
+  upload remains `if-no-files-found: error`.
+
+### Implementation plan and acceptance
+
+1. Add a RED unit test where MMPC returns `2` once and then `0`; require exactly
+   two update attempts followed by status, exclusion proof, and scan.
+2. Add a RED unit test where every MMPC attempt fails; require the fixed maximum
+   attempts, no status/scan, fail-closed reason, and bounded attempt metadata.
+3. Add a RED workflow contract proving a pre-lifecycle Defender failure cannot
+   turn the installer-diagnostics upload into another error, while Defender
+   report upload remains mandatory.
+4. Implement the smallest synchronous retry helper with dependency-injected
+   sleep for deterministic unit tests; no new package or configuration.
+5. Update only the release diagnostic-upload missing-file policy needed by the
+   observed failure. Preserve the ordinary CI lifecycle diagnostic hard gate.
+6. Run focused RED/GREEN, Desktop full tests, direct Python workflow contracts,
+   YAML parse, AI governance, syntax, diff, dependency/data/secret boundaries,
+   and independent review.
+7. Commit, push one branch, create one Draft PR, freeze its exact Head, and wait
+   for the complete repository CI. Real Defender remains a later Windows release
+   gate and is not claimed from Linux unit contracts or ordinary PR CI.
+
+### Scope and stop gates
+
+- Authorized: tests, minimum scanner/workflow/control-evidence changes, normal
+  commits, push, one Draft PR, fixed-Head CI, and in-scope CI repair.
+- Forbidden: Ready, merge, main write, Tag, Release, dependency changes,
+  database/user-data changes, real credentials, disabling Defender, accepting
+  update exit `2`, or accepting any non-zero target scan result.
+
+---
+
+# Historical contract | WORK-029 / v3.29.5 safe unpublished Windows candidate
 
 ## Work29 authorization and execution contract
 

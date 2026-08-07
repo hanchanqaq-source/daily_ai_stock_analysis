@@ -291,7 +291,7 @@ jobs:
         with:
           name: pp02-windows-installer-diagnostics-${{ env.DSA_RELEASE_COMMIT_SHA }}-${{ github.run_id }}
           path: ${{ runner.temp }}/pp02-installer-diagnostics-${{ env.DSA_RELEASE_COMMIT_SHA }}-${{ github.run_id }}
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
 
       - name: Prepare release artifact (Windows)

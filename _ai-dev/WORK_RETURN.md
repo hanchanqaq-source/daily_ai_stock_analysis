@@ -1,4 +1,41 @@
-# WORK-029 | v3.29.5 safe unpublished Windows candidate return
+# WORK-030 | Defender intelligence bounded retry and diagnostics return
+
+## Work30 current evidence
+
+```text
+BASE=ed44a6a3dfa366d595eed1a6999e089d65207cbc
+BRANCH=agent/pp02-work30-defender-retry
+FAILURE_RUN=31191357654
+FAILURE_JOB=92909068724
+ROOT_CAUSE=SINGLE_ATTEMPT_MMPC_EXIT_2_PLUS_EXPECTED_PRE_LIFECYCLE_DIAGNOSTICS_ABSENCE_TREATED_AS_UPLOAD_ERROR
+RETRY_POLICY=MAXIMUM_3_ATTEMPTS_2_FIXED_DELAY_RETRIES_EXACT_EXIT_0_ONLY
+REPORT_POLICY=ATTEMPT_COUNT_PLUS_EXISTING_BOUNDED_PROCESS_METADATA_NO_STDOUT_OR_STDERR
+UPLOAD_POLICY=RELEASE_INSTALLER_DIAGNOSTICS_WARN_DEFENDER_REPORT_ERROR_ORDINARY_CI_DIAGNOSTICS_ERROR
+TDD_RED=DEFENDER_16_PASS_3_EXPECTED_FAIL_WORKFLOW_1_EXPECTED_FAIL
+TDD_GREEN=DEFENDER_21_OF_21_WORKFLOW_CONTRACT_PASS
+FINAL_FULL_LOCAL=DEFENDER_21_OF_21_DESKTOP_131_OF_131_PYTHON_ACTIONS_24_OF_24_YAML_VERSION_AI_ASSETS_DIFF_DEPENDENCY_DATA_BOUNDARIES_PASS
+REVIEW=PASS_NO_CRITICAL_OR_IMPORTANT_PRIOR_TEST_AND_STATUS_GAPS_VERIFIED_CLOSED
+DRAFT_PR=PENDING
+JUDGE=ACTIVE_DRAFT_HOLD
+```
+
+- Formal release Run `31191357654` built the Windows artifacts but stopped
+  safely when the external MMPC intelligence update returned `2`; all Defender
+  targets remained `NOT_CHECKED`/`NOT_RUN` and nothing was published.
+- Work30 retries only that update operation, at most three total attempts with
+  two fixed waits. It still requires exact exit `0`; exhaustion, thrown errors
+  and timeout-like failures stop before engine status, exclusions or scans.
+- Reports add only the attempt count to the already bounded exit/signal/error
+  metadata and continue to redact stdout/stderr. The Defender report upload is
+  still a hard gate.
+- Only the release workflow's pre-lifecycle installer diagnostic upload changes
+  from missing-file error to warning. Ordinary CI lifecycle diagnostics remain
+  `if-no-files-found: error`.
+- Ready, merge, direct `main`, Tag and Release remain outside Work30 authority.
+
+---
+
+# Historical | WORK-029 v3.29.5 safe unpublished Windows candidate return
 
 ## Work29 current evidence
 
