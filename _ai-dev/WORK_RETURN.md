@@ -15,7 +15,11 @@ TDD_RED=DEFENDER_16_PASS_3_EXPECTED_FAIL_WORKFLOW_1_EXPECTED_FAIL
 TDD_GREEN=DEFENDER_21_OF_21_WORKFLOW_CONTRACT_PASS
 FINAL_FULL_LOCAL=DEFENDER_21_OF_21_DESKTOP_131_OF_131_PYTHON_ACTIONS_24_OF_24_YAML_VERSION_AI_ASSETS_DIFF_DEPENDENCY_DATA_BOUNDARIES_PASS
 REVIEW=PASS_NO_CRITICAL_OR_IMPORTANT_PRIOR_TEST_AND_STATUS_GAPS_VERIFIED_CLOSED
-DRAFT_PR=PENDING
+DRAFT_PR=29_OPEN_DRAFT
+INITIAL_REMOTE_HEAD=97109cce18ce54c8e9f59cd26df5780b5a98f575
+INITIAL_REMOTE_TREE=1bc32852d84e85dddabb4932209381be8b4b41ed_LOCAL_REVIEWED_TREE_MATCH
+INITIAL_REMOTE_CI=RUN_31194859300_PASS_7_SUCCESS_1_WEB_PATH_SKIPPED_WINDOWS_LIFECYCLE_PASS
+STATUS_SYNC=THIS_DOCS_ONLY_HEAD_FINAL_EXACT_HEAD_CI_PENDING
 JUDGE=ACTIVE_DRAFT_HOLD
 ```
 
@@ -32,6 +36,10 @@ JUDGE=ACTIVE_DRAFT_HOLD
   from missing-file error to warning. Ordinary CI lifecycle diagnostics remain
   `if-no-files-found: error`.
 - Ready, merge, direct `main`, Tag and Release remain outside Work30 authority.
+- Draft PR #29 initial Head `97109cce…` completed Run `31194859300`: all
+  seven applicable Jobs passed, Web was path-skipped, and the Windows installed
+  lifecycle passed without any publish action. This status-only synchronization
+  is the final Head whose complete CI must now reach terminal success.
 
 ---
 

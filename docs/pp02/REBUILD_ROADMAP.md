@@ -17,8 +17,10 @@
   Defender `21/21` and the workflow contract passing, including unified call
   order, thrown-error, timeout-like exhaustion, redaction and ordinary-CI gates.
   Final full local verification and independent re-review pass with no Critical
-  or Important findings; one Draft PR and the complete exact-Head CI remain
-  required. Ready, merge, Tag and Release are forbidden.
+  or Important findings. Draft PR #29 initial Head `97109cce…` then passed Run
+  `31194859300`: seven applicable Jobs succeeded, Web was path-skipped and the
+  Windows installed lifecycle passed. Only the docs-only status-sync Head's
+  complete CI remains required. Ready, merge, Tag and Release are forbidden.
 
 ## 2026-08-06 Work29 v3.29.5 safe unpublished Windows candidate
 
