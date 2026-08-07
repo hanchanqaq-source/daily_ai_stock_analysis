@@ -57,6 +57,7 @@ jobs:
               - 'scripts/verify-frozen-backend.ps1'
               - 'scripts/verify-windows-secure-credentials.ps1'
               - 'scripts/verify-windows-installer.ps1'
+              - 'scripts/windows-bounded-process.ps1'
               - 'scripts/tests/verify-windows-installer-contract.ps1'
               - 'scripts/verify-release-version.js'
               - 'scripts/windows-defender-scan.js'
@@ -285,6 +286,7 @@ jobs:
 
       - name: 🧪 Validate installed Windows lifecycle
         shell: pwsh
+        timeout-minutes: 25
         run: |
           $version = (Get-Content apps/dsa-desktop/package.json -Raw | ConvertFrom-Json).version
           $installerPath = "apps/dsa-desktop/dist/pp02-ai-daily-stock-analysis-windows-installer-v$version.exe"
@@ -296,7 +298,9 @@ jobs:
             -ExpectedVersion $version `
             -InstallRoot $installRoot `
             -DiagnosticRoot $diagnosticRoot `
-            -ExpectedCommitSha $env:DSA_EXPECTED_PR_HEAD_SHA
+            -ExpectedCommitSha $env:DSA_EXPECTED_PR_HEAD_SHA `
+            -InstallTimeoutSeconds 300 `
+            -UninstallTimeoutSeconds 300
 
       - name: 📤 Upload Windows installer diagnostics
         if: always()

@@ -330,6 +330,92 @@ test('env file version changes with bytes and secure mode suppresses backend pay
   assert.equal(mainModule.shouldForwardBackendOutput({ keys: [], values: {} }), false);
 });
 
+test('backend API config version matches content generation while vault version stays compatible', (t) => {
+  const mainModule = loadMainModule(t, { platform: 'win32' });
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pp02-backend-env-version-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const envPath = path.join(root, '.env');
+
+  const digest = (marker, content = Buffer.alloc(0)) => (
+    `sha256:${require('node:crypto').createHash('sha256')
+      .update(Buffer.concat([Buffer.from(marker, 'utf8'), content]))
+      .digest('hex')}`
+  );
+
+  assert.equal(
+    mainModule.getBackendConfigVersion(envPath),
+    digest('missing\0'),
+  );
+  const firstBytes = Buffer.from('STOCK_LIST=600519\n', 'utf8');
+  fs.writeFileSync(envPath, firstBytes);
+  assert.equal(
+    mainModule.getBackendConfigVersion(envPath),
+    digest('present\0', firstBytes),
+  );
+  assert.match(mainModule.getEnvFileVersion(envPath), /^\d+:[0-9a-f]{64}$/);
+
+  const mainSource = fs.readFileSync(path.resolve(__dirname, '..', 'main.js'), 'utf8');
+  const commitHandler = mainSource.slice(
+    mainSource.indexOf("ipcMain.handle('desktop:commit-secure-credential-update'"),
+    mainSource.indexOf("ipcMain.handle('desktop:rollback-secure-credential-update'"),
+  );
+  assert.match(commitHandler, /getBackendConfigVersion\(activeBackendRuntime\.envFile\)/);
+  assert.match(commitHandler, /getEnvFileVersion\(activeBackendRuntime\.envFile\)/);
+  assert.match(commitHandler, /commit\(payload\.transactionId, vaultConfigVersion\)/);
+});
+
+test('secure credential commit accepts the backend generation and binds the vault generation', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pp02-secure-commit-version-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const envPath = path.join(root, '.env');
+  fs.writeFileSync(envPath, 'GENERATION_BACKEND=codex_cli\n', 'utf8');
+  const mainModule = loadMainModule(t, {
+    platform: 'win32',
+    app: { getPath: () => root },
+  });
+  t.after(() => mainModule.__setActiveBackendRuntimeForTest(null));
+
+  const mainFrame = { url: 'http://127.0.0.1:8032/settings' };
+  const webContents = { mainFrame };
+  const event = { sender: webContents, senderFrame: mainFrame };
+  mainModule.__setMainWindowForTest({ webContents });
+  mainModule.__setActiveBackendRuntimeForTest({
+    connectHost: '127.0.0.1',
+    envFile: envPath,
+    port: 8032,
+  });
+
+  const prepared = mainModule.__getIpcMainHandler(
+    'desktop:prepare-secure-credential-update',
+  )(event, {
+    items: [{ key: 'LLM_AIHUBMIX_API_KEY', value: 'pp02-r37-unit-test-only' }],
+    maskToken: '******',
+  });
+  assert.equal(prepared.supported, true);
+  assert.deepEqual(prepared.changedKeys, ['LLM_AIHUBMIX_API_KEY']);
+
+  const commit = mainModule.__getIpcMainHandler(
+    'desktop:commit-secure-credential-update',
+  );
+  assert.throws(
+    () => commit(event, {
+      transactionId: prepared.transactionId,
+      configVersion: mainModule.getEnvFileVersion(envPath),
+    }),
+    (error) => error?.code === 'vault_config_mismatch',
+  );
+  assert.deepEqual(commit(event, {
+    transactionId: prepared.transactionId,
+    configVersion: mainModule.getBackendConfigVersion(envPath),
+  }), { committed: true });
+
+  const vaultDocument = JSON.parse(
+    fs.readFileSync(path.join(root, 'secure-credentials.v1.json'), 'utf8'),
+  );
+  assert.equal(vaultDocument.configVersion, mainModule.getEnvFileVersion(envPath));
+  assert.notEqual(vaultDocument.configVersion, mainModule.getBackendConfigVersion(envPath));
+});
+
 test('main registers the narrow secure credential IPC surface without a read handler', (t) => {
   const mainModule = loadMainModule(t, { platform: 'win32' });
   for (const channel of [

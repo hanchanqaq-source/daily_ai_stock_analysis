@@ -9,11 +9,26 @@ param(
   [string]$PortableArchivePath = '',
   [string]$ExpectedCommitSha = '',
   [int]$StartupTimeoutSeconds = 120,
+  [int]$InstallTimeoutSeconds = 300,
+  [int]$UninstallTimeoutSeconds = 300,
   [switch]$RequireValidSignature
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+
+$boundedProcessHelper = Join-Path $PSScriptRoot 'windows-bounded-process.ps1'
+if (-not (Test-Path -LiteralPath $boundedProcessHelper -PathType Leaf)) {
+  throw 'Bounded Windows process helper is missing.'
+}
+. $boundedProcessHelper
+
+if ($InstallTimeoutSeconds -lt 1 -or $InstallTimeoutSeconds -gt 1800) {
+  throw 'InstallTimeoutSeconds must be between 1 and 1800.'
+}
+if ($UninstallTimeoutSeconds -lt 1 -or $UninstallTimeoutSeconds -gt 1800) {
+  throw 'UninstallTimeoutSeconds must be between 1 and 1800.'
+}
 
 function Get-NormalizedDirectoryPath {
   param([Parameter(Mandatory=$true)][string]$Path)
@@ -209,6 +224,12 @@ function Protect-DiagnosticText {
     '<redacted>',
     [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
   )
+  $protected = [regex]::Replace(
+    $protected,
+    '\bpp02-r37-[0-9a-f]{64}\b',
+    '<redacted>',
+    [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+  )
   return $protected
 }
 
@@ -267,11 +288,15 @@ function Get-DesktopDiagnosticLines {
 function Get-DesktopBackendPort {
   param([string[]]$DesktopLines)
 
+  $matchedPort = $null
   foreach ($line in $DesktopLines) {
     $match = [regex]::Match($line, 'Using port (?<port>\d+)')
     if ($match.Success) {
-      return [int]$match.Groups['port'].Value
+      $matchedPort = [int]$match.Groups['port'].Value
     }
+  }
+  if ($null -ne $matchedPort) {
+    return $matchedPort
   }
   return 8000
 }
@@ -737,6 +762,72 @@ function Stop-StartedProcessTree {
   }
 }
 
+function Get-PP02SyntheticCredential {
+  param([Parameter(Mandatory=$true)][string]$Head)
+
+  $sha256 = [Security.Cryptography.SHA256]::Create()
+  try {
+    $bytes = [Text.Encoding]::UTF8.GetBytes("pp02-r37-fake:$Head")
+    $digest = $sha256.ComputeHash($bytes)
+    $suffix = -join ($digest | ForEach-Object { $_.ToString('x2') })
+    return "pp02-r37-$suffix"
+  }
+  finally {
+    $sha256.Dispose()
+  }
+}
+
+function Invoke-PP02LocalJsonRequest {
+  param(
+    [Parameter(Mandatory=$true)][ValidateSet('GET', 'POST', 'PUT')][string]$Method,
+    [Parameter(Mandatory=$true)][string]$Uri,
+    [object]$Body = $null,
+    [int]$TimeoutSeconds = 30,
+    [string]$RawOutputPath = ''
+  )
+
+  if ($TimeoutSeconds -lt 1 -or $TimeoutSeconds -gt 120) {
+    throw 'Local JSON request timeout must be between 1 and 120 seconds.'
+  }
+  $parsedUri = [Uri]$Uri
+  if (-not $parsedUri.IsLoopback -or $parsedUri.Scheme -ne 'http') {
+    throw 'Installed configuration acceptance permits only loopback HTTP.'
+  }
+  $request = @{
+    Method = $Method
+    Uri = $parsedUri.AbsoluteUri
+    TimeoutSec = $TimeoutSeconds
+    ErrorAction = 'Stop'
+    UseBasicParsing = $true
+  }
+  if ($null -ne $Body) {
+    $request.ContentType = 'application/json'
+    $request.Body = ConvertTo-Json -InputObject $Body -Depth 12 -Compress
+  }
+  $response = Invoke-WebRequest @request
+  $content = [string]$response.Content
+  if (-not [string]::IsNullOrWhiteSpace($RawOutputPath)) {
+    Set-Content -LiteralPath $RawOutputPath -Value $content -Encoding UTF8
+  }
+  if ([string]::IsNullOrWhiteSpace($content)) {
+    return $null
+  }
+  return $content | ConvertFrom-Json
+}
+
+function Get-PP02ConfigItem {
+  param(
+    [Parameter(Mandatory=$true)][object]$Config,
+    [Parameter(Mandatory=$true)][string]$Key
+  )
+
+  $matches = @($Config.items | Where-Object { [string]$_.key -eq $Key })
+  if ($matches.Count -ne 1) {
+    throw "Installed configuration did not return exactly one $Key item."
+  }
+  return $matches[0]
+}
+
 function Remove-OwnedRootWithRetry {
   param([Parameter(Mandatory=$true)][string]$OwnedRoot)
 
@@ -913,14 +1004,71 @@ if (Test-Path -LiteralPath $candidateExtract) {
   throw 'Defender extraction root must not exist before verification.'
 }
 
+$acceptanceRoot = Join-Path $runnerTemp "pp02-config-acceptance-$expectedHead"
+if (Test-Path -LiteralPath $acceptanceRoot) {
+  throw 'Installed configuration acceptance root must not exist before verification.'
+}
+$acceptanceAppData = Join-Path $acceptanceRoot 'appdata'
+$acceptanceLocalAppData = Join-Path $acceptanceRoot 'localappdata'
+$acceptanceUserData = Join-Path $acceptanceAppData 'PP02 AI Daily Stock Analysis'
+$acceptanceReadyPath = Join-Path $acceptanceRoot 'mock-ready.json'
+$acceptanceReceiptPath = Join-Path $acceptanceRoot 'mock-receipt.json'
+$acceptanceMockStdout = Join-Path $acceptanceRoot 'mock-stdout.log'
+$acceptanceMockStderr = Join-Path $acceptanceRoot 'mock-stderr.log'
+$acceptanceConfigExport = Join-Path $acceptanceRoot 'config-export.json'
+$acceptanceFullBackup = Join-Path $acceptanceRoot 'full-data-backup.json'
+$installedConfigMock = Join-Path `
+  $repoRoot 'apps/dsa-desktop/tests/installed-config-smoke-server.js'
+$installedConfigVaultHarness = Join-Path `
+  $repoRoot 'apps/dsa-desktop/tests/windows-installed-config-vault-harness.js'
+$fakeCredentialScanner = Join-Path $repoRoot 'scripts/scan-windows-fake-credential.js'
+foreach ($acceptanceSource in @(
+  $installedConfigMock,
+  $installedConfigVaultHarness,
+  $fakeCredentialScanner
+)) {
+  if (-not (Test-Path -LiteralPath $acceptanceSource -PathType Leaf)) {
+    throw 'Installed configuration acceptance source is missing.'
+  }
+}
+New-Item -ItemType Directory -Path $acceptanceAppData -Force | Out-Null
+New-Item -ItemType Directory -Path $acceptanceLocalAppData -Force | Out-Null
+
 $appProcess = $null
 $appExe = $null
 $backendExe = $null
 $desktopLog = $null
 $uninstaller = $null
 $uninstallAttempted = $false
+$mockProcess = $null
 $ownedRootValidated = $true
 $savedGithubActions = [Environment]::GetEnvironmentVariable('GITHUB_ACTIONS', 'Process')
+$savedAppData = [Environment]::GetEnvironmentVariable('APPDATA', 'Process')
+$savedLocalAppData = [Environment]::GetEnvironmentVariable('LOCALAPPDATA', 'Process')
+$savedAcceptanceHead = [Environment]::GetEnvironmentVariable(
+  'DSA_CONFIG_ACCEPTANCE_HEAD',
+  'Process'
+)
+$savedAcceptanceReceipt = [Environment]::GetEnvironmentVariable(
+  'DSA_CONFIG_ACCEPTANCE_RECEIPT_PATH',
+  'Process'
+)
+$savedAcceptanceReady = [Environment]::GetEnvironmentVariable(
+  'DSA_CONFIG_ACCEPTANCE_READY_PATH',
+  'Process'
+)
+$savedAcceptanceUserData = [Environment]::GetEnvironmentVariable(
+  'DSA_CONFIG_ACCEPTANCE_USER_DATA',
+  'Process'
+)
+$savedAcceptanceEnvPath = [Environment]::GetEnvironmentVariable(
+  'DSA_CONFIG_ACCEPTANCE_ENV_PATH',
+  'Process'
+)
+$savedAcceptanceBackendVersion = [Environment]::GetEnvironmentVariable(
+  'DSA_CONFIG_ACCEPTANCE_BACKEND_VERSION',
+  'Process'
+)
 $savedInstallerDiagnosticRoot = [Environment]::GetEnvironmentVariable(
   'DSA_INSTALLER_DIAGNOSTIC_ROOT',
   'Process'
@@ -988,8 +1136,12 @@ try {
   $stageProcessStartedUtc = (Get-Date).ToUniversalTime().ToString('o')
   $stageProcessExitedUtc = '<not_observed>'
   $stageProcessExitCode = '<not_observed>'
-  $installProcess = Start-Process -FilePath $installer `
-    -ArgumentList "/S /D=$ownedRoot" -Wait -PassThru
+  $installProcess = Invoke-PP02BoundedProcess `
+    -FilePath $installer `
+    -ArgumentList "/S /D=$ownedRoot" `
+    -TimeoutSeconds $InstallTimeoutSeconds `
+    -Stage $failureStage `
+    -StageReportPath $stageReportPath
   $stageProcessExitedUtc = (Get-Date).ToUniversalTime().ToString('o')
   $stageProcessExitCode = [string]$installProcess.ExitCode
   Write-Output "WINDOWS_INSTALLER_EXIT_CODE=$($installProcess.ExitCode)"
@@ -1101,6 +1253,12 @@ try {
     $diagnosticRoot,
     'Process'
   )
+  [Environment]::SetEnvironmentVariable('APPDATA', $acceptanceAppData, 'Process')
+  [Environment]::SetEnvironmentVariable(
+    'LOCALAPPDATA',
+    $acceptanceLocalAppData,
+    'Process'
+  )
   $failureStage = 'installed_app_startup'
   Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
   $stageProcess = 'installed_app'
@@ -1133,6 +1291,116 @@ try {
   Write-Output 'WINDOWS_INSTALLED_APP_STARTUP_VALIDATION=PASS'
   Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'PASS'
 
+  $failureStage = 'installed_config_validation'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
+  [Environment]::SetEnvironmentVariable(
+    'DSA_CONFIG_ACCEPTANCE_HEAD',
+    $expectedHead,
+    'Process'
+  )
+  [Environment]::SetEnvironmentVariable(
+    'DSA_CONFIG_ACCEPTANCE_RECEIPT_PATH',
+    $acceptanceReceiptPath,
+    'Process'
+  )
+  [Environment]::SetEnvironmentVariable(
+    'DSA_CONFIG_ACCEPTANCE_READY_PATH',
+    $acceptanceReadyPath,
+    'Process'
+  )
+  $nodeCommand = (Get-Command node -ErrorAction Stop).Source
+  $mockProcess = Start-Process `
+    -FilePath $nodeCommand `
+    -ArgumentList @($installedConfigMock) `
+    -WorkingDirectory $repoRoot `
+    -RedirectStandardOutput $acceptanceMockStdout `
+    -RedirectStandardError $acceptanceMockStderr `
+    -PassThru
+  $mockReadyDeadline = (Get-Date).AddSeconds(20)
+  do {
+    $mockProcess.Refresh()
+    if ($mockProcess.HasExited) {
+      throw 'Installed configuration mock exited before readiness.'
+    }
+    if (Test-Path -LiteralPath $acceptanceReadyPath -PathType Leaf) {
+      break
+    }
+    Start-Sleep -Milliseconds 200
+  } while ((Get-Date) -lt $mockReadyDeadline)
+  if (-not (Test-Path -LiteralPath $acceptanceReadyPath -PathType Leaf)) {
+    throw 'Installed configuration mock did not become ready within 20 seconds.'
+  }
+  $mockReady = Get-Content -LiteralPath $acceptanceReadyPath -Raw | ConvertFrom-Json
+  if ([int]$mockReady.schemaVersion -ne 1 -or
+      [string]$mockReady.head -ne $expectedHead -or
+      [string]$mockReady.host -ne '127.0.0.1' -or
+      [int]$mockReady.port -lt 1 -or
+      [int]$mockReady.port -gt 65535) {
+    throw 'Installed configuration mock readiness identity is invalid.'
+  }
+
+  $desktopLines = Get-DesktopDiagnosticLines -LogPath $desktopLog
+  $backendPort = Get-DesktopBackendPort -DesktopLines $desktopLines
+  $backendBaseUrl = "http://127.0.0.1:$backendPort"
+  $mockBaseUrl = "http://127.0.0.1:$([int]$mockReady.port)/v1"
+  $initialConfig = Invoke-PP02LocalJsonRequest `
+    -Method 'GET' `
+    -Uri "$backendBaseUrl/api/v1/system/config?include_schema=false" `
+    -TimeoutSeconds 30
+  if ([string]$initialConfig.config_version -notmatch '^sha256:[0-9a-f]{64}$') {
+    throw 'Installed backend returned an invalid initial configuration version.'
+  }
+
+  $fakeCredential = Get-PP02SyntheticCredential -Head $expectedHead
+  $publicAcceptanceItems = @(
+    [ordered]@{ key = 'GENERATION_BACKEND'; value = 'codex_cli' },
+    [ordered]@{ key = 'GENERATION_FALLBACK_BACKEND'; value = 'litellm' },
+    [ordered]@{ key = 'LLM_CHANNELS'; value = 'aihubmix' },
+    [ordered]@{ key = 'LLM_AIHUBMIX_PROTOCOL'; value = 'openai' },
+    [ordered]@{ key = 'LLM_AIHUBMIX_BASE_URL'; value = $mockBaseUrl },
+    [ordered]@{ key = 'LLM_AIHUBMIX_MODELS'; value = 'openai/pp02-acceptance' },
+    [ordered]@{ key = 'LITELLM_MODEL'; value = 'openai/pp02-acceptance' },
+    [ordered]@{ key = 'LITELLM_FALLBACK_MODELS'; value = '' },
+    [ordered]@{ key = 'AGENT_LITELLM_MODEL'; value = '' }
+  )
+  $validationItems = @($publicAcceptanceItems) + @(
+    [ordered]@{ key = 'LLM_AIHUBMIX_API_KEY'; value = $fakeCredential }
+  )
+  $validationResult = Invoke-PP02LocalJsonRequest `
+    -Method 'POST' `
+    -Uri "$backendBaseUrl/api/v1/system/config/validate" `
+    -Body ([ordered]@{ items = $validationItems }) `
+    -TimeoutSeconds 30
+  if (-not [bool]$validationResult.valid) {
+    throw 'Fresh installed AIHubMix configuration validation failed.'
+  }
+  Write-Output 'WINDOWS_INSTALLED_CONFIG_VALIDATION=PASS'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'PASS'
+
+  $failureStage = 'installed_config_save'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
+  $backendItems = @($publicAcceptanceItems) + @(
+    [ordered]@{ key = 'LLM_AIHUBMIX_API_KEY'; value = '******' }
+  )
+  $saveResult = Invoke-PP02LocalJsonRequest `
+    -Method 'PUT' `
+    -Uri "$backendBaseUrl/api/v1/system/config" `
+    -Body ([ordered]@{
+      config_version = [string]$initialConfig.config_version
+      mask_token = '******'
+      reload_now = $false
+      items = $backendItems
+    }) `
+    -TimeoutSeconds 30
+  if (-not [bool]$saveResult.success -or
+      [bool]$saveResult.reload_triggered -or
+      [string]$saveResult.config_version -notmatch '^sha256:[0-9a-f]{64}$' -or
+      [string]$saveResult.config_version -eq [string]$initialConfig.config_version) {
+    throw 'Installed backend did not persist the public AI configuration generation.'
+  }
+  Write-Output 'WINDOWS_INSTALLED_CONFIG_SAVE=PASS'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'PASS'
+
   $failureStage = 'installed_app_shutdown'
   Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
   Stop-StartedProcessTree -Process $appProcess
@@ -1140,6 +1408,46 @@ try {
   $stageProcessExitCode = '0'
   $appProcess = $null
   Write-Output 'WINDOWS_INSTALLED_APP_EXIT_VALIDATION=PASS'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'PASS'
+
+  $failureStage = 'installed_config_vault_commit'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
+  [Environment]::SetEnvironmentVariable(
+    'DSA_CONFIG_ACCEPTANCE_USER_DATA',
+    $acceptanceUserData,
+    'Process'
+  )
+  [Environment]::SetEnvironmentVariable(
+    'DSA_CONFIG_ACCEPTANCE_ENV_PATH',
+    (Join-Path $ownedRoot '.env'),
+    'Process'
+  )
+  [Environment]::SetEnvironmentVariable(
+    'DSA_CONFIG_ACCEPTANCE_BACKEND_VERSION',
+    [string]$saveResult.config_version,
+    'Process'
+  )
+  $npmCommand = (Get-Command npm.cmd -ErrorAction Stop).Source
+  $vaultProcess = Invoke-PP02BoundedProcess `
+    -FilePath $npmCommand `
+    -ArgumentList @(
+      '--prefix',
+      'apps/dsa-desktop',
+      '--silent',
+      'run',
+      'test:windows-installed-config-vault'
+    ) `
+    -WorkingDirectory $repoRoot `
+    -TimeoutSeconds 120 `
+    -Stage $failureStage `
+    -StageReportPath $stageReportPath
+  if ($vaultProcess.ExitCode -ne 0 -or
+      -not (Test-Path `
+        -LiteralPath (Join-Path $acceptanceUserData 'secure-credentials.v1.json') `
+        -PathType Leaf)) {
+    throw 'Windows safeStorage did not commit the installed AI credential.'
+  }
+  Write-Output 'WINDOWS_INSTALLED_CONFIG_VAULT=PASS'
   Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'PASS'
 
   $restartReadyMarkerBaseline = Get-DesktopReadyMarkerCount -LogPath $desktopLog
@@ -1174,6 +1482,125 @@ try {
   Write-Output 'WINDOWS_INSTALLED_APP_RESTART_VALIDATION=PASS'
   Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'PASS'
 
+  $restartedDesktopLines = Get-DesktopDiagnosticLines -LogPath $desktopLog
+  $restartedBackendPort = Get-DesktopBackendPort -DesktopLines $restartedDesktopLines
+  $backendBaseUrl = "http://127.0.0.1:$restartedBackendPort"
+  $failureStage = 'installed_config_masked_restart'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
+  $restartedConfig = Invoke-PP02LocalJsonRequest `
+    -Method 'GET' `
+    -Uri "$backendBaseUrl/api/v1/system/config?include_schema=false" `
+    -TimeoutSeconds 30
+  $expectedPublicValues = [ordered]@{
+    GENERATION_BACKEND = 'codex_cli'
+    GENERATION_FALLBACK_BACKEND = 'litellm'
+    LLM_CHANNELS = 'aihubmix'
+    LLM_AIHUBMIX_PROTOCOL = 'openai'
+    LLM_AIHUBMIX_BASE_URL = $mockBaseUrl
+    LLM_AIHUBMIX_MODELS = 'openai/pp02-acceptance'
+    LITELLM_MODEL = 'openai/pp02-acceptance'
+    LITELLM_FALLBACK_MODELS = ''
+    AGENT_LITELLM_MODEL = ''
+  }
+  foreach ($entry in $expectedPublicValues.GetEnumerator()) {
+    $item = Get-PP02ConfigItem -Config $restartedConfig -Key $entry.Key
+    if ([string]$item.value -ne [string]$entry.Value) {
+      throw "Installed configuration did not preserve $($entry.Key) after restart."
+    }
+  }
+  $secretItem = Get-PP02ConfigItem `
+    -Config $restartedConfig `
+    -Key 'LLM_AIHUBMIX_API_KEY'
+  if ([string]$secretItem.value -ne '******' -or
+      -not [bool]$secretItem.is_masked -or
+      -not [bool]$secretItem.secure_value_exists -or
+      [string]$secretItem.credential_source -ne 'windows_dpapi') {
+    throw 'Installed AI credential did not return as a Windows DPAPI mask after restart.'
+  }
+  Write-Output 'WINDOWS_INSTALLED_CONFIG_MASKED_RESTART=PASS'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'PASS'
+
+  $failureStage = 'installed_config_smoke'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
+  $smokeResult = Invoke-PP02LocalJsonRequest `
+    -Method 'POST' `
+    -Uri "$backendBaseUrl/api/v1/system/config/generation-backends/smoke-test" `
+    -Body ([ordered]@{
+      backend_id = 'litellm'
+      mode = 'json'
+      items = @()
+      mask_token = '******'
+      timeout_seconds = 30
+    }) `
+    -TimeoutSeconds 45
+  if (-not [bool]$smokeResult.success -or
+      [string]$smokeResult.status.backend_id -ne 'litellm' -or
+      [string]$smokeResult.status.health_status -ne 'passed') {
+    throw 'Installed generation backend smoke request did not pass.'
+  }
+  if (-not (Test-Path -LiteralPath $acceptanceReceiptPath -PathType Leaf)) {
+    throw 'Installed generation backend smoke request did not preserve a receipt.'
+  }
+  $smokeReceipt = Get-Content -LiteralPath $acceptanceReceiptPath -Raw |
+    ConvertFrom-Json
+  if ([int]$smokeReceipt.schemaVersion -ne 1 -or
+      [string]$smokeReceipt.head -ne $expectedHead -or
+      -not [bool]$smokeReceipt.authorizationMatched -or
+      -not [bool]$smokeReceipt.routeMatched -or
+      -not [bool]$smokeReceipt.modelMatched -or
+      [int]$smokeReceipt.requestCount -ne 1) {
+    throw 'Installed generation backend smoke receipt is invalid.'
+  }
+  if (-not $mockProcess.WaitForExit(20000)) {
+    Stop-StartedProcessTree -Process $mockProcess
+    throw 'Installed configuration mock did not stop after its accepted request.'
+  }
+  if ($mockProcess.ExitCode -ne 0) {
+    throw 'Installed configuration mock exited with a failure.'
+  }
+  $mockProcess = $null
+  Write-Output 'WINDOWS_INSTALLED_CONFIG_SMOKE=PASS'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'PASS'
+
+  $failureStage = 'installed_config_exports'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
+  $configExportResult = Invoke-PP02LocalJsonRequest `
+    -Method 'GET' `
+    -Uri "$backendBaseUrl/api/v1/system/config/export" `
+    -TimeoutSeconds 30 `
+    -RawOutputPath $acceptanceConfigExport
+  if (-not [bool]$configExportResult.credentials_excluded -or
+      [string]$configExportResult.config_version -ne [string]$restartedConfig.config_version -or
+      [string]$configExportResult.content -match 'LLM_AIHUBMIX_API_KEY') {
+    throw 'Installed configuration export did not exclude credentials.'
+  }
+  $null = Invoke-PP02LocalJsonRequest `
+    -Method 'GET' `
+    -Uri "$backendBaseUrl/api/v1/system/full-data-backup/export" `
+    -TimeoutSeconds 60 `
+    -RawOutputPath $acceptanceFullBackup
+  foreach ($exportPath in @($acceptanceConfigExport, $acceptanceFullBackup)) {
+    if (-not (Test-Path -LiteralPath $exportPath -PathType Leaf) -or
+        (Get-Content -LiteralPath $exportPath -Raw).Contains($fakeCredential)) {
+      throw 'Installed export or complete backup contains synthetic credential plaintext.'
+    }
+  }
+  Write-Output 'WINDOWS_INSTALLED_CONFIG_EXPORTS=PASS'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'PASS'
+
+  $failureStage = 'installed_config_leakage_scan'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
+  node $fakeCredentialScanner `
+    --head $expectedHead `
+    --path $ownedRoot `
+    --path $acceptanceRoot `
+    --path $diagnosticRoot
+  if ($LASTEXITCODE -ne 0) {
+    throw 'Installed configuration synthetic credential leakage scan failed.'
+  }
+  Write-Output 'WINDOWS_INSTALLED_CONFIG_LEAKAGE_SCAN=PASS'
+  Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'PASS'
+
   $uninstallAttempted = $true
   $failureStage = 'uninstaller_process'
   Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
@@ -1181,8 +1608,12 @@ try {
   $stageProcessStartedUtc = (Get-Date).ToUniversalTime().ToString('o')
   $stageProcessExitedUtc = '<not_observed>'
   $stageProcessExitCode = '<not_observed>'
-  $uninstallProcess = Start-Process -FilePath $uninstaller `
-    -ArgumentList '/S /KEEP_APP_DATA /currentuser' -Wait -PassThru
+  $uninstallProcess = Invoke-PP02BoundedProcess `
+    -FilePath $uninstaller `
+    -ArgumentList '/S /KEEP_APP_DATA /currentuser' `
+    -TimeoutSeconds $UninstallTimeoutSeconds `
+    -Stage $failureStage `
+    -StageReportPath $stageReportPath
   $stageProcessExitedUtc = (Get-Date).ToUniversalTime().ToString('o')
   $stageProcessExitCode = [string]$uninstallProcess.ExitCode
   Write-Output "WINDOWS_UNINSTALLER_EXIT_CODE=$($uninstallProcess.ExitCode)"
@@ -1290,14 +1721,26 @@ catch {
   throw $originalFailure
 }
 finally {
+  if ($mockProcess) {
+    try {
+      Stop-StartedProcessTree -Process $mockProcess
+    }
+    catch {
+      Write-Warning 'Installed configuration mock cleanup could not be completed.'
+    }
+  }
   if ($appProcess) {
     Stop-StartedProcessTree -Process $appProcess
   }
   if ($uninstaller -and -not $uninstallAttempted -and
       (Test-Path -LiteralPath $uninstaller -PathType Leaf)) {
     try {
-      $cleanupUninstall = Start-Process -FilePath $uninstaller `
-        -ArgumentList '/S /KEEP_APP_DATA /currentuser' -Wait -PassThru
+      $cleanupUninstall = Invoke-PP02BoundedProcess `
+        -FilePath $uninstaller `
+        -ArgumentList '/S /KEEP_APP_DATA /currentuser' `
+        -TimeoutSeconds $UninstallTimeoutSeconds `
+        -Stage 'cleanup_uninstaller_process' `
+        -StageReportPath $stageReportPath
       if ($cleanupUninstall.ExitCode -ne 0) {
         Write-Warning "Cleanup uninstaller returned code $($cleanupUninstall.ExitCode)."
       }
@@ -1316,10 +1759,49 @@ finally {
     $savedInstallerDiagnosticRoot,
     'Process'
   )
+  [Environment]::SetEnvironmentVariable('APPDATA', $savedAppData, 'Process')
+  [Environment]::SetEnvironmentVariable(
+    'LOCALAPPDATA',
+    $savedLocalAppData,
+    'Process'
+  )
+  [Environment]::SetEnvironmentVariable(
+    'DSA_CONFIG_ACCEPTANCE_HEAD',
+    $savedAcceptanceHead,
+    'Process'
+  )
+  [Environment]::SetEnvironmentVariable(
+    'DSA_CONFIG_ACCEPTANCE_RECEIPT_PATH',
+    $savedAcceptanceReceipt,
+    'Process'
+  )
+  [Environment]::SetEnvironmentVariable(
+    'DSA_CONFIG_ACCEPTANCE_READY_PATH',
+    $savedAcceptanceReady,
+    'Process'
+  )
+  [Environment]::SetEnvironmentVariable(
+    'DSA_CONFIG_ACCEPTANCE_USER_DATA',
+    $savedAcceptanceUserData,
+    'Process'
+  )
+  [Environment]::SetEnvironmentVariable(
+    'DSA_CONFIG_ACCEPTANCE_ENV_PATH',
+    $savedAcceptanceEnvPath,
+    'Process'
+  )
+  [Environment]::SetEnvironmentVariable(
+    'DSA_CONFIG_ACCEPTANCE_BACKEND_VERSION',
+    $savedAcceptanceBackendVersion,
+    'Process'
+  )
   if ($ownedRootValidated) {
     Remove-OwnedRootWithRetry -OwnedRoot $ownedRoot
   }
   if ($candidateExtract -and (Test-Path -LiteralPath $candidateExtract)) {
     Remove-Item -LiteralPath $candidateExtract -Recurse -Force
+  }
+  if ($acceptanceRoot -and (Test-Path -LiteralPath $acceptanceRoot)) {
+    Remove-Item -LiteralPath $acceptanceRoot -Recurse -Force
   }
 }

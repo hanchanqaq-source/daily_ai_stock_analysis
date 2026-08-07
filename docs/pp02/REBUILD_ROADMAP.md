@@ -1,5 +1,28 @@
 # PP02 安全重建路线 R0–R7
 
+## 2026-08-07 Work32 P002 final usability closure
+
+- Exact Base is `main@295821e4…`. Main Run `31211548666` passed seven Jobs but
+  never closed the Windows lifecycle because installer and both uninstaller paths
+  could wait forever. All four verifier-owned external process calls are now
+  bounded, process-tree cleanup is explicit, and the workflow step has a finite
+  outer watchdog followed by unconditional sanitized diagnostics upload.
+- Desktop secure commit previously compared the backend's SHA-256 content
+  generation with its own mtime-based vault generation, making a successful
+  public config save impossible to commit into DPAPI. Work32 separates those two
+  roles without invalidating existing encrypted vaults.
+- The Windows candidate gate now validates and saves a fresh synthetic AIHubMix
+  configuration, commits it through real Electron `safeStorage`, restarts the
+  installed app, requires masked persistence, sends an authenticated LiteLLM
+  request only to a bounded loopback mock, verifies credential-free exports and
+  scans installed/verifier/diagnostic paths before one normal uninstall.
+- Local hard gates pass: Desktop `136/136`, Web `1081/1083` with two skips,
+  lint/build, 28 direct Python/Actions contracts, YAML, version, AI assets,
+  syntax, diff and dependency/version/schema/user-data/secret boundaries. Local
+  PowerShell is unavailable, so exact-Head Windows CI, Defender, artifacts and
+  hashes are still pending. Judge is `DRAFT_HOLD`; no usability, merge or release
+  claim is permitted yet.
+
 ## 2026-08-07 Work30 Defender intelligence bounded retry and diagnostics repair
 
 - Formal release Run `31191357654` reached the Windows Defender gate and failed
