@@ -97,8 +97,9 @@ Expected: FAIL because `scripts/windows-defender-scan.js` does not exist.
 
 - [ ] **Step 3: Implement minimal scanner orchestration**
 
-Update intelligence with `Update-MpSignature`, collect a compact JSON status from
-`Get-MpComputerStatus`, choose the newest platform `MpCmdRun.exe`, validate
+The initial implementation updated intelligence with `Update-MpSignature`; Task 6
+supersedes that hosted-runner call with `MpCmdRun -SignatureUpdate -MMPC`. Collect
+a compact JSON status from `Get-MpComputerStatus`, choose the newest platform `MpCmdRun.exe`, validate
 `AMServiceEnabled`, `AntivirusEnabled`, `AMRunningMode=Normal`, signature identity
 and age, then run this for each path:
 
@@ -250,3 +251,65 @@ or warned artifacts.
 Provide the exact candidate download link, version, Head, CI Run, hashes, Defender
 engine/signature identity, and scan scope. Explicitly state that it is an unsigned
 unpublished candidate and keep the PR Draft. Do not merge, tag, or release.
+
+### Task 6: Repair the GitHub-hosted Defender scan environment
+
+**Files:**
+- Modify: `scripts/windows-defender-scan.js`
+- Modify: `apps/dsa-desktop/tests/windows-defender-scan.test.js`
+- Modify: `docs/superpowers/specs/2026-08-06-work29-safe-candidate-design.md`
+- Modify: `docs/superpowers/plans/2026-08-06-work29-safe-candidate.md`
+- Modify: Work29 control files and `docs/CHANGELOG.md`
+
+**Interfaces:**
+- Consumes: the seven existing Windows candidate targets, the GitHub-hosted
+  runner's Defender preferences, installed `MpCmdRun.exe`, and exact PR Head.
+- Produces: a fail-closed report proving archive scanning is enabled, exact
+  whole-drive runner exclusions were removed when present, MMPC update passed,
+  and every target was explicitly proven not excluded before its custom scan.
+
+- [x] **Step 1: Add the focused failing contracts**
+
+Require exact `C:\`/`D:\` exclusion removal, archive scanning enablement,
+`-SignatureUpdate -MMPC`, `-CheckExclusion -Path`, and bounded fail reports for
+preparation/update/exclusion failures.
+
+- [x] **Step 2: Run RED**
+
+Run: `node --test apps/dsa-desktop/tests/windows-defender-scan.test.js`
+
+Observed: `15` expected failures because the fixed Head still used
+`Update-MpSignature`, did not prepare the hosted runner, and did not check target
+exclusions.
+
+- [x] **Step 3: Implement the minimal fail-closed repair**
+
+Remove only exact whole-drive runner exclusions, enable and verify archive scans,
+use MMPC for the update, retain the existing post-update health checks, and accept
+only exclusion-check exit `1` before each existing custom scan.
+
+- [x] **Step 4: Run focused GREEN**
+
+Run: `node --test apps/dsa-desktop/tests/windows-defender-scan.test.js`
+
+Observed: `17/17` passed. A Linux run is orchestration evidence only and is not a
+real Defender malware verdict.
+
+- [x] **Step 5: Run mutation and complete local verification**
+
+Temporarily accept exclusion-check exit `0` and prove the exclusion regression
+test fails; restore the implementation. Then run Desktop full, the existing
+Python/Actions contracts, AI assets, YAML/Node syntax, diff, dependency, scope,
+and sensitive-data checks.
+
+Observed: accepting exclusion-check exit `0` makes the dedicated regression test
+fail. After restoration, Defender focused `17/17`, Desktop `127/127`, related
+Python/Actions `38/38`, AI assets, Node/YAML syntax, diff, dependency, scope and
+sensitive-data checks pass.
+
+- [ ] **Step 6: Update the existing Draft PR and run exact-Head CI**
+
+Create one scoped correction commit, update only PR #28 with a non-force
+fast-forward, trigger one new `[SAFE_CANDIDATE_ONLY]` complete run, and require all
+seven targets plus the installed lifecycle to pass. Keep formal release Jobs
+skipped and do not Ready, merge, tag, or release.

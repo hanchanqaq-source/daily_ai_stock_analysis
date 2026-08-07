@@ -89,11 +89,34 @@ function describeTarget(targetPath) {
   };
 }
 
-function defenderUpdateScript() {
+function defenderEnvironmentPreparationScript() {
   return [
     "$ErrorActionPreference = 'Stop'",
     'Import-Module Defender -ErrorAction Stop',
-    'Update-MpSignature -ErrorAction Stop | Out-Null',
+    '$preferences = Get-MpPreference -ErrorAction Stop',
+    '$removedWholeDriveExclusions = 0',
+    "foreach ($root in @('C:\\', 'D:\\')) {",
+    '  if (@($preferences.ExclusionPath) -contains $root) {',
+    '    Remove-MpPreference -ExclusionPath $root -Force -ErrorAction Stop',
+    '    $removedWholeDriveExclusions += 1',
+    '  }',
+    '}',
+    'Set-MpPreference -DisableArchiveScanning $false -Force -ErrorAction Stop',
+    '$preferences = Get-MpPreference -ErrorAction Stop',
+    "$platformRoot = Join-Path $env:ProgramData 'Microsoft\\Windows Defender\\Platform'",
+    '$scanner = $null',
+    'if (Test-Path -LiteralPath $platformRoot -PathType Container) {',
+    "  $scanner = Get-ChildItem -LiteralPath $platformRoot -Directory -ErrorAction Stop | Sort-Object Name -Descending | ForEach-Object { Join-Path $_.FullName 'MpCmdRun.exe' } | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1",
+    '}',
+    'if (-not $scanner) {',
+    "  $legacyScanner = Join-Path $env:ProgramFiles 'Windows Defender\\MpCmdRun.exe'",
+    '  if (Test-Path -LiteralPath $legacyScanner -PathType Leaf) { $scanner = $legacyScanner }',
+    '}',
+    '[ordered]@{',
+    '  archiveScanningDisabled = [bool]$preferences.DisableArchiveScanning',
+    '  removedWholeDriveExclusions = [int]$removedWholeDriveExclusions',
+    '  scannerPath = [string]$scanner',
+    '} | ConvertTo-Json -Compress',
   ].join('\n');
 }
 
@@ -102,6 +125,7 @@ function defenderStatusScript() {
     "$ErrorActionPreference = 'Stop'",
     'Import-Module Defender -ErrorAction Stop',
     '$status = Get-MpComputerStatus -ErrorAction Stop',
+    '$preferences = Get-MpPreference -ErrorAction Stop',
     "$platformRoot = Join-Path $env:ProgramData 'Microsoft\\Windows Defender\\Platform'",
     '$scanner = $null',
     'if (Test-Path -LiteralPath $platformRoot -PathType Container) {',
@@ -120,6 +144,7 @@ function defenderStatusScript() {
     '  antivirusSignatureVersion = [string]$status.AntivirusSignatureVersion',
     '  amEngineVersion = [string]$status.AMEngineVersion',
     '  amProductVersion = [string]$status.AMProductVersion',
+    '  disableArchiveScanning = [bool]$preferences.DisableArchiveScanning',
     '  scannerPath = [string]$scanner',
     '} | ConvertTo-Json -Compress',
   ].join('\n');
@@ -188,6 +213,9 @@ function validateDefenderStatus(status) {
   if (status.amRunningMode !== 'Normal') {
     fail('defender_not_normal', 'Microsoft Defender is not running in Normal mode.');
   }
+  if (status.disableArchiveScanning !== false) {
+    fail('defender_archive_scanning_disabled', 'Microsoft Defender archive scanning is disabled.');
+  }
   if (!Number.isInteger(status.antivirusSignatureAge) ||
       status.antivirusSignatureAge < 0 ||
       status.antivirusSignatureAge > MAX_SIGNATURE_AGE_DAYS) {
@@ -216,6 +244,43 @@ function validateDefenderStatus(status) {
     antivirusSignatureVersion: status.antivirusSignatureVersion,
     antivirusSignatureAge: status.antivirusSignatureAge,
     antivirusSignatureLastUpdatedUtc: status.antivirusSignatureLastUpdatedUtc,
+    archiveScanningEnabled: true,
+  };
+}
+
+function parseProcessJson(result, reasonCode, message) {
+  if (!result || result.status !== 0 || typeof result.stdout !== 'string') {
+    return null;
+  }
+  try {
+    return JSON.parse(result.stdout.trim());
+  } catch (_error) {
+    fail(reasonCode, message);
+  }
+}
+
+function validateEnvironmentPreparation(preparation) {
+  if (!preparation || typeof preparation !== 'object') {
+    fail('defender_environment_invalid', 'Microsoft Defender environment preparation returned invalid data.');
+  }
+  if (preparation.archiveScanningDisabled !== false) {
+    fail('defender_archive_scanning_disabled', 'Microsoft Defender archive scanning is disabled.');
+  }
+  if (!Number.isInteger(preparation.removedWholeDriveExclusions) ||
+      preparation.removedWholeDriveExclusions < 0 ||
+      preparation.removedWholeDriveExclusions > 2) {
+    fail('defender_environment_invalid', 'Microsoft Defender environment preparation returned invalid data.');
+  }
+  if (typeof preparation.scannerPath !== 'string' ||
+      !preparation.scannerPath.trim() ||
+      !fs.existsSync(preparation.scannerPath) ||
+      !fs.lstatSync(preparation.scannerPath).isFile()) {
+    fail('defender_scanner_missing', 'Microsoft Defender MpCmdRun.exe is unavailable.');
+  }
+  return {
+    archiveScanningEnabled: true,
+    removedWholeDriveExclusions: preparation.removedWholeDriveExclusions,
+    scannerPath: preparation.scannerPath,
   };
 }
 
@@ -232,10 +297,10 @@ function runWindowsDefenderScan(options, dependencies = {}) {
     fail('report_directory_missing', 'Defender report directory must already exist.');
   }
   const now = dependencies.now || (() => new Date());
-  const runSignatureUpdate = dependencies.runSignatureUpdate ||
-    (() => defaultRunPowerShell(defenderUpdateScript()));
+  const runEnvironmentPreparation = dependencies.runEnvironmentPreparation ||
+    ((script) => defaultRunPowerShell(script));
   const runStatusQuery = dependencies.runStatusQuery ||
-    (() => defaultRunPowerShell(defenderStatusScript()));
+    ((script) => defaultRunPowerShell(script));
   const runScanner = dependencies.runScanner || defaultRunScanner;
   const head = String(options.head || '').toLowerCase();
   const startedAtUtc = now().toISOString();
@@ -246,6 +311,7 @@ function runWindowsDefenderScan(options, dependencies = {}) {
     startedAtUtc,
   };
   let defender = null;
+  let environment = null;
   let targetReports = [];
 
   try {
@@ -261,19 +327,44 @@ function runWindowsDefenderScan(options, dependencies = {}) {
     const targets = options.targets.map(describeTarget);
     targetReports = targets.map((target) => ({
       ...target.report,
+      exclusionStatus: 'NOT_CHECKED',
+      exclusionExitCode: null,
       scanStatus: 'NOT_RUN',
       scanExitCode: null,
     }));
-    const updateResult = runProcessSafely(runSignatureUpdate);
+    const preparationResult = runProcessSafely(
+      () => runEnvironmentPreparation(defenderEnvironmentPreparationScript()),
+    );
+    if (!preparationResult || preparationResult.status !== 0) {
+      failProcess(
+        'defender_environment_prepare_failed',
+        'Microsoft Defender environment preparation failed.',
+        'environment_prepare',
+        preparationResult,
+      );
+    }
+    const rawPreparation = parseProcessJson(
+      preparationResult,
+      'defender_environment_invalid',
+      'Microsoft Defender environment preparation returned invalid data.',
+    );
+    const prepared = validateEnvironmentPreparation(rawPreparation);
+    environment = {
+      archiveScanningEnabled: prepared.archiveScanningEnabled,
+      removedWholeDriveExclusions: prepared.removedWholeDriveExclusions,
+    };
+    const updateResult = runProcessSafely(
+      () => runScanner(prepared.scannerPath, ['-SignatureUpdate', '-MMPC']),
+    );
     if (!updateResult || updateResult.status !== 0) {
       failProcess(
         'defender_signature_update_failed',
         'Microsoft Defender security intelligence update failed.',
-        'signature_update',
+        'mmpc_signature_update',
         updateResult,
       );
     }
-    const statusResult = runProcessSafely(runStatusQuery);
+    const statusResult = runProcessSafely(() => runStatusQuery(defenderStatusScript()));
     if (!statusResult || statusResult.status !== 0 || typeof statusResult.stdout !== 'string') {
       failProcess(
         'defender_status_query_failed',
@@ -282,15 +373,34 @@ function runWindowsDefenderScan(options, dependencies = {}) {
         statusResult,
       );
     }
-    let rawStatus;
-    try {
-      rawStatus = JSON.parse(statusResult.stdout.trim());
-    } catch (_error) {
-      fail('defender_status_invalid', 'Microsoft Defender returned invalid status data.');
-    }
+    const rawStatus = parseProcessJson(
+      statusResult,
+      'defender_status_invalid',
+      'Microsoft Defender returned invalid status data.',
+    );
     defender = validateDefenderStatus(rawStatus);
     for (let index = 0; index < targets.length; index += 1) {
       const target = targets[index];
+      const exclusionResult = runProcessSafely(
+        () => runScanner(rawStatus.scannerPath, [
+          '-CheckExclusion',
+          '-Path',
+          target.resolved,
+        ]),
+      );
+      const exclusionExitCode = Number.isInteger(exclusionResult?.status)
+        ? exclusionResult.status
+        : null;
+      targetReports[index].exclusionExitCode = exclusionExitCode;
+      if (exclusionExitCode === 0) {
+        targetReports[index].exclusionStatus = 'EXCLUDED';
+        fail('scan_target_excluded', 'A required Defender scan target is excluded from scanning.');
+      }
+      if (exclusionExitCode !== 1) {
+        targetReports[index].exclusionStatus = 'CHECK_FAILED';
+        fail('scan_target_exclusion_check_failed', 'Defender could not prove that a scan target is included.');
+      }
+      targetReports[index].exclusionStatus = 'NOT_EXCLUDED';
       let scanResult;
       try {
         scanResult = runScanner(rawStatus.scannerPath, [
@@ -319,6 +429,7 @@ function runWindowsDefenderScan(options, dependencies = {}) {
       ...baseReport,
       completedAtUtc: now().toISOString(),
       status: 'PASS',
+      environment,
       defender,
       targets: targetReports,
     };
@@ -334,6 +445,7 @@ function runWindowsDefenderScan(options, dependencies = {}) {
       status: 'FAIL',
       reasonCode: failure.reasonCode,
       ...(failure.processFailure ? { processFailure: failure.processFailure } : {}),
+      ...(environment ? { environment } : {}),
       ...(defender ? { defender } : {}),
       targets: targetReports,
     });
@@ -378,7 +490,9 @@ if (require.main === module) {
 
 module.exports = {
   MalwareScanError,
+  defenderEnvironmentPreparationScript,
   describeTarget,
   runWindowsDefenderScan,
+  validateEnvironmentPreparation,
   validateDefenderStatus,
 };

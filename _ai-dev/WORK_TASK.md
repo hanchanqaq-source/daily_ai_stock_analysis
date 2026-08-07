@@ -4,15 +4,15 @@
 
 ```text
 WORK_ID=WORK-029
-WORK_STATE=DRAFT_PR_OPEN_MINIMAL_CI_CORRECTION_LOCAL_PASS
+WORK_STATE=DRAFT_PR_OPEN_DEFENDER_RUNNER_REPAIR_LOCAL_PASS
 BASE=9a4a705d06370ddbebf669ab8efb0058ce9eb81a
 BRANCH=agent/pp02-work29-safe-candidate
 SOURCE_VERSION=3.29.5
 FORMAL_RELEASE_VERSION=3.29.4
 DRAFT_PR=28_OPEN_DRAFT
 INITIAL_REMOTE_HEAD=b689e51188a373262e69414fc30f0014c6647796
-REMOTE_FIXED_HEAD=33ec1eb67145fc7f9bd407eeb424c123fe32e6ba_SUPERSEDED_BY_MINIMAL_CORRECTION_HEAD_PENDING
-REMOTE_CI=RUN_31127543822_FAIL_6_OF_8_SAFE_CANDIDATE_JOBS_PASS_TWO_BOUNDED_CORRECTIONS_LOCAL_PASS
+REMOTE_FIXED_HEAD=3c1e73b4d9443345cd34b849daed5f625e1130ea_SUPERSEDED_BY_DEFENDER_RUNNER_REPAIR_HEAD_PENDING
+REMOTE_CI=RUN_31168780911_FAIL_7_OF_8_SAFE_CANDIDATE_JOBS_PASS_WINDOWS_SIGNATURE_UPDATE_FAILED_TWICE
 JUDGE=ACTIVE_DRAFT_HOLD
 ```
 
@@ -46,6 +46,9 @@ JUDGE=ACTIVE_DRAFT_HOLD
    distinguishable through bounded reason/exit/signal/error-code fields without
    preserving child stdout/stderr; the safe-candidate caller alone may retain
    the required two read-only permissions.
+7. After Run `31168780911`, the disposable hosted runner must remove only exact
+   `C:\`/`D:\` exclusions, enable archive scanning, update through MMPC, and
+   prove each target is not excluded (`-CheckExclusion` exit `1`) before scan.
 
 ### Scope and stop gates
 

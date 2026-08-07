@@ -4,15 +4,15 @@
 
 | Item | Current fact |
 | --- | --- |
-| State | `WORK29_DRAFT_PR_OPEN_MINIMAL_CI_CORRECTION_LOCAL_PASS` |
+| State | `WORK29_DRAFT_PR_OPEN_DEFENDER_RUNNER_REPAIR_LOCAL_PASS` |
 | Base | `main@9a4a705d06370ddbebf669ab8efb0058ce9eb81a` |
 | Branch | `agent/pp02-work29-safe-candidate` |
 | Goal | Produce an unpublished source-consistent `3.29.5` Windows candidate that passes fail-closed Microsoft Defender gates |
 | Release | Formal release remains `v3.29.4`; no Tag or Release is authorized |
 | Version gate | Root `VERSION` binds Desktop/Web/locks/backup; candidate must exceed latest stable Tag and release Tag must equal source |
 | Security gate | Defender intelligence/health plus installer, portable, extracted, unpacked, final-release and installed-root scans; only scanner exit `0` accepted |
-| Local | Desktop `123/123`; related Python/Actions `38/38` via direct `runpy`; Defender update/status split diagnostic RED/GREEN and exit-2 mutation RED; real Defender not claimed on Linux |
-| Draft PR / CI | [#28](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/28) Open Draft; Run `31127543822` at `33ec1eb…` passed 6/8 candidate Jobs, backend failed one stale read-permission assertion, and Windows stopped before scanning because the combined Defender update/status process exited `1` |
+| Local | Defender focused `17/17` plus exclusion mutation RED; Desktop `127/127`; Python/Actions `38/38`; governance/syntax/diff/scope PASS; real Defender remains pending |
+| Draft PR / CI | [#28](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/28) Open Draft at `3c1e73b4…`; Run `31168780911` passed 7/8 candidate Jobs, while both Windows attempts stopped at signature update before all seven scans |
 | Judge | `ACTIVE — DRAFT_HOLD` |
 | Prohibited | Ready, merge, `main`, Tag, Release, dependencies, database/user data, real credentials |
 
@@ -23,13 +23,14 @@ safe candidate link. A Linux unit contract is not a malware-clean verdict; only
 the Windows Job's bound Defender reports and candidate hashes may support that
 claim.
 
-The next action is to upload only the approved minimal correction to PR #28 and
-rerun Desktop Release from that exact branch Head with a
-`[SAFE_CANDIDATE_ONLY]` message. Defender remains fail closed, but signature
-update and status query now produce separate bounded reason codes and process
-metadata without stdout/stderr. The caller still grants only `contents: read`
-and `pull-requests: read`; safe mode still skips the entire release
-preflight/build/publish chain. Accept no older Head and create no Tag or Release.
+The next action is to commit and upload only the approved hosted-runner Defender
+repair to PR #28 and run Desktop Release from
+the new exact branch Head with a `[SAFE_CANDIDATE_ONLY]` message. The repair
+removes only exact `C:\`/`D:\` runner exclusions, enables archive scanning, uses
+MMPC, and proves every target is not excluded before scanning. The caller still
+has only `contents: read` and `pull-requests: read`; safe mode still skips the
+entire release preflight/build/publish chain. Accept no older Head and create no
+Tag or Release.
 
 ---
 

@@ -101,3 +101,35 @@ The Draft branch can be closed with no effect on `main` or any released version.
 No user data or database migration exists. If later merged, rollback is a normal
 revert of the version verifier, workflow gates, and version-source commit; released
 tags and releases remain separate, explicitly authorized operations.
+
+## 2026-08-07 hosted-runner Defender remediation addendum
+
+Exact-Head Run `31168780911` and its one permitted Windows rerun proved that the
+candidate build is not blocked by product code or a malware detection. Both
+attempts stopped before all seven target scans because the hosted Windows Server
+2025 image could not complete the original `Update-MpSignature` prerequisite.
+The same image also preconfigures whole-drive `C:\` and `D:\` exclusions and
+disables archive scanning, so skipping the update alone would not establish a
+trustworthy scan.
+
+The approved remediation remains fail closed and is limited to the disposable
+GitHub-hosted runner:
+
+- Remove only the exact `C:\` and `D:\` path-exclusion entries when present;
+  leave every other exclusion untouched.
+- Force archive scanning on and verify that it remains enabled after the change.
+- Resolve the newest installed `MpCmdRun.exe` and update intelligence directly
+  from Microsoft MMPC with `-SignatureUpdate -MMPC`.
+- Keep the existing Normal-mode, service, engine, identity, and signature-age
+  checks after the update.
+- Before each custom scan, run `-CheckExclusion -Path <target>`. Microsoft defines
+  exit `1` as not excluded; exit `0` means excluded. Accept only exit `1` for this
+  proof, then continue to the existing custom scan where only exit `0` passes.
+- Record only bounded environment, exit-code, Defender-identity, digest, and
+  per-target status fields. Never record child stdout/stderr or file contents.
+
+Preparation failure, MMPC update failure, disabled archive scanning, an excluded
+target, an indeterminate exclusion check, stale/unhealthy Defender, or any scan
+failure still blocks installation and candidate upload. No workflow permission,
+product dependency, product feature, database, user-data, Tag, or Release scope is
+added by this addendum.

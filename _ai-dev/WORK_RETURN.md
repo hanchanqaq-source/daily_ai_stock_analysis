@@ -9,15 +9,15 @@ ROOT_CAUSE=RUNNER_ONLY_RELEASE_VERSION_MUTATION_PLUS_NO_REAL_ANTIMALWARE_GATE
 SOURCE_VERSION=3.29.5
 FORMAL_RELEASE_REMAINS=3.29.4
 VERSION_TDD=PASS_10_OF_10
-DEFENDER_TDD=PASS_13_OF_13_WITH_SPLIT_SANITIZED_UPDATE_STATUS_DIAGNOSTICS_AND_EXIT_2_MUTATION_RED
-DESKTOP_FULL=PASS_123_OF_123
+DEFENDER_TDD=PASS_17_OF_17_PLUS_EXCLUSION_ACCEPTANCE_MUTATION_RED
+DESKTOP_FULL=PASS_127_OF_127
 PYTHON_RELATED=PASS_38_DIRECT_RUNPY_PYTEST_UNAVAILABLE
-LOCAL_AUXILIARY=PASS_AI_ASSETS_NODE_SYNTAX_YAML_PARSE_DIFF
+LOCAL_AUXILIARY=PASS_AI_ASSETS_NODE_SYNTAX_YAML_PARSE_DIFF_DEPENDENCY_DATA_SECRET_BOUNDARIES
 REAL_DEFENDER=NOT_CLAIMED_LINUX_ENV_EXACT_HEAD_WINDOWS_CI_REQUIRED
 DRAFT_PR=28_OPEN_DRAFT
 INITIAL_REMOTE_HEAD=b689e51188a373262e69414fc30f0014c6647796
-REMOTE_FIXED_HEAD=33EC1EB67145FC7F9BD407EEB424C123FE32E6BA_RUN_31127543822_FAILED_TWO_BOUNDED_GATES_SUPERSEDED_BY_MINIMAL_CORRECTION_HEAD_PENDING
-REMOTE_CI=RUN_31127543822_FAIL_6_OF_8_SAFE_CANDIDATE_JOBS_PASS_BACKEND_STALE_PERMISSION_ASSERTION_WINDOWS_DEFENDER_UPDATE_OR_STATUS_OPAQUE_SCAN_NOT_RUN
+REMOTE_FIXED_HEAD=3C1E73B4D9443345CD34B849DAED5F625E1130EA_RUN_31168780911_FAILED_WINDOWS_SIGNATURE_UPDATE_TWICE_SUPERSEDED_BY_DEFENDER_RUNNER_REPAIR_HEAD_PENDING
+REMOTE_CI=RUN_31168780911_FAIL_7_OF_8_SAFE_CANDIDATE_JOBS_PASS_WINDOWS_SIGNATURE_UPDATE_EXIT_1_TWICE_ALL_TARGETS_NOT_RUN
 CANDIDATE=PENDING
 JUDGE=ACTIVE_DRAFT_HOLD
 ```
@@ -62,6 +62,18 @@ JUDGE=ACTIVE_DRAFT_HOLD
   code, bounded signal and bounded error code; child stdout/stderr is discarded.
   Desktop `123/123` and related Python/Actions contracts `38/38` pass locally.
   The new exact-Head Windows CI remains authoritative and pending.
+- Run `31168780911` passed seven candidate Jobs. Its Windows Job and one permitted
+  rerun both stopped at signature update exit `1`; every scan target was
+  `NOT_RUN`, installation never started, and no candidate uploaded. This stable
+  reproduction plus the hosted-image configuration proves the scanner was
+  operating inside whole-drive exclusions with archive scanning disabled.
+- The approved repair removes only exact `C:\`/`D:\` runner exclusions, enables
+  archive scanning, updates with `MpCmdRun -SignatureUpdate -MMPC`, and requires
+  `-CheckExclusion` exit `1` before every custom scan. Focused RED was 15 expected
+  failures and focused GREEN is `17/17`; the exclusion-acceptance mutation fails
+  as required. Desktop `127/127`, Python/Actions `38/38`, governance, syntax,
+  diff and scope checks pass. Exact-Head Windows CI is pending, so no malware-clean
+  result is claimed yet.
 
 ---
 

@@ -35,6 +35,14 @@
   preserves only bounded process metadata, while synchronizing the read-only
   permission contract. Desktop `123/123` and related Python/Actions `38/38`
   pass locally; the next exact-Head safe-candidate CI remains required.
+- Run `31168780911` at Head `3c1e73b4…` passed seven candidate Jobs but its
+  Windows attempt and one permitted rerun both failed at signature update before
+  any of the seven target scans. The hosted image's exact `C:\`/`D:\` exclusions
+  and disabled archive scan mean a bypass is unsafe. The approved minimum repair
+  removes only those two exact exclusions, enables archive scanning, updates from
+  MMPC, and accepts only `-CheckExclusion` exit `1` before the existing custom
+  scan. Focused TDD is `15` expected RED failures to `17/17` GREEN; full local and
+  exact-Head Windows verification remain pending.
 
 ## Historical entry | 2026-08-06 Work27 Windows Desktop AI configuration save validation repair
 

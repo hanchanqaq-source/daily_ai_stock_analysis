@@ -137,6 +137,10 @@ HKCU 卸载登记，启动到 `Main UI loaded in`，停止后再次启动，并�
 Microsoft Defender 自定义扫描；候选和发布工作流也会扫描安装器、元数据、免安装
 ZIP、解包目录和最终发布目录。扫描器不可用、病毒库过期、引擎非 Normal 模式、
 发现威胁或扫描出错都会阻止候选上传或 Release 发布，并保留绑定精确 Head 的报告。
+GitHub Hosted Runner 扫描前仅移除镜像预设的 `C:\`、`D:\` 整盘排除并启用归档扫描，
+随后通过 `MpCmdRun -SignatureUpdate -MMPC` 更新病毒库；每个目标必须先由
+`-CheckExclusion` 返回“未排除”再进入自定义扫描。环境准备、更新、排除核验或扫描
+任一步失败都会保持失败关闭，报告不保存子进程 stdout/stderr 或文件内容。
 
 卸载助手与一个闭合的两项清单一起放在安装目录的 `resources` 下。助手从自身位置
 推导安装根，只匹配清单中桌面 EXE 和冻结后端的完整路径；NSIS 不通过命令行传入

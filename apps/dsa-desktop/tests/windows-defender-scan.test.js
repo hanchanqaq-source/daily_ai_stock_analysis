@@ -33,30 +33,46 @@ function healthyStatus(scannerPath, overrides = {}) {
     antivirusSignatureVersion: '1.2.3.4',
     amEngineVersion: '1.1.2.3',
     amProductVersion: '4.18.26070.1000',
+    disableArchiveScanning: false,
     scannerPath,
     ...overrides,
   };
 }
 
-function dependencies(status, scannerExitCode = 0) {
+function dependencies(status, options = {}) {
   const calls = [];
   const powerShellCalls = [];
+  const preparation = {
+    archiveScanningDisabled: false,
+    removedWholeDriveExclusions: 2,
+    scannerPath: status.scannerPath,
+    ...(options.preparation || {}),
+  };
   return {
     calls,
     powerShellCalls,
     value: {
       now: () => new Date('2026-08-06T12:00:00.000Z'),
-      runSignatureUpdate: () => {
-        powerShellCalls.push('signature_update');
-        return { status: 0, stdout: '' };
+      runEnvironmentPreparation: (script) => {
+        powerShellCalls.push({ stage: 'environment_prepare', script });
+        return options.preparationResult || {
+          status: 0,
+          stdout: JSON.stringify(preparation),
+        };
       },
-      runStatusQuery: () => {
-        powerShellCalls.push('status_query');
+      runStatusQuery: (script) => {
+        powerShellCalls.push({ stage: 'status_query', script });
         return { status: 0, stdout: JSON.stringify(status) };
       },
       runScanner: (scannerPath, args) => {
         calls.push({ scannerPath, args });
-        return { status: scannerExitCode };
+        if (args[0] === '-SignatureUpdate') {
+          return options.signatureUpdateResult || { status: 0 };
+        }
+        if (args[0] === '-CheckExclusion') {
+          return options.exclusionCheckResult || { status: 1 };
+        }
+        return { status: options.scannerExitCode || 0 };
       },
     },
   };
@@ -66,7 +82,7 @@ function readReport(reportPath) {
   return JSON.parse(fs.readFileSync(reportPath, 'utf8'));
 }
 
-test('clean scan records exact Head, Defender identity, file digest, and custom scan arguments', (t) => {
+test('clean scan repairs hosted-runner exclusions, updates from MMPC, proves targets are included, and scans', (t) => {
   const fixture = createFixture(t);
   const deps = dependencies(healthyStatus(fixture.scannerPath));
 
@@ -80,13 +96,34 @@ test('clean scan records exact Head, Defender identity, file digest, and custom 
   assert.equal(result.status, 'PASS');
   assert.equal(result.head, HEAD);
   assert.equal(result.defender.antivirusSignatureVersion, '1.2.3.4');
-  assert.deepEqual(deps.powerShellCalls, ['signature_update', 'status_query']);
-  assert.deepEqual(deps.calls, [{
-    scannerPath: fixture.scannerPath,
-    args: ['-Scan', '-ScanType', '3', '-File', path.resolve(fixture.target), '-DisableRemediation'],
-  }]);
+  assert.deepEqual(deps.powerShellCalls.map((call) => call.stage), [
+    'environment_prepare',
+    'status_query',
+  ]);
+  const preparationScript = deps.powerShellCalls[0].script;
+  assert.match(preparationScript, /Remove-MpPreference -ExclusionPath \$root/);
+  assert.equal(preparationScript.includes("foreach ($root in @('C:\\', 'D:\\')) {"), true);
+  assert.match(preparationScript, /Set-MpPreference -DisableArchiveScanning \$false/);
+  assert.deepEqual(deps.calls, [
+    {
+      scannerPath: fixture.scannerPath,
+      args: ['-SignatureUpdate', '-MMPC'],
+    },
+    {
+      scannerPath: fixture.scannerPath,
+      args: ['-CheckExclusion', '-Path', path.resolve(fixture.target)],
+    },
+    {
+      scannerPath: fixture.scannerPath,
+      args: ['-Scan', '-ScanType', '3', '-File', path.resolve(fixture.target), '-DisableRemediation'],
+    },
+  ]);
   const report = readReport(fixture.reportPath);
   assert.equal(report.status, 'PASS');
+  assert.deepEqual(report.environment, {
+    archiveScanningEnabled: true,
+    removedWholeDriveExclusions: 2,
+  });
   assert.equal(report.targets[0].name, 'candidate.exe');
   assert.equal(report.targets[0].kind, 'file');
   assert.equal(report.targets[0].bytes, Buffer.byteLength('synthetic candidate bytes'));
@@ -94,6 +131,8 @@ test('clean scan records exact Head, Defender identity, file digest, and custom 
     report.targets[0].sha256,
     crypto.createHash('sha256').update('synthetic candidate bytes').digest('hex'),
   );
+  assert.equal(report.targets[0].exclusionStatus, 'NOT_EXCLUDED');
+  assert.equal(report.targets[0].exclusionExitCode, 1);
   assert.equal(JSON.stringify(report).includes('synthetic candidate bytes'), false);
 });
 
@@ -111,13 +150,46 @@ test('scan fails closed outside Windows before invoking Defender', (t) => {
   assert.equal(readReport(fixture.reportPath).status, 'FAIL');
 });
 
-test('signature update failure is reported separately without child output', (t) => {
+test('hosted-runner Defender preparation failure blocks update and scan without child output', (t) => {
   const fixture = createFixture(t);
-  const deps = dependencies(healthyStatus(fixture.scannerPath));
-  deps.value.runSignatureUpdate = () => ({
-    status: 1,
-    stdout: 'synthetic-sensitive-update-output',
-    stderr: 'synthetic-sensitive-update-error',
+  const deps = dependencies(healthyStatus(fixture.scannerPath), {
+    preparationResult: {
+      status: 1,
+      stdout: 'synthetic-sensitive-preparation-output',
+      stderr: 'synthetic-sensitive-preparation-error',
+    },
+  });
+
+  assert.throws(
+    () => runWindowsDefenderScan({
+      platform: 'win32', head: HEAD, targets: [fixture.target], reportPath: fixture.reportPath,
+    }, deps.value),
+    (error) => error.reasonCode === 'defender_environment_prepare_failed',
+  );
+  assert.equal(deps.calls.length, 0);
+  const reportText = fs.readFileSync(fixture.reportPath, 'utf8');
+  const report = JSON.parse(reportText);
+  assert.equal(report.reasonCode, 'defender_environment_prepare_failed');
+  assert.deepEqual(report.processFailure, {
+    stage: 'environment_prepare',
+    exitCode: 1,
+    signal: null,
+    errorCode: null,
+  });
+  assert.equal(reportText.includes('synthetic-sensitive-preparation-output'), false);
+  assert.equal(reportText.includes('synthetic-sensitive-preparation-error'), false);
+  assert.equal(Object.hasOwn(report, 'stdout'), false);
+  assert.equal(Object.hasOwn(report, 'stderr'), false);
+});
+
+test('MMPC signature update failure is reported separately without child output', (t) => {
+  const fixture = createFixture(t);
+  const deps = dependencies(healthyStatus(fixture.scannerPath), {
+    signatureUpdateResult: {
+      status: 1,
+      stdout: 'synthetic-sensitive-update-output',
+      stderr: 'synthetic-sensitive-update-error',
+    },
   });
 
   assert.throws(
@@ -126,20 +198,19 @@ test('signature update failure is reported separately without child output', (t)
     }, deps.value),
     (error) => error.reasonCode === 'defender_signature_update_failed',
   );
-  assert.equal(deps.calls.length, 0);
+  assert.equal(deps.calls.length, 1);
+  assert.deepEqual(deps.calls[0].args, ['-SignatureUpdate', '-MMPC']);
   const reportText = fs.readFileSync(fixture.reportPath, 'utf8');
   const report = JSON.parse(reportText);
   assert.equal(report.reasonCode, 'defender_signature_update_failed');
   assert.deepEqual(report.processFailure, {
-    stage: 'signature_update',
+    stage: 'mmpc_signature_update',
     exitCode: 1,
     signal: null,
     errorCode: null,
   });
   assert.equal(reportText.includes('synthetic-sensitive-update-output'), false);
   assert.equal(reportText.includes('synthetic-sensitive-update-error'), false);
-  assert.equal(Object.hasOwn(report, 'stdout'), false);
-  assert.equal(Object.hasOwn(report, 'stderr'), false);
 });
 
 test('Defender status failure is reported separately with bounded process metadata', (t) => {
@@ -159,7 +230,7 @@ test('Defender status failure is reported separately with bounded process metada
     }, deps.value),
     (error) => error.reasonCode === 'defender_status_query_failed',
   );
-  assert.equal(deps.calls.length, 0);
+  assert.deepEqual(deps.calls.map((call) => call.args[0]), ['-SignatureUpdate']);
   const reportText = fs.readFileSync(fixture.reportPath, 'utf8');
   const report = JSON.parse(reportText);
   assert.equal(report.reasonCode, 'defender_status_query_failed');
@@ -173,6 +244,54 @@ test('Defender status failure is reported separately with bounded process metada
   assert.equal(reportText.includes('synthetic-sensitive-status-error'), false);
   assert.equal(Object.hasOwn(report, 'stdout'), false);
   assert.equal(Object.hasOwn(report, 'stderr'), false);
+});
+
+test('scan fails closed when archive scanning remains disabled after preparation', (t) => {
+  const fixture = createFixture(t);
+  const deps = dependencies(healthyStatus(fixture.scannerPath, {
+    disableArchiveScanning: true,
+  }));
+
+  assert.throws(
+    () => runWindowsDefenderScan({
+      platform: 'win32', head: HEAD, targets: [fixture.target], reportPath: fixture.reportPath,
+    }, deps.value),
+    (error) => error.reasonCode === 'defender_archive_scanning_disabled',
+  );
+  assert.equal(deps.calls.some((call) => call.args[0] === '-Scan'), false);
+});
+
+test('scan fails closed when MpCmdRun reports a target is excluded', (t) => {
+  const fixture = createFixture(t);
+  const deps = dependencies(healthyStatus(fixture.scannerPath), {
+    exclusionCheckResult: { status: 0 },
+  });
+
+  assert.throws(
+    () => runWindowsDefenderScan({
+      platform: 'win32', head: HEAD, targets: [fixture.target], reportPath: fixture.reportPath,
+    }, deps.value),
+    (error) => error.reasonCode === 'scan_target_excluded',
+  );
+  assert.equal(deps.calls.some((call) => call.args[0] === '-Scan'), false);
+  const report = readReport(fixture.reportPath);
+  assert.equal(report.targets[0].exclusionStatus, 'EXCLUDED');
+  assert.equal(report.targets[0].exclusionExitCode, 0);
+});
+
+test('scan fails closed when target exclusion state cannot be proven', (t) => {
+  const fixture = createFixture(t);
+  const deps = dependencies(healthyStatus(fixture.scannerPath), {
+    exclusionCheckResult: { status: 2 },
+  });
+
+  assert.throws(
+    () => runWindowsDefenderScan({
+      platform: 'win32', head: HEAD, targets: [fixture.target], reportPath: fixture.reportPath,
+    }, deps.value),
+    (error) => error.reasonCode === 'scan_target_exclusion_check_failed',
+  );
+  assert.equal(deps.calls.some((call) => call.args[0] === '-Scan'), false);
 });
 
 for (const [name, overrides, reasonCode] of [
@@ -192,7 +311,7 @@ for (const [name, overrides, reasonCode] of [
       }, deps.value),
       (error) => error.reasonCode === reasonCode,
     );
-    assert.equal(deps.calls.length, 0);
+    assert.equal(deps.calls.some((call) => call.args[0] === '-Scan'), false);
   });
 }
 
@@ -221,7 +340,7 @@ test('scan rejects a missing scanner executable or target', (t) => {
 
 test('MpCmdRun exit 2 blocks the candidate as detection or scan error', (t) => {
   const fixture = createFixture(t);
-  const deps = dependencies(healthyStatus(fixture.scannerPath), 2);
+  const deps = dependencies(healthyStatus(fixture.scannerPath), { scannerExitCode: 2 });
 
   assert.throws(
     () => runWindowsDefenderScan({
@@ -249,11 +368,20 @@ test('detection report binds Defender identity, prior success, failing target di
       reportPath: fixture.reportPath,
     }, {
       now: () => new Date('2026-08-06T12:00:00.000Z'),
-      runSignatureUpdate: () => ({ status: 0, stdout: '' }),
+      runEnvironmentPreparation: () => ({
+        status: 0,
+        stdout: JSON.stringify({
+          archiveScanningDisabled: false,
+          removedWholeDriveExclusions: 2,
+          scannerPath: fixture.scannerPath,
+        }),
+      }),
       runStatusQuery: () => ({ status: 0, stdout: JSON.stringify(status) }),
       runScanner: (_scannerPath, args) => {
         calls.push(args);
-        return { status: calls.length === 1 ? 0 : 2 };
+        if (args[0] === '-SignatureUpdate') return { status: 0 };
+        if (args[0] === '-CheckExclusion') return { status: 1 };
+        return { status: args.includes(fixture.target) ? 0 : 2 };
       },
     }),
     (error) => error.reasonCode === 'threat_detected_or_scan_failed',
