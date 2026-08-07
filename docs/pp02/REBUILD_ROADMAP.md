@@ -26,6 +26,15 @@
   are then skipped and cannot publish. Run `31127507235` proved the call path but
   stopped before Jobs until the outer caller explicitly delegated CI's two
   read-only permissions; no write permission was added.
+- Run `31127543822` at Head `33ec1eb…` then executed the candidate topology:
+  six Jobs passed, backend exposed one stale permission assertion, and Windows
+  reached the real Defender gate after build/portable/verifier success. The
+  exact-Head report marked all seven targets `NOT_RUN` because one combined
+  update/status process exited `1`; this is not a clean or infected verdict.
+  The approved minimum correction separates those two blocking operations and
+  preserves only bounded process metadata, while synchronizing the read-only
+  permission contract. Desktop `123/123` and related Python/Actions `38/38`
+  pass locally; the next exact-Head safe-candidate CI remains required.
 
 ## Historical entry | 2026-08-06 Work27 Windows Desktop AI configuration save validation repair
 

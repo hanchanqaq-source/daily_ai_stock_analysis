@@ -4,15 +4,15 @@
 
 ```text
 WORK_ID=WORK-029
-WORK_STATE=DRAFT_PR_OPEN_EXACT_HEAD_CI_PENDING
+WORK_STATE=DRAFT_PR_OPEN_MINIMAL_CI_CORRECTION_LOCAL_PASS
 BASE=9a4a705d06370ddbebf669ab8efb0058ce9eb81a
 BRANCH=agent/pp02-work29-safe-candidate
 SOURCE_VERSION=3.29.5
 FORMAL_RELEASE_VERSION=3.29.4
-DRAFT_PR=27_OPEN_DRAFT
-INITIAL_REMOTE_HEAD=d3f7d44b83c795324e22ec39cf562475c9546322_TREE_BF92DD919A59410366D1EA2B5990B5788727BD52_VERIFIED
-REMOTE_FIXED_HEAD=THIS_STATUS_SYNC_HEAD
-REMOTE_CI=PENDING_EXACT_HEAD
+DRAFT_PR=28_OPEN_DRAFT
+INITIAL_REMOTE_HEAD=b689e51188a373262e69414fc30f0014c6647796
+REMOTE_FIXED_HEAD=33ec1eb67145fc7f9bd407eeb424c123fe32e6ba_SUPERSEDED_BY_MINIMAL_CORRECTION_HEAD_PENDING
+REMOTE_CI=RUN_31127543822_FAIL_6_OF_8_SAFE_CANDIDATE_JOBS_PASS_TWO_BOUNDED_CORRECTIONS_LOCAL_PASS
 JUDGE=ACTIVE_DRAFT_HOLD
 ```
 
@@ -42,6 +42,10 @@ JUDGE=ACTIVE_DRAFT_HOLD
    candidate and Defender reports.
 5. Artifact hashes, Head, report Head, Defender engine/signature identity and
    scan scope must cross-check before a download link is returned.
+6. After Run `31127543822`, signature update and status query failures must be
+   distinguishable through bounded reason/exit/signal/error-code fields without
+   preserving child stdout/stderr; the safe-candidate caller alone may retain
+   the required two read-only permissions.
 
 ### Scope and stop gates
 

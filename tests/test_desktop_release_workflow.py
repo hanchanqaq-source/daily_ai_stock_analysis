@@ -135,8 +135,12 @@ def test_publish_is_single_run_after_all_builds_with_minimal_permissions() -> No
 
     assert publish["needs"] == ["preflight", "build-windows", "build-macos"]
     assert publish["permissions"] == {"contents": "write"}
+    assert jobs["safe-candidate"]["permissions"] == {
+        "contents": "read",
+        "pull-requests": "read",
+    }
     for name, job in jobs.items():
-        if name != "publish-release":
+        if name not in {"publish-release", "safe-candidate"}:
             assert job["permissions"] == {"contents": "read"}
 
     workflow_text = _workflow_text()

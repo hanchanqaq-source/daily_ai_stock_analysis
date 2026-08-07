@@ -7,10 +7,11 @@ const MAX_SIGNATURE_AGE_DAYS = 1;
 const HEAD_PATTERN = /^[0-9a-f]{40}$/i;
 
 class MalwareScanError extends Error {
-  constructor(reasonCode, message) {
+  constructor(reasonCode, message, processFailure = null) {
     super(message);
     this.name = 'MalwareScanError';
     this.reasonCode = reasonCode;
+    if (processFailure) this.processFailure = processFailure;
   }
 }
 
@@ -88,11 +89,18 @@ function describeTarget(targetPath) {
   };
 }
 
-function defenderStatusScript() {
+function defenderUpdateScript() {
   return [
     "$ErrorActionPreference = 'Stop'",
     'Import-Module Defender -ErrorAction Stop',
     'Update-MpSignature -ErrorAction Stop | Out-Null',
+  ].join('\n');
+}
+
+function defenderStatusScript() {
+  return [
+    "$ErrorActionPreference = 'Stop'",
+    'Import-Module Defender -ErrorAction Stop',
     '$status = Get-MpComputerStatus -ErrorAction Stop',
     "$platformRoot = Join-Path $env:ProgramData 'Microsoft\\Windows Defender\\Platform'",
     '$scanner = $null',
@@ -117,10 +125,10 @@ function defenderStatusScript() {
   ].join('\n');
 }
 
-function defaultRunPowerShell() {
+function defaultRunPowerShell(script) {
   return spawnSync(
     'powershell.exe',
-    ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', defenderStatusScript()],
+    ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script],
     {
       encoding: 'utf8',
       maxBuffer: 2 * 1024 * 1024,
@@ -128,6 +136,34 @@ function defaultRunPowerShell() {
       windowsHide: true,
     },
   );
+}
+
+function boundedProcessToken(value) {
+  if (typeof value !== 'string') return null;
+  const token = value.trim();
+  if (!token) return null;
+  return /^[a-z0-9._-]{1,64}$/i.test(token) ? token : 'UNRECOGNIZED';
+}
+
+function describeProcessFailure(stage, result) {
+  return {
+    stage,
+    exitCode: Number.isInteger(result?.status) ? result.status : null,
+    signal: boundedProcessToken(result?.signal),
+    errorCode: boundedProcessToken(result?.error?.code),
+  };
+}
+
+function runProcessSafely(run) {
+  try {
+    return run();
+  } catch (error) {
+    return { status: null, error };
+  }
+}
+
+function failProcess(reasonCode, message, stage, result) {
+  throw new MalwareScanError(reasonCode, message, describeProcessFailure(stage, result));
 }
 
 function defaultRunScanner(scannerPath, args) {
@@ -196,7 +232,10 @@ function runWindowsDefenderScan(options, dependencies = {}) {
     fail('report_directory_missing', 'Defender report directory must already exist.');
   }
   const now = dependencies.now || (() => new Date());
-  const runPowerShell = dependencies.runPowerShell || defaultRunPowerShell;
+  const runSignatureUpdate = dependencies.runSignatureUpdate ||
+    (() => defaultRunPowerShell(defenderUpdateScript()));
+  const runStatusQuery = dependencies.runStatusQuery ||
+    (() => defaultRunPowerShell(defenderStatusScript()));
   const runScanner = dependencies.runScanner || defaultRunScanner;
   const head = String(options.head || '').toLowerCase();
   const startedAtUtc = now().toISOString();
@@ -225,9 +264,23 @@ function runWindowsDefenderScan(options, dependencies = {}) {
       scanStatus: 'NOT_RUN',
       scanExitCode: null,
     }));
-    const statusResult = runPowerShell();
+    const updateResult = runProcessSafely(runSignatureUpdate);
+    if (!updateResult || updateResult.status !== 0) {
+      failProcess(
+        'defender_signature_update_failed',
+        'Microsoft Defender security intelligence update failed.',
+        'signature_update',
+        updateResult,
+      );
+    }
+    const statusResult = runProcessSafely(runStatusQuery);
     if (!statusResult || statusResult.status !== 0 || typeof statusResult.stdout !== 'string') {
-      fail('defender_update_or_status_failed', 'Microsoft Defender update or status check failed.');
+      failProcess(
+        'defender_status_query_failed',
+        'Microsoft Defender status query failed.',
+        'status_query',
+        statusResult,
+      );
     }
     let rawStatus;
     try {
@@ -280,6 +333,7 @@ function runWindowsDefenderScan(options, dependencies = {}) {
       completedAtUtc: now().toISOString(),
       status: 'FAIL',
       reasonCode: failure.reasonCode,
+      ...(failure.processFailure ? { processFailure: failure.processFailure } : {}),
       ...(defender ? { defender } : {}),
       targets: targetReports,
     });

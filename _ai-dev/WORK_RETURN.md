@@ -9,15 +9,15 @@ ROOT_CAUSE=RUNNER_ONLY_RELEASE_VERSION_MUTATION_PLUS_NO_REAL_ANTIMALWARE_GATE
 SOURCE_VERSION=3.29.5
 FORMAL_RELEASE_REMAINS=3.29.4
 VERSION_TDD=PASS_10_OF_10
-DEFENDER_TDD=PASS_12_OF_12_WITH_EXIT_2_MUTATION_RED
-DESKTOP_FULL=PASS_122_OF_122
-PYTHON_RELATED=PASS_34_DIRECT_RUNPY_PYTEST_UNAVAILABLE
+DEFENDER_TDD=PASS_13_OF_13_WITH_SPLIT_SANITIZED_UPDATE_STATUS_DIAGNOSTICS_AND_EXIT_2_MUTATION_RED
+DESKTOP_FULL=PASS_123_OF_123
+PYTHON_RELATED=PASS_38_DIRECT_RUNPY_PYTEST_UNAVAILABLE
 LOCAL_AUXILIARY=PASS_AI_ASSETS_NODE_SYNTAX_YAML_PARSE_DIFF
 REAL_DEFENDER=NOT_CLAIMED_LINUX_ENV_EXACT_HEAD_WINDOWS_CI_REQUIRED
 DRAFT_PR=28_OPEN_DRAFT
 INITIAL_REMOTE_HEAD=b689e51188a373262e69414fc30f0014c6647796
-REMOTE_FIXED_HEAD=3C227D125EB626BF256E10611513A1934EEF6D9B_RUN_31127507235_STARTUP_PERMISSION_FAILURE_SUPERSEDED_BY_FIX_HEAD_PENDING
-REMOTE_CI=RUN_31127507235_STARTUP_FAIL_BEFORE_JOBS_REUSABLE_PULL_REQUESTS_READ_PERMISSION_FIXED_RETRY_PENDING
+REMOTE_FIXED_HEAD=33EC1EB67145FC7F9BD407EEB424C123FE32E6BA_RUN_31127543822_FAILED_TWO_BOUNDED_GATES_SUPERSEDED_BY_MINIMAL_CORRECTION_HEAD_PENDING
+REMOTE_CI=RUN_31127543822_FAIL_6_OF_8_SAFE_CANDIDATE_JOBS_PASS_BACKEND_STALE_PERMISSION_ASSERTION_WINDOWS_DEFENDER_UPDATE_OR_STATUS_OPAQUE_SCAN_NOT_RUN
 CANDIDATE=PENDING
 JUDGE=ACTIVE_DRAFT_HOLD
 ```
@@ -51,6 +51,17 @@ JUDGE=ACTIVE_DRAFT_HOLD
   `pull-requests: read`, without adding any write or release authority. No real
   credential/data, dependency,
   Ready, merge, Tag or Release action occurred.
+- Run `31127543822` passed six of eight safe-candidate Jobs. Backend's only
+  failure was the stale assertion that every non-publish Job had exactly one
+  read permission. Windows completed the frozen backend, portable package and
+  installer-verifier contract, then produced an exact-Head diagnostic report
+  with seven targets marked `NOT_RUN`; the combined Defender update/status
+  process had exited `1`, so no malware scan or install lifecycle ran.
+- The minimum correction separates signature update from status query while
+  preserving both as blocking gates. Failure reports retain only stage, exit
+  code, bounded signal and bounded error code; child stdout/stderr is discarded.
+  Desktop `123/123` and related Python/Actions contracts `38/38` pass locally.
+  The new exact-Head Windows CI remains authoritative and pending.
 
 ---
 

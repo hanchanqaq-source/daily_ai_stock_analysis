@@ -40,11 +40,20 @@ function healthyStatus(scannerPath, overrides = {}) {
 
 function dependencies(status, scannerExitCode = 0) {
   const calls = [];
+  const powerShellCalls = [];
   return {
     calls,
+    powerShellCalls,
     value: {
       now: () => new Date('2026-08-06T12:00:00.000Z'),
-      runPowerShell: () => ({ status: 0, stdout: JSON.stringify(status) }),
+      runSignatureUpdate: () => {
+        powerShellCalls.push('signature_update');
+        return { status: 0, stdout: '' };
+      },
+      runStatusQuery: () => {
+        powerShellCalls.push('status_query');
+        return { status: 0, stdout: JSON.stringify(status) };
+      },
       runScanner: (scannerPath, args) => {
         calls.push({ scannerPath, args });
         return { status: scannerExitCode };
@@ -71,6 +80,7 @@ test('clean scan records exact Head, Defender identity, file digest, and custom 
   assert.equal(result.status, 'PASS');
   assert.equal(result.head, HEAD);
   assert.equal(result.defender.antivirusSignatureVersion, '1.2.3.4');
+  assert.deepEqual(deps.powerShellCalls, ['signature_update', 'status_query']);
   assert.deepEqual(deps.calls, [{
     scannerPath: fixture.scannerPath,
     args: ['-Scan', '-ScanType', '3', '-File', path.resolve(fixture.target), '-DisableRemediation'],
@@ -101,18 +111,68 @@ test('scan fails closed outside Windows before invoking Defender', (t) => {
   assert.equal(readReport(fixture.reportPath).status, 'FAIL');
 });
 
-test('scan fails closed when signature update or Defender status cannot run', (t) => {
+test('signature update failure is reported separately without child output', (t) => {
   const fixture = createFixture(t);
   const deps = dependencies(healthyStatus(fixture.scannerPath));
-  deps.value.runPowerShell = () => ({ status: 1, stdout: '' });
+  deps.value.runSignatureUpdate = () => ({
+    status: 1,
+    stdout: 'synthetic-sensitive-update-output',
+    stderr: 'synthetic-sensitive-update-error',
+  });
 
   assert.throws(
     () => runWindowsDefenderScan({
       platform: 'win32', head: HEAD, targets: [fixture.target], reportPath: fixture.reportPath,
     }, deps.value),
-    (error) => error.reasonCode === 'defender_update_or_status_failed',
+    (error) => error.reasonCode === 'defender_signature_update_failed',
   );
   assert.equal(deps.calls.length, 0);
+  const reportText = fs.readFileSync(fixture.reportPath, 'utf8');
+  const report = JSON.parse(reportText);
+  assert.equal(report.reasonCode, 'defender_signature_update_failed');
+  assert.deepEqual(report.processFailure, {
+    stage: 'signature_update',
+    exitCode: 1,
+    signal: null,
+    errorCode: null,
+  });
+  assert.equal(reportText.includes('synthetic-sensitive-update-output'), false);
+  assert.equal(reportText.includes('synthetic-sensitive-update-error'), false);
+  assert.equal(Object.hasOwn(report, 'stdout'), false);
+  assert.equal(Object.hasOwn(report, 'stderr'), false);
+});
+
+test('Defender status failure is reported separately with bounded process metadata', (t) => {
+  const fixture = createFixture(t);
+  const deps = dependencies(healthyStatus(fixture.scannerPath));
+  deps.value.runStatusQuery = () => ({
+    status: null,
+    signal: 'SIGTERM',
+    stdout: 'synthetic-sensitive-status-output',
+    stderr: 'synthetic-sensitive-status-error',
+    error: { code: 'ETIMEDOUT' },
+  });
+
+  assert.throws(
+    () => runWindowsDefenderScan({
+      platform: 'win32', head: HEAD, targets: [fixture.target], reportPath: fixture.reportPath,
+    }, deps.value),
+    (error) => error.reasonCode === 'defender_status_query_failed',
+  );
+  assert.equal(deps.calls.length, 0);
+  const reportText = fs.readFileSync(fixture.reportPath, 'utf8');
+  const report = JSON.parse(reportText);
+  assert.equal(report.reasonCode, 'defender_status_query_failed');
+  assert.deepEqual(report.processFailure, {
+    stage: 'status_query',
+    exitCode: null,
+    signal: 'SIGTERM',
+    errorCode: 'ETIMEDOUT',
+  });
+  assert.equal(reportText.includes('synthetic-sensitive-status-output'), false);
+  assert.equal(reportText.includes('synthetic-sensitive-status-error'), false);
+  assert.equal(Object.hasOwn(report, 'stdout'), false);
+  assert.equal(Object.hasOwn(report, 'stderr'), false);
 });
 
 for (const [name, overrides, reasonCode] of [
@@ -189,7 +249,8 @@ test('detection report binds Defender identity, prior success, failing target di
       reportPath: fixture.reportPath,
     }, {
       now: () => new Date('2026-08-06T12:00:00.000Z'),
-      runPowerShell: () => ({ status: 0, stdout: JSON.stringify(status) }),
+      runSignatureUpdate: () => ({ status: 0, stdout: '' }),
+      runStatusQuery: () => ({ status: 0, stdout: JSON.stringify(status) }),
       runScanner: (_scannerPath, args) => {
         calls.push(args);
         return { status: calls.length === 1 ? 0 : 2 };
