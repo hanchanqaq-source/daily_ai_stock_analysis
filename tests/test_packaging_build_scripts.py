@@ -711,6 +711,11 @@ def test_windows_installed_configuration_acceptance_is_complete_and_ordered() ->
     assert verifier.index("$restartedBackendPort = Get-DesktopBackendPort") < verifier.index(
         "WINDOWS_INSTALLED_CONFIG_MASKED_RESTART=PASS"
     )
+    masked_restart_start = verifier.index("$failureStage = 'installed_config_masked_restart'")
+    masked_restart_end = verifier.index("WINDOWS_INSTALLED_CONFIG_MASKED_RESTART=PASS")
+    masked_restart_segment = verifier[masked_restart_start:masked_restart_end]
+    assert "?include_schema=true" in masked_restart_segment
+    assert "?include_schema=false" not in masked_restart_segment
     assert "node $fakeCredentialScanner" in verifier
     assert "--path $acceptanceRoot" in verifier
     assert "--path $diagnosticRoot" in verifier

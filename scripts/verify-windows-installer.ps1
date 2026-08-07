@@ -1489,7 +1489,7 @@ try {
   Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
   $restartedConfig = Invoke-PP02LocalJsonRequest `
     -Method 'GET' `
-    -Uri "$backendBaseUrl/api/v1/system/config?include_schema=false" `
+    -Uri "$backendBaseUrl/api/v1/system/config?include_schema=true" `
     -TimeoutSeconds 30
   $expectedPublicValues = [ordered]@{
     GENERATION_BACKEND = 'codex_cli'
