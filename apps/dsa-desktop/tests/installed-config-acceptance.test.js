@@ -115,11 +115,13 @@ test('installed smoke failure preserves only sanitized diagnostic evidence', () 
   assert.match(verifierSource, /mock_exit_code=/);
   assert.match(verifierSource, /stdout_marker_matched=/);
   assert.match(verifierSource, /stderr_whitespace_only=/);
+  const mockProcessStart = verifierSource.indexOf('$mockProcess = Start-Process');
+  const mockHandleCache = verifierSource.indexOf('$null = $mockProcess.Handle');
+  const mockExitWait = verifierSource.indexOf('$mockProcess.WaitForExit(20000)');
+  assert.ok(mockProcessStart >= 0);
+  assert.ok(mockHandleCache > mockProcessStart);
+  assert.ok(mockExitWait > mockHandleCache);
   assert.match(
-    verifierSource,
-    /\$null -ne \$mockExitCode -and\s+\[int\]\$mockExitCode -ne 0/,
-  );
-  assert.doesNotMatch(
     verifierSource,
     /\$null -eq \$mockExitCode -or\s+\[int\]\$mockExitCode -ne 0/,
   );

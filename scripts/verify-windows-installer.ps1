@@ -1328,6 +1328,7 @@ try {
     -RedirectStandardOutput $acceptanceMockStdout `
     -RedirectStandardError $acceptanceMockStderr `
     -PassThru
+  $null = $mockProcess.Handle
   $mockReadyDeadline = (Get-Date).AddSeconds(20)
   do {
     $mockProcess.Refresh()
@@ -1661,8 +1662,8 @@ try {
       "stderr_whitespace_only=$mockStderrWhitespaceOnly",
       "stderr_char_count=$($mockStderrNormalized.Length)"
     ) -join [Environment]::NewLine)
-  if (($null -ne $mockExitCode -and
-       [int]$mockExitCode -ne 0) -or
+  if ($null -eq $mockExitCode -or
+      [int]$mockExitCode -ne 0 -or
       -not $mockStdoutMarkerMatched -or
       -not $mockStderrWhitespaceOnly) {
     foreach ($mockDiagnostic in @(
