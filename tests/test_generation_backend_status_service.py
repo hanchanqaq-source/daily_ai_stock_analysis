@@ -47,6 +47,30 @@ class _PassingBackend:
         return SimpleNamespace(text=text)
 
 
+class _UnsafeConfigBackend:
+    def generate(self, *_args, **_kwargs):
+        raise GenerationError(
+            error_code=GenerationErrorCode.UNSAFE_CONFIG,
+            stage="configuration",
+            retryable=False,
+            fallbackable=False,
+            backend="litellm",
+            details={
+                "field": "LLM_AIHUBMIX_API_KEY",
+                "reason": "masked_secret_not_reusable",
+                "secret": "must-never-reach-diagnostics",
+            },
+        )
+
+
+class _UnsafeConfigAnalyzer:
+    def __init__(self, _config):
+        pass
+
+    def _get_generation_backend(self, _backend_id):
+        return _UnsafeConfigBackend()
+
+
 class _CapturingAnalyzer:
     configs = []
 
@@ -140,6 +164,25 @@ def test_local_cli_smoke_failure_keeps_available_true_when_cheap_check_passes() 
     assert status["health_status"] == "failed"
     assert status["last_error_code"] == "invalid_json"
     assert status["supports_tools"] is False
+
+
+def test_smoke_failure_logs_only_safe_error_classification(caplog) -> None:
+    service = GenerationBackendStatusService(
+        effective_map=_litellm_effective_map(),
+        analyzer_factory=lambda config: _UnsafeConfigAnalyzer(config),
+    )
+    caplog.set_level(logging.WARNING, logger="src.services.generation_backend_status_service")
+
+    payload = service.smoke_test(backend_id="litellm", mode="json")
+
+    assert payload["success"] is False
+    logged_text = "\n".join(record.getMessage() for record in caplog.records)
+    assert "code=unsafe_config" in logged_text
+    assert "stage=configuration" in logged_text
+    assert "backend=litellm" in logged_text
+    assert "field=LLM_AIHUBMIX_API_KEY" in logged_text
+    assert "reason=masked_secret_not_reusable" in logged_text
+    assert "must-never-reach-diagnostics" not in logged_text
 
 
 def test_smoke_timeout_overrides_config_timeout_for_local_cli() -> None:

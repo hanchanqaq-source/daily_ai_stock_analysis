@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import re
 from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
@@ -53,6 +55,16 @@ from src.llm.local_cli_backend import (
 )
 
 HealthStatus = str
+
+logger = logging.getLogger(__name__)
+
+_SAFE_DIAGNOSTIC_TOKEN = re.compile(r"^[A-Za-z0-9_.:-]{1,96}$")
+
+
+def _safe_diagnostic_token(value: Any) -> str:
+    """Return a bounded identifier for logs without exposing config values."""
+    text = str(value or "").strip()
+    return text if _SAFE_DIAGNOSTIC_TOKEN.fullmatch(text) else "<redacted>"
 
 
 @dataclass(frozen=True)
@@ -269,6 +281,15 @@ class GenerationBackendStatusService:
             )
             self._run_smoke(request)
         except GenerationError as exc:
+            logger.warning(
+                "Generation backend smoke failed "
+                "(code=%s stage=%s backend=%s field=%s reason=%s)",
+                _safe_diagnostic_token(_as_error_code(exc.error_code)),
+                _safe_diagnostic_token(exc.stage),
+                _safe_diagnostic_token(exc.backend),
+                _safe_diagnostic_token(exc.details.get("field")),
+                _safe_diagnostic_token(exc.details.get("reason") or exc.details.get("code")),
+            )
             failed_backend_id = str(
                 exc.details.get("requested_backend")
                 or exc.backend
