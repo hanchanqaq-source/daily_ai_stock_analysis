@@ -130,7 +130,14 @@ test('installed smoke failure preserves only sanitized diagnostic evidence', () 
   assert.match(verifierSource, /config-export-summary\.txt/);
   assert.match(verifierSource, /credentials_excluded=/);
   assert.match(verifierSource, /config_version_matched=/);
-  assert.match(verifierSource, /credential_key_name_absent=/);
+  assert.match(verifierSource, /credential_assignment_absent=/);
+  assert.ok(verifierSource.includes(
+    String.raw`-notmatch '(?m)^\s*(?:export\s+)?LLM_AIHUBMIX_API_KEY\s*='`,
+  ));
+  assert.doesNotMatch(
+    verifierSource,
+    /-notmatch 'LLM_AIHUBMIX_API_KEY'/,
+  );
   assert.doesNotMatch(verifierSource, /config_export_content=/);
 
   const serverSource = fs.readFileSync(

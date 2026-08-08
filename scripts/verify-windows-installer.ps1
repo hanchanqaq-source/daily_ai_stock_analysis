@@ -1705,8 +1705,8 @@ try {
     [string]$configExportResult.config_version -eq
       [string]$restartedConfig.config_version
   )
-  $configExportCredentialKeyNameAbsent = (
-    [string]$configExportResult.content -notmatch 'LLM_AIHUBMIX_API_KEY'
+  $configExportCredentialAssignmentAbsent = (
+    [string]$configExportResult.content -notmatch '(?m)^\s*(?:export\s+)?LLM_AIHUBMIX_API_KEY\s*='
   )
   Set-ProtectedDiagnosticContent `
     -Path (Join-Path $diagnosticRoot 'config-export-summary.txt') `
@@ -1714,11 +1714,11 @@ try {
       'WINDOWS_INSTALLED_CONFIG_EXPORT=OBSERVED',
       "credentials_excluded=$configExportCredentialsExcluded",
       "config_version_matched=$configExportVersionMatched",
-      "credential_key_name_absent=$configExportCredentialKeyNameAbsent"
+      "credential_assignment_absent=$configExportCredentialAssignmentAbsent"
     ) -join [Environment]::NewLine)
   if (-not $configExportCredentialsExcluded -or
       -not $configExportVersionMatched -or
-      -not $configExportCredentialKeyNameAbsent) {
+      -not $configExportCredentialAssignmentAbsent) {
     throw 'Installed configuration export did not exclude credentials.'
   }
   $null = Invoke-PP02LocalJsonRequest `
