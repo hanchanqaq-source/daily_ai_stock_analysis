@@ -1,4 +1,51 @@
-# WORK-030 | Defender intelligence bounded retry and diagnostics return
+# WORK-032 | P002 final usability closure return
+
+## Work32 current evidence
+
+```text
+BASE=295821e463674e9f82a79a75a0a13052ef1cb696
+BRANCH=agent/pp02-work32-final-usability-closure
+IMPLEMENTATION_HEAD=3a768d4143d6ceac9225759318b3c8f24cf778d2
+ROOT_CAUSE_WINDOWS=THREE_UNBOUNDED_LIFECYCLE_PROCESS_WAITS
+ROOT_CAUSE_CONFIG=BACKEND_CONTENT_GENERATION_COMPARED_TO_DESKTOP_MTIME_GENERATION
+LOCAL_DESKTOP=PASS_136_OF_136
+LOCAL_WEB=PASS_1081_OF_1083_WITH_2_SKIPPED
+LOCAL_PYTHON_ACTIONS=PASS_28_OF_28_DIRECT_NO_FIXTURE_CONTRACTS
+LOCAL_AUXILIARY=PASS_LINT_BUILD_YAML_VERSION_AI_ASSETS_NODE_SYNTAX_DIFF_AND_SCOPE_SECURITY_BOUNDARIES
+POWERSHELL_LOCAL=UNAVAILABLE_REMOTE_WINDOWS_AUTHORITATIVE
+DRAFT_PR=PENDING
+REMOTE_CI=PENDING
+DEFENDER=PENDING
+CANDIDATE=PENDING
+JUDGE=ACTIVE_DRAFT_HOLD
+```
+
+- Added one shared bounded Windows process runner for install, normal uninstall,
+  cleanup uninstall, and the installed DPAPI harness. Timeout records a safe
+  stage marker, kills only the owned process tree, and throws. CI and release
+  lifecycle steps have a finite outer watchdog followed immediately by
+  unconditional diagnostics upload.
+- Corrected Desktop secure-credential commit to validate the backend's canonical
+  content generation and then preserve the existing vault generation format.
+  The IPC regression test proves the old generation is rejected as the API
+  response and the canonical backend generation commits the encrypted vault.
+- Added an installed Windows acceptance sequence using only a deterministic
+  exact-Head synthetic key and verifier-owned `RUNNER_TEMP` roots. The key is not
+  supplied through an environment variable or written to logs/receipts. The
+  chain requires public config persistence, real DPAPI ciphertext, masked reload,
+  an authenticated loopback LiteLLM smoke request, credential-free exports,
+  plaintext scans, and one normal uninstall.
+- The initial parallel Web run was invalidated by resource contention and had
+  four existing async-test failures. The failing file then passed `59/59`, and a
+  serialized complete rerun passed `1081` with `2` expected skips; lint and build
+  also passed. The invalid run is not counted as evidence.
+- No real credential, user data, dependency lock, product version, schema, Ready,
+  merge, Tag or Release action occurred. Remote hard gates remain pending, so
+  Work32 does not yet claim usability.
+
+---
+
+# Historical return | WORK-030 / Defender intelligence bounded retry and diagnostics return
 
 ## Work30 current evidence
 
@@ -15,12 +62,12 @@ TDD_RED=DEFENDER_16_PASS_3_EXPECTED_FAIL_WORKFLOW_1_EXPECTED_FAIL
 TDD_GREEN=DEFENDER_21_OF_21_WORKFLOW_CONTRACT_PASS
 FINAL_FULL_LOCAL=DEFENDER_21_OF_21_DESKTOP_131_OF_131_PYTHON_ACTIONS_24_OF_24_YAML_VERSION_AI_ASSETS_DIFF_DEPENDENCY_DATA_BOUNDARIES_PASS
 REVIEW=PASS_NO_CRITICAL_OR_IMPORTANT_PRIOR_TEST_AND_STATUS_GAPS_VERIFIED_CLOSED
-DRAFT_PR=29_OPEN_DRAFT
+DRAFT_PR=29_MERGED
 INITIAL_REMOTE_HEAD=97109cce18ce54c8e9f59cd26df5780b5a98f575
 INITIAL_REMOTE_TREE=1bc32852d84e85dddabb4932209381be8b4b41ed_LOCAL_REVIEWED_TREE_MATCH
 INITIAL_REMOTE_CI=RUN_31194859300_PASS_7_SUCCESS_1_WEB_PATH_SKIPPED_WINDOWS_LIFECYCLE_PASS
-STATUS_SYNC=THIS_DOCS_ONLY_HEAD_FINAL_EXACT_HEAD_CI_PENDING
-JUDGE=ACTIVE_DRAFT_HOLD
+STATUS_SYNC=MERGED_TO_MAIN_295821E463674E9F82A79A75A0A13052EF1CB696
+JUDGE=SUPERSEDED_BY_WORK32_AFTER_MAIN_CI_WINDOWS_HANG
 ```
 
 - Formal release Run `31191357654` built the Windows artifacts but stopped

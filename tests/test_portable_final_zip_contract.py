@@ -87,7 +87,7 @@ def test_windows_ci_smokes_the_final_extracted_portable_zip() -> None:
     assert "Expand-Archive -LiteralPath $portableZip -DestinationPath $candidateExtract" in verifier
     assert "--path $candidateExtract" in verifier
     assert verifier.index("--path $candidateExtract") < verifier.index(
-        "$installProcess = Start-Process -FilePath $installer"
+        "$installProcess = Invoke-PP02BoundedProcess"
     )
 
 

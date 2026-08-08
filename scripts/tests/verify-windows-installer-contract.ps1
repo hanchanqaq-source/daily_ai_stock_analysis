@@ -11,8 +11,20 @@ if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
 
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $verifier = Join-Path $repoRoot 'scripts/verify-windows-installer.ps1'
-if (-not (Test-Path -LiteralPath $verifier -PathType Leaf)) {
-  throw 'Windows installer verifier script is missing.'
+$boundedProcessHelper = Join-Path $repoRoot 'scripts/windows-bounded-process.ps1'
+$installedConfigMock = Join-Path `
+  $repoRoot 'apps/dsa-desktop/tests/installed-config-smoke-server.js'
+$installedConfigVaultHarness = Join-Path `
+  $repoRoot 'apps/dsa-desktop/tests/windows-installed-config-vault-harness.js'
+foreach ($requiredVerifierFile in @(
+  $verifier,
+  $boundedProcessHelper,
+  $installedConfigMock,
+  $installedConfigVaultHarness
+)) {
+  if (-not (Test-Path -LiteralPath $requiredVerifierFile -PathType Leaf)) {
+    throw 'Windows installer verifier contract source is missing.'
+  }
 }
 
 $fixtureRoot = Join-Path ([IO.Path]::GetTempPath()) (
@@ -126,6 +138,106 @@ try {
     -LiteralPath $fakePortableChecksum `
     -Value "$portableHash  $(Split-Path -Leaf $fakePortableZip)" `
     -Encoding ASCII
+
+  $verifierText = Get-Content -LiteralPath $verifier -Raw
+  foreach ($installedAcceptanceContract in @(
+    '/api/v1/system/config/validate',
+    '/api/v1/system/config/generation-backends/smoke-test',
+    '/api/v1/system/full-data-backup/export',
+    'WINDOWS_INSTALLED_USER_DATA_ISOLATION=PASS',
+    'smoke-response-sanitized.json',
+    'mock-stdout-sanitized.log',
+    'mock-stderr-sanitized.log',
+    'receipt_exists',
+    'WINDOWS_INSTALLED_CONFIG_MASKED_RESTART=PASS',
+    'WINDOWS_INSTALLED_CONFIG_LEAKAGE_SCAN=PASS'
+  )) {
+    if (-not $verifierText.Contains($installedAcceptanceContract)) {
+      throw 'Installed configuration acceptance verifier contract is incomplete.'
+    }
+  }
+  if (-not $verifierText.Contains('pp02-r37-[0-9a-f]{64}')) {
+    throw 'Installed configuration synthetic credential diagnostics are not redacted.'
+  }
+  if (([regex]::Matches($verifierText, '--user-data-dir=')).Count -ne 2 -or
+      $verifierText.Contains(
+        'Get-ChildItem -LiteralPath $acceptanceAppData -Directory'
+      )) {
+    throw 'Installed configuration userData isolation contract is incomplete.'
+  }
+  Write-Output 'WINDOWS_INSTALLED_CONFIG_ACCEPTANCE_CONTRACT=PASS'
+
+  $contractStage = 'bounded_process_helper'
+  . $boundedProcessHelper
+  $powerShell = (Get-Process -Id $PID).Path
+  $boundedStageReport = Join-Path $fixtureRoot 'bounded-process-stage-report.txt'
+  Set-Content `
+    -LiteralPath $boundedStageReport `
+    -Value 'WINDOWS_BOUNDED_PROCESS_STAGE_REPORT=AVAILABLE' `
+    -Encoding UTF8
+  $boundedSuccess = Invoke-PP02BoundedProcess `
+    -FilePath $powerShell `
+    -ArgumentList @('-NoLogo', '-NoProfile', '-NonInteractive', '-Command', 'exit 0') `
+    -TimeoutSeconds 10 `
+    -Stage 'bounded_process_success' `
+    -StageReportPath $boundedStageReport
+  if ($boundedSuccess.ExitCode -ne 0) {
+    throw 'Bounded process rejected a successful child.'
+  }
+  Write-Output 'WINDOWS_BOUNDED_PROCESS_SUCCESS_CONTRACT=PASS'
+
+  $timeoutPidPath = Join-Path $fixtureRoot 'bounded-process-timeout.pid'
+  $escapedTimeoutPidPath = $timeoutPidPath.Replace("'", "''")
+  $timeoutScript = "`$PID | Set-Content -LiteralPath '$escapedTimeoutPidPath'; Start-Sleep -Seconds 30"
+  $timeoutEncoded = [Convert]::ToBase64String(
+    [Text.Encoding]::Unicode.GetBytes($timeoutScript)
+  )
+  $boundedTimedOut = $false
+  try {
+    Invoke-PP02BoundedProcess `
+      -FilePath $powerShell `
+      -ArgumentList @('-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', $timeoutEncoded) `
+      -TimeoutSeconds 1 `
+      -Stage 'bounded_process' `
+      -StageReportPath $boundedStageReport | Out-Null
+  }
+  catch {
+    $boundedTimedOut = $_.Exception.Message.Contains('exceeded its bounded timeout')
+  }
+  if (-not $boundedTimedOut) {
+    throw 'Bounded process did not reject a timed-out child.'
+  }
+  if (-not (Test-Path -LiteralPath $timeoutPidPath -PathType Leaf)) {
+    throw 'Bounded process timeout fixture did not record its child PID.'
+  }
+  $timeoutProcessId = [int](Get-Content -LiteralPath $timeoutPidPath -Raw).Trim()
+  if (Get-Process -Id $timeoutProcessId -ErrorAction SilentlyContinue) {
+    throw 'Bounded process leaked its timed-out child.'
+  }
+  $boundedStageText = Get-Content -LiteralPath $boundedStageReport -Raw
+  if (-not $boundedStageText.Contains('bounded_process status=TIMEOUT')) {
+    throw 'Bounded process did not preserve its timeout stage evidence.'
+  }
+  Write-Output 'WINDOWS_BOUNDED_PROCESS_TIMEOUT_CONTRACT=PASS'
+
+  $invalidTimeoutRejected = $false
+  try {
+    Invoke-PP02BoundedProcess `
+      -FilePath $powerShell `
+      -TimeoutSeconds 0 `
+      -Stage 'bounded_process_invalid' `
+      -StageReportPath $boundedStageReport | Out-Null
+  }
+  catch {
+    $invalidTimeoutRejected = $_.Exception.Message.Contains(
+      'TimeoutSeconds must be between 1 and 1800'
+    )
+  }
+  if (-not $invalidTimeoutRejected) {
+    throw 'Bounded process accepted an invalid timeout.'
+  }
+  Write-Output 'WINDOWS_BOUNDED_PROCESS_INVALID_TIMEOUT_CONTRACT=PASS'
+
   $fakeMalwareScannerSource = @'
 'use strict';
 const fs = require('node:fs');
@@ -159,7 +271,6 @@ fs.writeFileSync(report, JSON.stringify({ status: 'PASS', head, targets }, null,
   }
 
   $contractStage = 'owned_process_helper'
-  $powerShell = (Get-Process -Id $PID).Path
   $helperSource = Join-Path $repoRoot 'apps/dsa-desktop/windows/close-owned-processes.ps1'
   $manifestSource = Join-Path $repoRoot 'apps/dsa-desktop/windows/owned-processes.json'
   foreach ($requiredSource in @($helperSource, $manifestSource)) {

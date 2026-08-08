@@ -1,4 +1,58 @@
-# WORK-030 | bounded Defender intelligence retry and diagnostic upload repair
+# WORK-032 | P002 final usability closure
+
+## Work32 authorization and execution contract
+
+```text
+WORK_ID=WORK-032
+WORK_STATE=LOCAL_HARD_GATES_PASS_REMOTE_GATES_PENDING
+BASE=295821e463674e9f82a79a75a0a13052ef1cb696
+BRANCH=agent/pp02-work32-final-usability-closure
+SOURCE_VERSION=3.29.5
+FORMAL_RELEASE_VERSION=3.29.4
+IMPLEMENTATION_HEAD=3a768d4143d6ceac9225759318b3c8f24cf778d2
+DRAFT_PR=PENDING
+JUDGE=ACTIVE_DRAFT_HOLD
+```
+
+### Root causes and selected design
+
+- Main Run `31211548666` did not terminate because the three external Windows
+  lifecycle entry points used unbounded waits. Put each owned child behind a
+  finite timeout, record a sanitized stage result, terminate only its process
+  tree on timeout, and keep an outer step watchdog so `if: always()` diagnostics
+  can continue.
+- The backend returns `sha256:<hash(presence marker + bytes)>` after saving
+  configuration, but Desktop secure commit compared that value to
+  `<mtimeNs>:<content hash>`. Compare the response with the backend algorithm,
+  then bind DPAPI vault compatibility to the existing mtime generation.
+- Prove the installed chain with exact-Head synthetic material only: validate and
+  save fresh AIHubMix public fields, commit through real Windows `safeStorage`,
+  restart, require masked persistence, make a real LiteLLM request to a bounded
+  loopback OpenAI-compatible server, export configuration/full backup, scan for
+  plaintext, and complete one normal uninstall.
+
+### Required hard gates
+
+1. Local Desktop/Web/Python/Actions, lint/build/YAML/version/governance/syntax,
+   diff and boundary audits must pass without dependency/version/schema changes.
+2. One exact Draft PR Head must run every applicable native CI Job; a path skip
+   is not acceptance.
+3. Windows must pass verifier contracts, build, Defender candidate and installed
+   scans, install/start/save/DPAPI/restart/smoke/export/leakage/uninstall, and
+   always-uploaded diagnostics.
+4. Candidate artifacts and Defender evidence must bind to that same Head and
+   cross-check by member identity and SHA-256 before any usability statement.
+
+### Scope and stop gates
+
+- Authorized: scoped commits, push, one Draft PR, exact-Head CI, safe-candidate
+  validation and in-scope failure repair.
+- Forbidden: reading a real API key, touching user data, dependencies, versions
+  or schema, expanding product scope, Ready, merge, direct `main`, Tag or Release.
+
+---
+
+# Historical contract | WORK-030 / bounded Defender intelligence retry and diagnostic upload repair
 
 ## Work30 authorization and execution contract
 

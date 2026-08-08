@@ -1003,6 +1003,16 @@ function getEnvFileVersion(envPath, fsImpl = fs) {
   return `${stat.mtimeNs}:${contentHash}`;
 }
 
+function getBackendConfigVersion(envPath, fsImpl = fs) {
+  const exists = fsImpl.existsSync(envPath);
+  const marker = Buffer.from(exists ? 'present\0' : 'missing\0', 'utf8');
+  const content = exists ? fsImpl.readFileSync(envPath) : Buffer.alloc(0);
+  const digest = crypto.createHash('sha256')
+    .update(Buffer.concat([marker, content]))
+    .digest('hex');
+  return `sha256:${digest}`;
+}
+
 function getDesktopBackendOrigin(runtime = activeBackendRuntime) {
   if (!runtime || !runtime.connectHost || !Number.isInteger(Number(runtime.port))) {
     return null;
@@ -1592,6 +1602,10 @@ function __setBackendProcessForTest(processRef = null) {
   backendProcess = processRef;
 }
 
+function __setActiveBackendRuntimeForTest(runtime = null) {
+  activeBackendRuntime = runtime;
+}
+
 function clearBackendProcessIfCurrent(processRef) {
   if (backendProcess === processRef) {
     backendProcess = null;
@@ -2149,11 +2163,12 @@ ipcMain.handle('desktop:commit-secure-credential-update', (event, payload = {}) 
   if (!activeBackendRuntime) {
     throw new SecureCredentialError('transaction_invalid');
   }
-  const currentConfigVersion = getEnvFileVersion(activeBackendRuntime.envFile);
-  if (payload.configVersion !== currentConfigVersion) {
+  const currentBackendConfigVersion = getBackendConfigVersion(activeBackendRuntime.envFile);
+  if (payload.configVersion !== currentBackendConfigVersion) {
     throw new SecureCredentialError('vault_config_mismatch');
   }
-  ensureCredentialVault().commit(payload.transactionId, currentConfigVersion);
+  const vaultConfigVersion = getEnvFileVersion(activeBackendRuntime.envFile);
+  ensureCredentialVault().commit(payload.transactionId, vaultConfigVersion);
   return { committed: true };
 });
 
@@ -2467,6 +2482,7 @@ module.exports = {
   resolveBackendBindHost,
   resolveDesktopConnectHost,
   restorePackagedRuntimeStateFromBackup,
+  getBackendConfigVersion,
   getEnvFileVersion,
   isAllowedDesktopNavigation,
   isTrustedSecureCredentialSender,
@@ -2481,6 +2497,7 @@ module.exports = {
   __getBackendProcessForTest() {
     return backendProcess;
   },
+  __setActiveBackendRuntimeForTest,
   __setBackendProcessForTest,
   __setMainWindowForTest(mainWindowRef = null) {
     mainWindow = mainWindowRef;

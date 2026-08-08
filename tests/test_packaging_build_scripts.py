@@ -217,10 +217,10 @@ def test_windows_workflows_fail_closed_on_defender_before_upload_or_release() ->
     assert verifier.count("node $malwareScanner") == 2
     assert "[string]$malwareResult.head -ne $expectedHead" in verifier
     assert verifier.index("candidate_payload_defender_scan") < verifier.index(
-        "$installProcess = Start-Process -FilePath $installer"
+        "$installProcess = Invoke-PP02BoundedProcess"
     )
     assert verifier.index("installed_payload_defender_scan") < verifier.index(
-        "$appProcess = Start-Process -FilePath $appExe"
+        "$failureStage = 'installed_app_startup'"
     )
     for evidence_marker in (
         "EXTERNAL_PREINSTALL_EVIDENCE_VALIDATION=PASS",
@@ -545,6 +545,61 @@ def test_windows_jobs_upload_diagnostics_even_after_lifecycle_failure() -> None:
         )
 
 
+def test_windows_lifecycle_external_processes_and_step_watchdogs_are_bounded() -> None:
+    verifier = _read_text(
+        REPO_ROOT / "scripts" / "verify-windows-installer.ps1"
+    )
+    bounded_process = _read_text(
+        REPO_ROOT / "scripts" / "windows-bounded-process.ps1"
+    )
+    contract = _read_text(
+        REPO_ROOT
+        / "scripts"
+        / "tests"
+        / "verify-windows-installer-contract.ps1"
+    )
+    ci = _read_text(REPO_ROOT / ".github" / "workflows" / "ci.yml")
+    release = _read_text(
+        REPO_ROOT / ".github" / "workflows" / "desktop-release.yml"
+    )
+
+    assert "[int]$InstallTimeoutSeconds = 300" in verifier
+    assert "[int]$UninstallTimeoutSeconds = 300" in verifier
+    assert "InstallTimeoutSeconds must be between 1 and 1800" in verifier
+    assert "UninstallTimeoutSeconds must be between 1 and 1800" in verifier
+    assert ". 'scripts/windows-bounded-process.ps1'" not in verifier
+    assert "windows-bounded-process.ps1" in verifier
+    assert "- 'scripts/windows-bounded-process.ps1'" in ci
+    assert verifier.count("Invoke-PP02BoundedProcess") == 4
+    assert "-TimeoutSeconds $InstallTimeoutSeconds" in verifier
+    assert verifier.count("-TimeoutSeconds $UninstallTimeoutSeconds") == 2
+    assert "Start-Process -FilePath $installer" not in verifier
+    assert "Start-Process -FilePath $uninstaller" not in verifier
+
+    assert "function Invoke-PP02BoundedProcess" in bounded_process
+    assert ".WaitForExit($TimeoutSeconds * 1000)" in bounded_process
+    assert "status=TIMEOUT" in bounded_process
+    assert "taskkill.exe /PID $process.Id /T /F" in bounded_process
+    assert "RedirectStandardOutput" not in bounded_process
+    assert "RedirectStandardError" not in bounded_process
+
+    assert "WINDOWS_BOUNDED_PROCESS_SUCCESS_CONTRACT=PASS" in contract
+    assert "WINDOWS_BOUNDED_PROCESS_TIMEOUT_CONTRACT=PASS" in contract
+    assert "bounded_process status=TIMEOUT" in contract
+    assert "bounded process leaked" in contract.lower()
+
+    for workflow in (ci, release):
+        lifecycle_start = workflow.index("Validate installed Windows lifecycle")
+        upload_start = workflow.index(
+            "Upload Windows installer diagnostics", lifecycle_start
+        )
+        lifecycle_step = workflow[lifecycle_start:upload_start]
+        assert "timeout-minutes: 25" in lifecycle_step
+        assert "-InstallTimeoutSeconds 300" in lifecycle_step
+        assert "-UninstallTimeoutSeconds 300" in lifecycle_step
+        assert "if: always()" in workflow[upload_start:]
+
+
 def test_windows_installer_validates_exit_restart_before_uninstall() -> None:
     verifier = _read_text(
         REPO_ROOT / "scripts" / "verify-windows-installer.ps1"
@@ -579,6 +634,125 @@ def test_windows_installer_validates_exit_restart_before_uninstall() -> None:
         verifier.index(restart):verifier.index(live_uninstall)
     ]
     assert "Stop-StartedProcessTree -Process $appProcess" not in live_segment
+    evidence_wait = "$ownedProcessEvidenceDeadline = (Get-Date).AddSeconds(30)"
+    evidence_parse = "$ownedProcessEvidence = Get-Content"
+    evidence_timeout = "Official uninstaller did not preserve owned-process helper evidence within 30 seconds."
+    for contract_text in (evidence_wait, evidence_parse, evidence_timeout):
+        assert contract_text in live_segment
+    assert live_segment.index(evidence_wait) < live_segment.index(evidence_parse)
+    assert live_segment.index(evidence_parse) < live_segment.index(evidence_timeout)
+    evidence_segment = live_segment[
+        live_segment.index(evidence_wait):live_segment.index(evidence_timeout)
+    ]
+    assert "Start-Sleep -Milliseconds 100" in evidence_segment
+    assert "ConvertFrom-Json -ErrorAction Stop" in evidence_segment
+
+
+def test_windows_installed_configuration_acceptance_is_complete_and_ordered() -> None:
+    verifier = _read_text(
+        REPO_ROOT / "scripts" / "verify-windows-installer.ps1"
+    )
+    contract = _read_text(
+        REPO_ROOT
+        / "scripts"
+        / "tests"
+        / "verify-windows-installer-contract.ps1"
+    )
+    package = json.loads(
+        _read_text(REPO_ROOT / "apps" / "dsa-desktop" / "package.json")
+    )
+
+    for source_path in (
+        "apps/dsa-desktop/tests/installed-config-smoke-server.js",
+        "apps/dsa-desktop/tests/windows-installed-config-vault-harness.js",
+    ):
+        assert source_path in verifier
+    assert package["scripts"]["test:windows-installed-config-vault"] == (
+        "electron tests/windows-installed-config-vault-harness.js"
+    )
+
+    required_fields = (
+        "GENERATION_BACKEND",
+        "codex_cli",
+        "GENERATION_FALLBACK_BACKEND",
+        "litellm",
+        "LLM_CHANNELS",
+        "aihubmix",
+        "LLM_AIHUBMIX_PROTOCOL",
+        "LLM_AIHUBMIX_BASE_URL",
+        "LLM_AIHUBMIX_API_KEY",
+        "LLM_AIHUBMIX_MODELS",
+        "LITELLM_MODEL",
+        "LITELLM_FALLBACK_MODELS",
+        "AGENT_LITELLM_MODEL",
+    )
+    for value in required_fields:
+        assert value in verifier
+
+    for endpoint in (
+        "/api/v1/system/config/validate",
+        "/api/v1/system/config",
+        "/api/v1/system/config/generation-backends/smoke-test",
+        "/api/v1/system/config/export",
+        "/api/v1/system/full-data-backup/export",
+    ):
+        assert endpoint in verifier
+
+    ordered_markers = (
+        "WINDOWS_INSTALLED_APP_STARTUP_VALIDATION=PASS",
+        "WINDOWS_INSTALLED_USER_DATA_ISOLATION=PASS",
+        "WINDOWS_INSTALLED_CONFIG_VALIDATION=PASS",
+        "WINDOWS_INSTALLED_CONFIG_SAVE=PASS",
+        "WINDOWS_INSTALLED_CONFIG_VAULT=PASS",
+        "WINDOWS_INSTALLED_APP_RESTART_VALIDATION=PASS",
+        "WINDOWS_INSTALLED_CONFIG_MASKED_RESTART=PASS",
+        "WINDOWS_INSTALLED_CONFIG_SMOKE=PASS",
+        "WINDOWS_INSTALLED_CONFIG_EXPORTS=PASS",
+        "WINDOWS_INSTALLED_CONFIG_LEAKAGE_SCAN=PASS",
+        "WINDOWS_UNINSTALL_LIVE_PROCESS_VALIDATION=PASS",
+    )
+    positions = [verifier.index(marker) for marker in ordered_markers]
+    assert positions == sorted(positions)
+
+    assert "DSA_CONFIG_ACCEPTANCE_FAKE_CREDENTIAL" not in verifier
+    assert "DSA_CONFIG_ACCEPTANCE_HEAD" in verifier
+    assert "DSA_CONFIG_ACCEPTANCE_USER_DATA" in verifier
+    assert "pp02-r37-[0-9a-f]{64}" in verifier
+    assert "authorizationMatched" in verifier
+    assert "credentials_excluded" in verifier
+    assert "$acceptanceUserData = Join-Path $acceptanceRoot 'user-data'" in verifier
+    assert verifier.count("--user-data-dir=") == 2
+    assert "$acceptanceUserData = $null" not in verifier
+    assert (
+        "Get-ChildItem -LiteralPath $acceptanceAppData -Directory"
+        not in verifier
+    )
+    assert "[IO.FileAttributes]::ReparsePoint" in verifier
+    assert "$desktopPackageMetadata" not in verifier
+    assert (
+        "$acceptanceUserData = Join-Path $acceptanceAppData 'PP02 AI Daily Stock Analysis'"
+        not in verifier
+    )
+    assert "Get-DesktopBackendPort -DesktopLines $restartedDesktopLines" in verifier
+    assert verifier.index("$restartedBackendPort = Get-DesktopBackendPort") < verifier.index(
+        "WINDOWS_INSTALLED_CONFIG_MASKED_RESTART=PASS"
+    )
+    masked_restart_start = verifier.index("$failureStage = 'installed_config_masked_restart'")
+    masked_restart_end = verifier.index("WINDOWS_INSTALLED_CONFIG_MASKED_RESTART=PASS")
+    masked_restart_segment = verifier[masked_restart_start:masked_restart_end]
+    assert "?include_schema=true" in masked_restart_segment
+    assert "?include_schema=false" not in masked_restart_segment
+    assert "node $fakeCredentialScanner" in verifier
+    assert "--path $acceptanceRoot" in verifier
+    assert "--path $diagnosticRoot" in verifier
+    for diagnostic_marker in (
+        "smoke-response-sanitized.json",
+        "mock-stdout-sanitized.log",
+        "mock-stderr-sanitized.log",
+        "receipt_exists",
+    ):
+        assert diagnostic_marker in verifier
+    assert "WINDOWS_INSTALLED_CONFIG_ACCEPTANCE_CONTRACT=PASS" in contract
 
 
 def test_windows_signing_interface_is_read_only_and_has_an_explicit_identity_gate() -> None:
@@ -631,6 +805,7 @@ def test_fake_credential_scanner_detects_utf8_and_never_prints_the_value(tmp_pat
     suffix = hashlib.sha256(f"pp02-r37-fake:{head}".encode()).hexdigest()
     fake = f"pp02-r37-{suffix}"
     candidate = tmp_path / "candidate.bin"
+    report = tmp_path / "scan-report.json"
     candidate.write_bytes(b"prefix\x00" + fake.encode("utf-8") + b"\x00suffix")
 
     result = subprocess.run(
@@ -641,6 +816,8 @@ def test_fake_credential_scanner_detects_utf8_and_never_prints_the_value(tmp_pat
             head,
             "--path",
             str(tmp_path),
+            "--report",
+            str(report),
         ],
         text=True,
         capture_output=True,
@@ -651,6 +828,79 @@ def test_fake_credential_scanner_detects_utf8_and_never_prints_the_value(tmp_pat
     assert result.returncode != 0
     assert fake not in self_output
     assert "R3_7_WINDOWS_FAKE_CREDENTIAL_SCAN=FAIL" in self_output
+    report_payload = json.loads(report.read_text(encoding="utf-8"))
+    assert report_payload == {
+        "schemaVersion": 1,
+        "result": "MATCH",
+        "rootIndex": 0,
+        "relativePath": "candidate.bin",
+        "errorCode": "plaintext_match",
+    }
+    assert fake not in report.read_text(encoding="utf-8")
+
+    error_report = tmp_path / "scan-error-report.json"
+    missing_result = subprocess.run(
+        [
+            "node",
+            str(REPO_ROOT / "scripts" / "scan-windows-fake-credential.js"),
+            "--head",
+            head,
+            "--path",
+            str(tmp_path / "missing"),
+            "--report",
+            str(error_report),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert missing_result.returncode != 0
+    assert json.loads(error_report.read_text(encoding="utf-8")) == {
+        "schemaVersion": 1,
+        "result": "ERROR",
+        "rootIndex": 0,
+        "relativePath": ".",
+        "errorCode": "ENOENT",
+    }
+
+    empty_root = tmp_path / "empty-root"
+    empty_root.mkdir()
+    (empty_root / "LOCK").touch()
+    busy_lock_preload = tmp_path / "busy-lock-preload.cjs"
+    busy_lock_preload.write_text(
+        """
+const fs = require('node:fs');
+const originalOpenSync = fs.openSync;
+fs.openSync = function (filePath, ...args) {
+  if (String(filePath).endsWith('LOCK')) {
+    const error = new Error('Synthetic locked zero-byte file.');
+    error.code = 'EBUSY';
+    throw error;
+  }
+  return originalOpenSync.call(this, filePath, ...args);
+};
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    busy_lock_env = os.environ.copy()
+    busy_lock_env["NODE_OPTIONS"] = f"--require={busy_lock_preload}"
+    empty_result = subprocess.run(
+        [
+            "node",
+            str(REPO_ROOT / "scripts" / "scan-windows-fake-credential.js"),
+            "--head",
+            head,
+            "--path",
+            str(empty_root),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+        env=busy_lock_env,
+    )
+    assert empty_result.returncode == 0
+    assert "R3_7_WINDOWS_FAKE_CREDENTIAL_SCAN=PASS" in empty_result.stdout
 
 
 def _write_fake_macos_signature_tools(fake_bin: Path) -> None:

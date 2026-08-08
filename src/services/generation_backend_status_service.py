@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import re
 from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
@@ -53,6 +55,23 @@ from src.llm.local_cli_backend import (
 )
 
 HealthStatus = str
+
+logger = logging.getLogger(__name__)
+
+_SAFE_DIAGNOSTIC_TOKEN = re.compile(r"^[A-Za-z0-9_.:-]{1,96}$")
+
+
+def _safe_diagnostic_token(value: Any) -> str:
+    """Return a bounded identifier for logs without exposing config values."""
+    text = str(value or "").strip()
+    return text if _SAFE_DIAGNOSTIC_TOKEN.fullmatch(text) else "<redacted>"
+
+
+def _safe_generation_error_message(error: GenerationError) -> str:
+    """Describe a structured failure using identifiers only, never detail values."""
+    field = _safe_diagnostic_token(error.details.get("field"))
+    reason = _safe_diagnostic_token(error.details.get("reason") or error.details.get("code"))
+    return f"{error.message} (field={field} reason={reason})"
 
 
 @dataclass(frozen=True)
@@ -160,8 +179,10 @@ def _parse_smoke_timeout(value: Optional[float], *, backend_id: str) -> int:
     )
     if value is None:
         return spec.default
-    if isinstance(value, float) and not value.is_integer():
-        raise _numeric_config_error(backend_id=backend_id, spec=spec, value=value, reason="invalid_integer")
+    if isinstance(value, float):
+        if not value.is_integer():
+            raise _numeric_config_error(backend_id=backend_id, spec=spec, value=value, reason="invalid_integer")
+        value = int(value)
     error = _validate_int_config_value(backend_id=backend_id, value=value, spec=spec)
     if error is not None:
         raise error
@@ -269,6 +290,16 @@ class GenerationBackendStatusService:
             )
             self._run_smoke(request)
         except GenerationError as exc:
+            safe_error_message = _safe_generation_error_message(exc)
+            logger.warning(
+                "Generation backend smoke failed "
+                "(code=%s stage=%s backend=%s field=%s reason=%s)",
+                _safe_diagnostic_token(_as_error_code(exc.error_code)),
+                _safe_diagnostic_token(exc.stage),
+                _safe_diagnostic_token(exc.backend),
+                _safe_diagnostic_token(exc.details.get("field")),
+                _safe_diagnostic_token(exc.details.get("reason") or exc.details.get("code")),
+            )
             failed_backend_id = str(
                 exc.details.get("requested_backend")
                 or exc.backend
@@ -286,10 +317,11 @@ class GenerationBackendStatusService:
                 health_status="failed",
                 error=exc,
             )
+            status["last_error_message"] = safe_error_message
             return {
                 "success": False,
                 "mode": normalized_mode,
-                "message": exc.message,
+                "message": safe_error_message,
                 "status": status,
             }
         except Exception as exc:

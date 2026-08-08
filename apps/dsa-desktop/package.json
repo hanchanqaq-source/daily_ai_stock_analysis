@@ -7,7 +7,8 @@
     "dev": "electron .",
     "build": "electron-builder",
     "test": "node ../../scripts/verify-release-version.js candidate && node --test tests/*.test.js",
-    "test:windows-credentials": "electron tests/windows-secure-credential-harness.js"
+    "test:windows-credentials": "electron tests/windows-secure-credential-harness.js",
+    "test:windows-installed-config-vault": "electron tests/windows-installed-config-vault-harness.js"
   },
   "dependencies": {
     "electron-updater": "^6.8.3",

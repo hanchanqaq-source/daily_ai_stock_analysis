@@ -266,6 +266,7 @@ jobs:
 
       - name: Validate installed Windows lifecycle
         shell: pwsh
+        timeout-minutes: 25
         run: |
           $expectedVersion = $env:RELEASE_TAG.TrimStart('v')
           $installerPath = "apps/dsa-desktop/dist/pp02-ai-daily-stock-analysis-windows-installer-$env:RELEASE_TAG.exe"
@@ -281,6 +282,8 @@ jobs:
             -InstallRoot $installRoot `
             -DiagnosticRoot $diagnosticRoot `
             -ExpectedCommitSha $env:DSA_RELEASE_COMMIT_SHA `
+            -InstallTimeoutSeconds 300 `
+            -UninstallTimeoutSeconds 300 `
             -MalwareScannerPath scripts/windows-defender-scan.js `
             -MalwareReportPath $installedDefenderReport `
             -PreinstallMalwareReportPath $preinstallDefenderReport

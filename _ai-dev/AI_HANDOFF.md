@@ -1,10 +1,34 @@
 # PP02 handoff
 
-## Current takeover entry | WORK-030
+## Current takeover entry | WORK-032
 
 | Item | Current fact |
 | --- | --- |
-| State | `WORK30_DRAFT_PR_OPEN_INITIAL_CI_PASS_STATUS_SYNC_PENDING` |
+| State | `LOCAL_HARD_GATES_PASS_REMOTE_DRAFT_PR_AND_EXACT_HEAD_GATES_PENDING` |
+| Base | `main@295821e463674e9f82a79a75a0a13052ef1cb696` |
+| Branch | `agent/pp02-work32-final-usability-closure` |
+| Prior failure | Main Run `31211548666` passed 7/8 and left the Windows lifecycle Job hanging |
+| Root causes | Installer, normal uninstaller, and cleanup uninstaller used unbounded process waits; Desktop compared the backend content-generation version with a different mtime-based vault generation, so secure commit rejected a valid save |
+| Repair | Bound and terminate all owned lifecycle children, preserve stage diagnostics under an outer step watchdog, compare the backend generation correctly while retaining the legacy vault binding, and add installed save/DPAPI/restart/smoke/export/non-leakage acceptance |
+| Local | Desktop `136/136`; Web `1081 passed / 2 skipped`; Web lint/build; Python/Actions `28/28`; YAML/version/AI-assets/syntax/diff and scope/security boundaries PASS |
+| Remote | One Draft PR, exact-Head full CI, Windows PowerShell contract, Defender, candidate artifacts and hashes are `PENDING` |
+| Judge | `ACTIVE — DRAFT_HOLD`; no usability claim yet |
+| Prohibited | Real API keys, user data, dependencies, versions, schema, Ready, merge, direct `main`, Tag, Release |
+
+Continue only from implementation commit `3a768d4` plus the Work32 truth-sync
+commit. Accept no stale or path-skipped native Job as final evidence. Any failure
+must be repaired within this fixed scope and rerun at the new exact Head. The
+candidate may be called usable only after every required Job, Windows installed
+acceptance, both Defender reports, artifact-to-Head identity, hashes, and leakage
+checks pass. It must still remain unsigned, unpublished, and Draft.
+
+---
+
+## Historical takeover entry | WORK-030
+
+| Item | Current fact |
+| --- | --- |
+| State | `WORK30_MERGED_WORK32_SUPERSEDES_AFTER_MAIN_CI_WINDOWS_HANG` |
 | Base | `main@ed44a6a3dfa366d595eed1a6999e089d65207cbc` |
 | Branch | `agent/pp02-work30-defender-retry` |
 | Failure | Formal release Run `31191357654`, Windows Job `92909068724`: MMPC intelligence update exited `2` before any scan |
@@ -13,16 +37,15 @@
 | TDD | RED: Defender `16 pass / 3 expected fail`, workflow `1 expected fail`; GREEN/review fixes: Defender `21/21`, workflow contract PASS |
 | Local | Final suite: Defender `21/21`, Desktop `131/131`, Python/Actions `24/24`, YAML/version/AI assets/diff/dependency/data boundaries PASS |
 | Review | PASS — no Critical or Important findings; prior test/status gaps verified closed |
-| Draft PR / CI | [#29](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/29) Open Draft; initial Head `97109cce…` Run `31194859300` passed 7 applicable Jobs with Web path-skipped and Windows lifecycle PASS; docs-only status-sync Head CI pending |
-| Judge | `ACTIVE — DRAFT_HOLD` |
+| Draft PR / CI | [#29](https://github.com/hanchanqaq-source/daily_ai_stock_analysis/pull/29) merged as `main@295821e4…`; initial Head Run `31194859300` passed 7 applicable Jobs, while later main Run `31211548666` exposed the Windows lifecycle hang |
+| Judge | `SUPERSEDED BY WORK32` |
 | Prohibited | Ready, merge, direct `main`, Tag, Release, dependencies, database/user data, real credentials |
 
 The repair is deliberately limited to the flaky external intelligence update.
 It never retries a scan, engine-health failure, exclusion failure or malware
 verdict, and it never records Defender stdout/stderr. Exhaustion still fails
-closed before status or scan calls. Independent re-review passed. PR #29 remains
-Draft. The initial reviewed remote tree passed complete applicable CI; the next
-action is to wait for the docs-only status-sync Head's complete CI result.
+closed before status or scan calls. Independent re-review passed. PR #29 later
+merged; main Run `31211548666` exposed the lifecycle hang now owned by Work32.
 
 ---
 

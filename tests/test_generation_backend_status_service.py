@@ -47,6 +47,30 @@ class _PassingBackend:
         return SimpleNamespace(text=text)
 
 
+class _UnsafeConfigBackend:
+    def generate(self, *_args, **_kwargs):
+        raise GenerationError(
+            error_code=GenerationErrorCode.UNSAFE_CONFIG,
+            stage="configuration",
+            retryable=False,
+            fallbackable=False,
+            backend="litellm",
+            details={
+                "field": "LLM_AIHUBMIX_API_KEY",
+                "reason": "masked_secret_not_reusable",
+                "secret": "must-never-reach-diagnostics",
+            },
+        )
+
+
+class _UnsafeConfigAnalyzer:
+    def __init__(self, _config):
+        pass
+
+    def _get_generation_backend(self, _backend_id):
+        return _UnsafeConfigBackend()
+
+
 class _CapturingAnalyzer:
     configs = []
 
@@ -142,6 +166,29 @@ def test_local_cli_smoke_failure_keeps_available_true_when_cheap_check_passes() 
     assert status["supports_tools"] is False
 
 
+def test_smoke_failure_logs_only_safe_error_classification(caplog) -> None:
+    service = GenerationBackendStatusService(
+        effective_map=_litellm_effective_map(),
+        analyzer_factory=lambda config: _UnsafeConfigAnalyzer(config),
+    )
+    caplog.set_level(logging.WARNING, logger="src.services.generation_backend_status_service")
+
+    payload = service.smoke_test(backend_id="litellm", mode="json")
+
+    assert payload["success"] is False
+    logged_text = "\n".join(record.getMessage() for record in caplog.records)
+    response_text = f"{payload['message']} {payload['status']['last_error_message']}"
+    assert "code=unsafe_config" in logged_text
+    assert "stage=configuration" in logged_text
+    assert "backend=litellm" in logged_text
+    assert "field=LLM_AIHUBMIX_API_KEY" in logged_text
+    assert "reason=masked_secret_not_reusable" in logged_text
+    assert "field=LLM_AIHUBMIX_API_KEY" in response_text
+    assert "reason=masked_secret_not_reusable" in response_text
+    for text in (logged_text, response_text):
+        assert "must-never-reach-diagnostics" not in text
+
+
 def test_smoke_timeout_overrides_config_timeout_for_local_cli() -> None:
     _CapturingAnalyzer.configs = []
     service = GenerationBackendStatusService(
@@ -159,6 +206,38 @@ def test_smoke_timeout_overrides_config_timeout_for_local_cli() -> None:
 
     assert payload["success"] is True
     assert _CapturingAnalyzer.configs[-1].generation_backend_timeout_seconds == 1
+
+
+def test_smoke_timeout_accepts_integral_float_from_api_model() -> None:
+    _CapturingAnalyzer.configs = []
+    service = GenerationBackendStatusService(
+        effective_map=_litellm_effective_map(),
+        analyzer_factory=lambda config: _CapturingAnalyzer(config),
+    )
+
+    payload = service.smoke_test(
+        backend_id="litellm",
+        mode="json",
+        timeout_seconds=30.0,
+    )
+
+    assert payload["success"] is True
+    assert _CapturingAnalyzer.configs[-1].generation_backend_timeout_seconds == 30
+
+
+def test_smoke_timeout_still_rejects_fractional_float() -> None:
+    service = GenerationBackendStatusService(effective_map=_litellm_effective_map())
+
+    payload = service.smoke_test(
+        backend_id="litellm",
+        mode="json",
+        timeout_seconds=1.5,
+    )
+
+    assert payload["success"] is False
+    assert payload["status"]["last_error_code"] == "unsafe_config"
+    assert "field=timeout_seconds" in payload["status"]["last_error_message"]
+    assert "reason=invalid_integer" in payload["status"]["last_error_message"]
 
 
 def test_litellm_smoke_timeout_reaches_final_completion_dispatch() -> None:
