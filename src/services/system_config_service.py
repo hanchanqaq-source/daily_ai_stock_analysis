@@ -534,9 +534,9 @@ class SystemConfigService:
             **saved_config_map,
         }
         registered_keys = set(get_registered_field_keys()) - WEB_SETTINGS_HIDDEN_FROM_UI
-        all_keys = set(config_map.keys()) | registered_keys
+        all_keys = set(config_map.keys()) | registered_keys | secure_keys
         if include_schema:
-            all_keys = self._get_schema_config_keys(config_map, registered_keys)
+            all_keys = self._get_schema_config_keys(config_map, registered_keys) | secure_keys
 
         category_orders = {
             item["category"]: item["display_order"]
@@ -556,10 +556,13 @@ class SystemConfigService:
             display_value = self._resolve_display_value(raw_value, field_schema, raw_value_exists)
             is_masked = False
             is_sensitive = bool(field_schema.get("is_sensitive", False)) or is_sensitive_config_key(key)
-            if is_sensitive and display_value:
+            secure_value_exists = key in secure_keys and bool(os.environ.get(key, ""))
+            if secure_value_exists:
                 display_value = mask_token
                 is_masked = True
-            secure_value_exists = key in secure_keys and bool(runtime_config_map.get(key, ""))
+            elif is_sensitive and display_value:
+                display_value = mask_token
+                is_masked = True
             credential_source: Optional[str] = None
             if secure_value_exists:
                 credential_source = self._SECURE_CREDENTIAL_MODE
