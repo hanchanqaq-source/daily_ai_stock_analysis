@@ -34,6 +34,11 @@ function writeJson(filePath, value) {
   });
 }
 
+function safeErrorToken(value, fallback) {
+  const text = String(value || '').trim();
+  return /^[A-Za-z0-9_.:-]{1,96}$/.test(text) ? text : fallback;
+}
+
 async function createAcceptanceServer({
   head,
   receiptPath,
@@ -193,8 +198,12 @@ async function main() {
 }
 
 if (require.main === module) {
-  main().catch(() => {
-    process.stderr.write('WINDOWS_INSTALLED_CONFIG_MOCK=FAIL\n');
+  main().catch((error) => {
+    const safeErrorName = safeErrorToken(error && error.name, 'Error');
+    const safeErrorCode = safeErrorToken(error && error.code, 'unknown');
+    process.stderr.write(
+      `WINDOWS_INSTALLED_CONFIG_MOCK=FAIL name=${safeErrorName} code=${safeErrorCode}\n`,
+    );
     process.exitCode = 1;
   });
 }

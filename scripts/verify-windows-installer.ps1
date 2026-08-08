@@ -1612,7 +1612,29 @@ try {
     Stop-StartedProcessTree -Process $mockProcess
     throw 'Installed configuration mock did not stop after its accepted request.'
   }
+  $mockProcess.Refresh()
   if ($mockProcess.ExitCode -ne 0) {
+    foreach ($mockDiagnostic in @(
+      [ordered]@{
+        Source = $acceptanceMockStdout
+        Name = 'mock-stdout-sanitized.log'
+      },
+      [ordered]@{
+        Source = $acceptanceMockStderr
+        Name = 'mock-stderr-sanitized.log'
+      }
+    )) {
+      $mockDiagnosticText = ''
+      if (Test-Path -LiteralPath $mockDiagnostic.Source -PathType Leaf) {
+        $mockDiagnosticText = Get-Content `
+          -LiteralPath $mockDiagnostic.Source `
+          -Raw `
+          -ErrorAction Stop
+      }
+      Set-ProtectedDiagnosticContent `
+        -Path (Join-Path $diagnosticRoot $mockDiagnostic.Name) `
+        -Text $mockDiagnosticText
+    }
     throw 'Installed configuration mock exited with a failure.'
   }
   $mockProcess = $null

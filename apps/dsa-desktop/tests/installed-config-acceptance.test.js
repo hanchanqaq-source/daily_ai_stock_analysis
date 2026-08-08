@@ -96,8 +96,20 @@ test('installed smoke failure preserves only sanitized diagnostic evidence', () 
   assert.match(verifierSource, /mock-stdout-sanitized\.log/);
   assert.match(verifierSource, /mock-stderr-sanitized\.log/);
   assert.match(verifierSource, /receipt_exists/);
+  assert.equal(
+    (verifierSource.match(/mock-stderr-sanitized\.log/g) || []).length,
+    2,
+  );
   assert.doesNotMatch(verifierSource, /smoke-request-body/);
   assert.doesNotMatch(verifierSource, /smoke-authorization/);
+
+  const serverSource = fs.readFileSync(
+    path.join(__dirname, 'installed-config-smoke-server.js'),
+    'utf8',
+  );
+  assert.match(serverSource, /safeErrorName/);
+  assert.match(serverSource, /safeErrorCode/);
+  assert.doesNotMatch(serverSource, /error\.(?:message|stack)/);
 });
 
 test('loopback server rejects a wrong key and records only a safe successful receipt', async (t) => {
