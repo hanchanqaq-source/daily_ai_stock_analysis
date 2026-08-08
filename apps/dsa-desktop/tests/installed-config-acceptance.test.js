@@ -65,6 +65,27 @@ test('exact-Head fake credential is deterministic and never embedded in harness 
   assert.doesNotMatch(vaultSource, /console\.(?:log|error)\([^\n]*(?:fake|secret)/i);
 });
 
+test('installed lifecycle pins Electron userData to a verifier-owned path', () => {
+  const verifierSource = fs.readFileSync(
+    path.join(__dirname, '../../../scripts/verify-windows-installer.ps1'),
+    'utf8',
+  );
+
+  assert.match(
+    verifierSource,
+    /\$acceptanceUserData = Join-Path \$acceptanceRoot 'user-data'/,
+  );
+  assert.equal(
+    (verifierSource.match(/--user-data-dir=/g) || []).length,
+    2,
+  );
+  assert.doesNotMatch(
+    verifierSource,
+    /Get-ChildItem -LiteralPath \$acceptanceAppData -Directory/,
+  );
+  assert.match(verifierSource, /WINDOWS_INSTALLED_USER_DATA_ISOLATION=PASS/);
+});
+
 test('loopback server rejects a wrong key and records only a safe successful receipt', async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pp02-config-smoke-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

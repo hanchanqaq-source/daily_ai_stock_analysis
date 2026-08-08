@@ -144,6 +144,7 @@ try {
     '/api/v1/system/config/validate',
     '/api/v1/system/config/generation-backends/smoke-test',
     '/api/v1/system/full-data-backup/export',
+    'WINDOWS_INSTALLED_USER_DATA_ISOLATION=PASS',
     'WINDOWS_INSTALLED_CONFIG_MASKED_RESTART=PASS',
     'WINDOWS_INSTALLED_CONFIG_LEAKAGE_SCAN=PASS'
   )) {
@@ -153,6 +154,12 @@ try {
   }
   if (-not $verifierText.Contains('pp02-r37-[0-9a-f]{64}')) {
     throw 'Installed configuration synthetic credential diagnostics are not redacted.'
+  }
+  if (([regex]::Matches($verifierText, '--user-data-dir=')).Count -ne 2 -or
+      $verifierText.Contains(
+        'Get-ChildItem -LiteralPath $acceptanceAppData -Directory'
+      )) {
+    throw 'Installed configuration userData isolation contract is incomplete.'
   }
   Write-Output 'WINDOWS_INSTALLED_CONFIG_ACCEPTANCE_CONTRACT=PASS'
 

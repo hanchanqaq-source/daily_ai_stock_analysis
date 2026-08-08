@@ -1010,7 +1010,7 @@ if (Test-Path -LiteralPath $acceptanceRoot) {
 }
 $acceptanceAppData = Join-Path $acceptanceRoot 'appdata'
 $acceptanceLocalAppData = Join-Path $acceptanceRoot 'localappdata'
-$acceptanceUserData = $null
+$acceptanceUserData = Join-Path $acceptanceRoot 'user-data'
 $acceptanceReadyPath = Join-Path $acceptanceRoot 'mock-ready.json'
 $acceptanceReceiptPath = Join-Path $acceptanceRoot 'mock-receipt.json'
 $acceptanceMockStdout = Join-Path $acceptanceRoot 'mock-stdout.log'
@@ -1033,6 +1033,12 @@ foreach ($acceptanceSource in @(
 }
 New-Item -ItemType Directory -Path $acceptanceAppData -Force | Out-Null
 New-Item -ItemType Directory -Path $acceptanceLocalAppData -Force | Out-Null
+New-Item -ItemType Directory -Path $acceptanceUserData -Force | Out-Null
+if (-not (Test-PathInsideRoot -Path $acceptanceUserData -Root $acceptanceRoot) -or
+    ((Get-Item -LiteralPath $acceptanceUserData -Force).Attributes -band `
+      [IO.FileAttributes]::ReparsePoint) -ne 0) {
+  throw 'Desktop userData acceptance path must be verifier-owned and not a reparse point.'
+}
 
 $appProcess = $null
 $appExe = $null
@@ -1265,7 +1271,11 @@ try {
   $stageProcessStartedUtc = (Get-Date).ToUniversalTime().ToString('o')
   $stageProcessExitedUtc = '<not_observed>'
   $stageProcessExitCode = '<not_observed>'
-  $appProcess = Start-Process -FilePath $appExe -WorkingDirectory $ownedRoot -PassThru
+  $appProcess = Start-Process `
+    -FilePath $appExe `
+    -ArgumentList @("--user-data-dir=`"$acceptanceUserData`"") `
+    -WorkingDirectory $ownedRoot `
+    -PassThru
   $desktopLog = Join-Path $ownedRoot 'logs/desktop.log'
   $startupDeadline = (Get-Date).AddSeconds($StartupTimeoutSeconds)
   $startupReady = $false
@@ -1291,30 +1301,7 @@ try {
   Write-Output 'WINDOWS_INSTALLED_APP_STARTUP_VALIDATION=PASS'
   Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'PASS'
 
-  $acceptanceUserDataDirectories = @(
-    Get-ChildItem -LiteralPath $acceptanceAppData -Directory -Force -ErrorAction Stop
-  )
-  if ($acceptanceUserDataDirectories.Count -ne 1) {
-    throw 'Installed application did not create exactly one isolated userData directory.'
-  }
-  if (($acceptanceUserDataDirectories[0].Attributes -band `
-      [IO.FileAttributes]::ReparsePoint) -ne 0) {
-    throw 'Installed application userData directory must not be a reparse point.'
-  }
-  $acceptanceUserData = [IO.Path]::GetFullPath(
-    $acceptanceUserDataDirectories[0].FullName
-  )
-  $acceptanceUserDataParent = Get-NormalizedDirectoryPath `
-    -Path (Split-Path -Parent $acceptanceUserData)
-  $acceptanceAppDataRoot = Get-NormalizedDirectoryPath -Path $acceptanceAppData
-  if (-not (Test-PathInsideRoot -Path $acceptanceUserData -Root $acceptanceAppData) -or
-      -not $acceptanceUserDataParent.Equals(
-        $acceptanceAppDataRoot,
-        [StringComparison]::OrdinalIgnoreCase
-      )) {
-    throw 'Desktop userData acceptance path must be a direct child of verifier-owned APPDATA.'
-  }
-  Write-Output 'WINDOWS_INSTALLED_USER_DATA_DISCOVERY=PASS'
+  Write-Output 'WINDOWS_INSTALLED_USER_DATA_ISOLATION=PASS'
 
   $failureStage = 'installed_config_validation'
   Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
@@ -1482,7 +1469,11 @@ try {
   $stageProcessStartedUtc = (Get-Date).ToUniversalTime().ToString('o')
   $stageProcessExitedUtc = '<not_observed>'
   $stageProcessExitCode = '<not_observed>'
-  $appProcess = Start-Process -FilePath $appExe -WorkingDirectory $ownedRoot -PassThru
+  $appProcess = Start-Process `
+    -FilePath $appExe `
+    -ArgumentList @("--user-data-dir=`"$acceptanceUserData`"") `
+    -WorkingDirectory $ownedRoot `
+    -PassThru
   $restartDeadline = (Get-Date).AddSeconds($StartupTimeoutSeconds)
   $restartReady = $false
   do {

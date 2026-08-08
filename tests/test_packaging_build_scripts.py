@@ -220,7 +220,7 @@ def test_windows_workflows_fail_closed_on_defender_before_upload_or_release() ->
         "$installProcess = Invoke-PP02BoundedProcess"
     )
     assert verifier.index("installed_payload_defender_scan") < verifier.index(
-        "$appProcess = Start-Process -FilePath $appExe"
+        "$failureStage = 'installed_app_startup'"
     )
     for evidence_marker in (
         "EXTERNAL_PREINSTALL_EVIDENCE_VALIDATION=PASS",
@@ -688,7 +688,7 @@ def test_windows_installed_configuration_acceptance_is_complete_and_ordered() ->
 
     ordered_markers = (
         "WINDOWS_INSTALLED_APP_STARTUP_VALIDATION=PASS",
-        "WINDOWS_INSTALLED_USER_DATA_DISCOVERY=PASS",
+        "WINDOWS_INSTALLED_USER_DATA_ISOLATION=PASS",
         "WINDOWS_INSTALLED_CONFIG_VALIDATION=PASS",
         "WINDOWS_INSTALLED_CONFIG_SAVE=PASS",
         "WINDOWS_INSTALLED_CONFIG_VAULT=PASS",
@@ -708,12 +708,13 @@ def test_windows_installed_configuration_acceptance_is_complete_and_ordered() ->
     assert "pp02-r37-[0-9a-f]{64}" in verifier
     assert "authorizationMatched" in verifier
     assert "credentials_excluded" in verifier
-    assert "$acceptanceUserData = $null" in verifier
+    assert "$acceptanceUserData = Join-Path $acceptanceRoot 'user-data'" in verifier
+    assert verifier.count("--user-data-dir=") == 2
+    assert "$acceptanceUserData = $null" not in verifier
     assert (
-        "Get-ChildItem -LiteralPath $acceptanceAppData -Directory -Force"
-        in verifier
+        "Get-ChildItem -LiteralPath $acceptanceAppData -Directory"
+        not in verifier
     )
-    assert "$acceptanceUserDataDirectories.Count -ne 1" in verifier
     assert "[IO.FileAttributes]::ReparsePoint" in verifier
     assert "$desktopPackageMetadata" not in verifier
     assert (
