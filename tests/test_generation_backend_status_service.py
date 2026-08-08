@@ -208,6 +208,38 @@ def test_smoke_timeout_overrides_config_timeout_for_local_cli() -> None:
     assert _CapturingAnalyzer.configs[-1].generation_backend_timeout_seconds == 1
 
 
+def test_smoke_timeout_accepts_integral_float_from_api_model() -> None:
+    _CapturingAnalyzer.configs = []
+    service = GenerationBackendStatusService(
+        effective_map=_litellm_effective_map(),
+        analyzer_factory=lambda config: _CapturingAnalyzer(config),
+    )
+
+    payload = service.smoke_test(
+        backend_id="litellm",
+        mode="json",
+        timeout_seconds=30.0,
+    )
+
+    assert payload["success"] is True
+    assert _CapturingAnalyzer.configs[-1].generation_backend_timeout_seconds == 30
+
+
+def test_smoke_timeout_still_rejects_fractional_float() -> None:
+    service = GenerationBackendStatusService(effective_map=_litellm_effective_map())
+
+    payload = service.smoke_test(
+        backend_id="litellm",
+        mode="json",
+        timeout_seconds=1.5,
+    )
+
+    assert payload["success"] is False
+    assert payload["status"]["last_error_code"] == "unsafe_config"
+    assert "field=timeout_seconds" in payload["status"]["last_error_message"]
+    assert "reason=invalid_integer" in payload["status"]["last_error_message"]
+
+
 def test_litellm_smoke_timeout_reaches_final_completion_dispatch() -> None:
     captured = {}
 
