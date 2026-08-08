@@ -1627,10 +1627,44 @@ try {
   else {
     ''
   }
+  $mockStdoutNormalized = if ($null -eq $mockStdoutText) {
+    ''
+  }
+  else {
+    [string]$mockStdoutText
+  }
+  $mockStderrNormalized = if ($null -eq $mockStderrText) {
+    ''
+  }
+  else {
+    [string]$mockStderrText
+  }
+  $mockExitCodeText = if ($null -eq $mockExitCode) {
+    '<not_observed>'
+  }
+  else {
+    [string][int]$mockExitCode
+  }
+  $mockStdoutMarkerMatched = (
+    $mockStdoutNormalized.Trim() -eq 'WINDOWS_INSTALLED_CONFIG_MOCK=PASS'
+  )
+  $mockStderrWhitespaceOnly = [string]::IsNullOrWhiteSpace(
+    $mockStderrNormalized
+  )
+  Set-ProtectedDiagnosticContent `
+    -Path (Join-Path $diagnosticRoot 'mock-process-summary.txt') `
+    -Text (@(
+      'WINDOWS_INSTALLED_CONFIG_MOCK_PROCESS=OBSERVED',
+      "mock_exit_code=$mockExitCodeText",
+      "stdout_marker_matched=$mockStdoutMarkerMatched",
+      "stdout_char_count=$($mockStdoutNormalized.Length)",
+      "stderr_whitespace_only=$mockStderrWhitespaceOnly",
+      "stderr_char_count=$($mockStderrNormalized.Length)"
+    ) -join [Environment]::NewLine)
   if ($null -eq $mockExitCode -or
       [int]$mockExitCode -ne 0 -or
-      $mockStdoutText.Trim() -ne 'WINDOWS_INSTALLED_CONFIG_MOCK=PASS' -or
-      -not [string]::IsNullOrWhiteSpace($mockStderrText)) {
+      -not $mockStdoutMarkerMatched -or
+      -not $mockStderrWhitespaceOnly) {
     foreach ($mockDiagnostic in @(
       [ordered]@{
         Source = $acceptanceMockStdout
