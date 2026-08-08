@@ -634,6 +634,18 @@ def test_windows_installer_validates_exit_restart_before_uninstall() -> None:
         verifier.index(restart):verifier.index(live_uninstall)
     ]
     assert "Stop-StartedProcessTree -Process $appProcess" not in live_segment
+    evidence_wait = "$ownedProcessEvidenceDeadline = (Get-Date).AddSeconds(30)"
+    evidence_parse = "$ownedProcessEvidence = Get-Content"
+    evidence_timeout = "Official uninstaller did not preserve owned-process helper evidence within 30 seconds."
+    for contract_text in (evidence_wait, evidence_parse, evidence_timeout):
+        assert contract_text in live_segment
+    assert live_segment.index(evidence_wait) < live_segment.index(evidence_parse)
+    assert live_segment.index(evidence_parse) < live_segment.index(evidence_timeout)
+    evidence_segment = live_segment[
+        live_segment.index(evidence_wait):live_segment.index(evidence_timeout)
+    ]
+    assert "Start-Sleep -Milliseconds 100" in evidence_segment
+    assert "ConvertFrom-Json -ErrorAction Stop" in evidence_segment
 
 
 def test_windows_installed_configuration_acceptance_is_complete_and_ordered() -> None:

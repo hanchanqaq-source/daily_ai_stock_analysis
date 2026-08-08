@@ -1770,12 +1770,36 @@ try {
   if ($uninstallProcess.ExitCode -ne 0) {
     throw "Uninstaller exited with code $($uninstallProcess.ExitCode)."
   }
-  if (-not (Test-Path -LiteralPath $ownedProcessEvidencePath -PathType Leaf)) {
-    throw 'Official uninstaller did not preserve owned-process helper evidence.'
+  $ownedProcessEvidence = $null
+  $ownedProcessEvidenceDeadline = (Get-Date).AddSeconds(30)
+  do {
+    if (Test-Path -LiteralPath $ownedProcessEvidencePath -PathType Leaf) {
+      try {
+        $ownedProcessEvidence = Get-Content `
+          -LiteralPath $ownedProcessEvidencePath `
+          -Raw `
+          -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+        $ownedProcessEvidenceProperties = @(
+          $ownedProcessEvidence.PSObject.Properties.Name | Sort-Object
+        )
+        if (($ownedProcessEvidenceProperties -join ',') -eq (
+            'forcedStopCount,gracefulRequestCount,' +
+            'initialOwnedProcessCount,remainingOwnedProcessCount,' +
+            'schemaVersion,status'
+          )) {
+          break
+        }
+        $ownedProcessEvidence = $null
+      }
+      catch {
+        $ownedProcessEvidence = $null
+      }
+    }
+    Start-Sleep -Milliseconds 100
+  } while ((Get-Date) -lt $ownedProcessEvidenceDeadline)
+  if ($null -eq $ownedProcessEvidence) {
+    throw 'Official uninstaller did not preserve owned-process helper evidence within 30 seconds.'
   }
-  $ownedProcessEvidence = Get-Content `
-    -LiteralPath $ownedProcessEvidencePath `
-    -Raw | ConvertFrom-Json
   if ([int]$ownedProcessEvidence.schemaVersion -ne 1 -or
       [string]$ownedProcessEvidence.status -ne 'PASS' -or
       [int]$ownedProcessEvidence.initialOwnedProcessCount -lt 1 -or
