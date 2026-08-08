@@ -688,6 +688,7 @@ def test_windows_installed_configuration_acceptance_is_complete_and_ordered() ->
 
     ordered_markers = (
         "WINDOWS_INSTALLED_APP_STARTUP_VALIDATION=PASS",
+        "WINDOWS_INSTALLED_USER_DATA_DISCOVERY=PASS",
         "WINDOWS_INSTALLED_CONFIG_VALIDATION=PASS",
         "WINDOWS_INSTALLED_CONFIG_SAVE=PASS",
         "WINDOWS_INSTALLED_CONFIG_VAULT=PASS",
@@ -707,14 +708,14 @@ def test_windows_installed_configuration_acceptance_is_complete_and_ordered() ->
     assert "pp02-r37-[0-9a-f]{64}" in verifier
     assert "authorizationMatched" in verifier
     assert "credentials_excluded" in verifier
-    assert "$desktopPackageMetadata.PSObject.Properties['productName']" in verifier
-    assert "$desktopPackageMetadata.PSObject.Properties['name']" in verifier
-    assert "$desktopPackageMetadata.productName" not in verifier
-    assert "$desktopPackageMetadata.name" not in verifier
+    assert "$acceptanceUserData = $null" in verifier
     assert (
-        "$acceptanceUserData = Join-Path $acceptanceAppData $desktopApplicationName"
+        "Get-ChildItem -LiteralPath $acceptanceAppData -Directory -Force"
         in verifier
     )
+    assert "$acceptanceUserDataDirectories.Count -ne 1" in verifier
+    assert "[IO.FileAttributes]::ReparsePoint" in verifier
+    assert "$desktopPackageMetadata" not in verifier
     assert (
         "$acceptanceUserData = Join-Path $acceptanceAppData 'PP02 AI Daily Stock Analysis'"
         not in verifier

@@ -1010,30 +1010,7 @@ if (Test-Path -LiteralPath $acceptanceRoot) {
 }
 $acceptanceAppData = Join-Path $acceptanceRoot 'appdata'
 $acceptanceLocalAppData = Join-Path $acceptanceRoot 'localappdata'
-$desktopPackageMetadataPath = Join-Path $repoRoot 'apps/dsa-desktop/package.json'
-$desktopPackageMetadata = Get-Content -LiteralPath $desktopPackageMetadataPath -Raw |
-  ConvertFrom-Json
-$desktopApplicationName = ''
-$desktopProductNameProperty = `
-  $desktopPackageMetadata.PSObject.Properties['productName']
-if ($null -ne $desktopProductNameProperty) {
-  $desktopApplicationName = [string]$desktopProductNameProperty.Value
-}
-if ([string]::IsNullOrWhiteSpace($desktopApplicationName)) {
-  $desktopNameProperty = $desktopPackageMetadata.PSObject.Properties['name']
-  if ($null -ne $desktopNameProperty) {
-    $desktopApplicationName = [string]$desktopNameProperty.Value
-  }
-}
-if ([string]::IsNullOrWhiteSpace($desktopApplicationName) -or
-    [IO.Path]::GetFileName($desktopApplicationName) -ne $desktopApplicationName -or
-    $desktopApplicationName -in @('.', '..')) {
-  throw 'Desktop package metadata does not define a safe Electron application name.'
-}
-$acceptanceUserData = Join-Path $acceptanceAppData $desktopApplicationName
-if (-not (Test-PathInsideRoot -Path $acceptanceUserData -Root $acceptanceAppData)) {
-  throw 'Desktop userData acceptance path must stay inside verifier-owned APPDATA.'
-}
+$acceptanceUserData = $null
 $acceptanceReadyPath = Join-Path $acceptanceRoot 'mock-ready.json'
 $acceptanceReceiptPath = Join-Path $acceptanceRoot 'mock-receipt.json'
 $acceptanceMockStdout = Join-Path $acceptanceRoot 'mock-stdout.log'
@@ -1313,6 +1290,31 @@ try {
   }
   Write-Output 'WINDOWS_INSTALLED_APP_STARTUP_VALIDATION=PASS'
   Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'PASS'
+
+  $acceptanceUserDataDirectories = @(
+    Get-ChildItem -LiteralPath $acceptanceAppData -Directory -Force -ErrorAction Stop
+  )
+  if ($acceptanceUserDataDirectories.Count -ne 1) {
+    throw 'Installed application did not create exactly one isolated userData directory.'
+  }
+  if (($acceptanceUserDataDirectories[0].Attributes -band `
+      [IO.FileAttributes]::ReparsePoint) -ne 0) {
+    throw 'Installed application userData directory must not be a reparse point.'
+  }
+  $acceptanceUserData = [IO.Path]::GetFullPath(
+    $acceptanceUserDataDirectories[0].FullName
+  )
+  $acceptanceUserDataParent = Get-NormalizedDirectoryPath `
+    -Path (Split-Path -Parent $acceptanceUserData)
+  $acceptanceAppDataRoot = Get-NormalizedDirectoryPath -Path $acceptanceAppData
+  if (-not (Test-PathInsideRoot -Path $acceptanceUserData -Root $acceptanceAppData) -or
+      -not $acceptanceUserDataParent.Equals(
+        $acceptanceAppDataRoot,
+        [StringComparison]::OrdinalIgnoreCase
+      )) {
+    throw 'Desktop userData acceptance path must be a direct child of verifier-owned APPDATA.'
+  }
+  Write-Output 'WINDOWS_INSTALLED_USER_DATA_DISCOVERY=PASS'
 
   $failureStage = 'installed_config_validation'
   Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
