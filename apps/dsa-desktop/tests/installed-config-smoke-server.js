@@ -39,6 +39,15 @@ function safeErrorToken(value, fallback) {
   return /^[A-Za-z0-9_.:-]{1,96}$/.test(text) ? text : fallback;
 }
 
+function writeCompletionMarker() {
+  return new Promise((resolve, reject) => {
+    process.stdout.write('WINDOWS_INSTALLED_CONFIG_MOCK=PASS\n', (error) => {
+      if (error) reject(error);
+      else resolve();
+    });
+  });
+}
+
 async function createAcceptanceServer({
   head,
   receiptPath,
@@ -194,7 +203,8 @@ async function main() {
   if (reason !== 'success') {
     throw new Error('Acceptance server did not receive the expected request.');
   }
-  process.stdout.write('WINDOWS_INSTALLED_CONFIG_MOCK=PASS\n');
+  await writeCompletionMarker();
+  process.exit(0);
 }
 
 if (require.main === module) {

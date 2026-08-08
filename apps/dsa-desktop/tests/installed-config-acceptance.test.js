@@ -106,6 +106,8 @@ test('installed smoke failure preserves only sanitized diagnostic evidence', () 
     verifierSource,
     /\$mockProcess\.WaitForExit\(\)\s+\$mockProcess\.Refresh\(\)\s+\$mockExitCode = \$mockProcess\.ExitCode/,
   );
+  assert.match(verifierSource, /WINDOWS_INSTALLED_CONFIG_MOCK=PASS/);
+  assert.match(verifierSource, /IsNullOrWhiteSpace\(\$mockStderrText\)/);
 
   const serverSource = fs.readFileSync(
     path.join(__dirname, 'installed-config-smoke-server.js'),
@@ -113,6 +115,8 @@ test('installed smoke failure preserves only sanitized diagnostic evidence', () 
   );
   assert.match(serverSource, /safeErrorName/);
   assert.match(serverSource, /safeErrorCode/);
+  assert.match(serverSource, /await writeCompletionMarker\(\)/);
+  assert.match(serverSource, /process\.exit\(0\)/);
   assert.doesNotMatch(serverSource, /error\.(?:message|stack)/);
 });
 

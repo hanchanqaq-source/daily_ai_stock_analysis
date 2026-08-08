@@ -1615,7 +1615,22 @@ try {
   $mockProcess.WaitForExit()
   $mockProcess.Refresh()
   $mockExitCode = $mockProcess.ExitCode
-  if ($null -eq $mockExitCode -or [int]$mockExitCode -ne 0) {
+  $mockStdoutText = if (Test-Path -LiteralPath $acceptanceMockStdout -PathType Leaf) {
+    Get-Content -LiteralPath $acceptanceMockStdout -Raw -ErrorAction Stop
+  }
+  else {
+    ''
+  }
+  $mockStderrText = if (Test-Path -LiteralPath $acceptanceMockStderr -PathType Leaf) {
+    Get-Content -LiteralPath $acceptanceMockStderr -Raw -ErrorAction Stop
+  }
+  else {
+    ''
+  }
+  if ($null -eq $mockExitCode -or
+      [int]$mockExitCode -ne 0 -or
+      $mockStdoutText.Trim() -ne 'WINDOWS_INSTALLED_CONFIG_MOCK=PASS' -or
+      -not [string]::IsNullOrWhiteSpace($mockStderrText)) {
     foreach ($mockDiagnostic in @(
       [ordered]@{
         Source = $acceptanceMockStdout
