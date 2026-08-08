@@ -177,12 +177,16 @@ def test_smoke_failure_logs_only_safe_error_classification(caplog) -> None:
 
     assert payload["success"] is False
     logged_text = "\n".join(record.getMessage() for record in caplog.records)
+    response_text = f"{payload['message']} {payload['status']['last_error_message']}"
     assert "code=unsafe_config" in logged_text
     assert "stage=configuration" in logged_text
     assert "backend=litellm" in logged_text
     assert "field=LLM_AIHUBMIX_API_KEY" in logged_text
     assert "reason=masked_secret_not_reusable" in logged_text
-    assert "must-never-reach-diagnostics" not in logged_text
+    assert "field=LLM_AIHUBMIX_API_KEY" in response_text
+    assert "reason=masked_secret_not_reusable" in response_text
+    for text in (logged_text, response_text):
+        assert "must-never-reach-diagnostics" not in text
 
 
 def test_smoke_timeout_overrides_config_timeout_for_local_cli() -> None:

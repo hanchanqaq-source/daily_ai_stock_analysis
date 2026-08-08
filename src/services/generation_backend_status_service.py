@@ -67,6 +67,13 @@ def _safe_diagnostic_token(value: Any) -> str:
     return text if _SAFE_DIAGNOSTIC_TOKEN.fullmatch(text) else "<redacted>"
 
 
+def _safe_generation_error_message(error: GenerationError) -> str:
+    """Describe a structured failure using identifiers only, never detail values."""
+    field = _safe_diagnostic_token(error.details.get("field"))
+    reason = _safe_diagnostic_token(error.details.get("reason") or error.details.get("code"))
+    return f"{error.message} (field={field} reason={reason})"
+
+
 @dataclass(frozen=True)
 class _SmokeRequest:
     backend_id: str
@@ -281,6 +288,7 @@ class GenerationBackendStatusService:
             )
             self._run_smoke(request)
         except GenerationError as exc:
+            safe_error_message = _safe_generation_error_message(exc)
             logger.warning(
                 "Generation backend smoke failed "
                 "(code=%s stage=%s backend=%s field=%s reason=%s)",
@@ -307,10 +315,11 @@ class GenerationBackendStatusService:
                 health_status="failed",
                 error=exc,
             )
+            status["last_error_message"] = safe_error_message
             return {
                 "success": False,
                 "mode": normalized_mode,
-                "message": exc.message,
+                "message": safe_error_message,
                 "status": status,
             }
         except Exception as exc:
