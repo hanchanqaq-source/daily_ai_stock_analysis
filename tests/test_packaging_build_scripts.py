@@ -793,6 +793,7 @@ def test_fake_credential_scanner_detects_utf8_and_never_prints_the_value(tmp_pat
     suffix = hashlib.sha256(f"pp02-r37-fake:{head}".encode()).hexdigest()
     fake = f"pp02-r37-{suffix}"
     candidate = tmp_path / "candidate.bin"
+    report = tmp_path / "scan-report.json"
     candidate.write_bytes(b"prefix\x00" + fake.encode("utf-8") + b"\x00suffix")
 
     result = subprocess.run(
@@ -803,6 +804,8 @@ def test_fake_credential_scanner_detects_utf8_and_never_prints_the_value(tmp_pat
             head,
             "--path",
             str(tmp_path),
+            "--report",
+            str(report),
         ],
         text=True,
         capture_output=True,
@@ -813,6 +816,14 @@ def test_fake_credential_scanner_detects_utf8_and_never_prints_the_value(tmp_pat
     assert result.returncode != 0
     assert fake not in self_output
     assert "R3_7_WINDOWS_FAKE_CREDENTIAL_SCAN=FAIL" in self_output
+    report_payload = json.loads(report.read_text(encoding="utf-8"))
+    assert report_payload == {
+        "schemaVersion": 1,
+        "result": "FAIL",
+        "rootIndex": 0,
+        "relativePath": "candidate.bin",
+    }
+    assert fake not in report.read_text(encoding="utf-8")
 
 
 def _write_fake_macos_signature_tools(fake_bin: Path) -> None:

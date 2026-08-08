@@ -1737,11 +1737,14 @@ try {
 
   $failureStage = 'installed_config_leakage_scan'
   Add-InstallerStageReport -Path $stageReportPath -Stage $failureStage -Status 'ENTER'
+  $leakageScanSummary = Join-Path `
+    $diagnosticRoot 'fake-credential-leakage-summary.json'
   node $fakeCredentialScanner `
     --head $expectedHead `
     --path $ownedRoot `
     --path $acceptanceRoot `
-    --path $diagnosticRoot
+    --path $diagnosticRoot `
+    --report $leakageScanSummary
   if ($LASTEXITCODE -ne 0) {
     throw 'Installed configuration synthetic credential leakage scan failed.'
   }

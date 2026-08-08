@@ -7,6 +7,7 @@ const CHUNK_BYTES = 1024 * 1024;
 
 function parseArguments(argv) {
   let head = '';
+  let report = '';
   const paths = [];
   for (let index = 0; index < argv.length; index += 1) {
     if (argv[index] === '--head') {
@@ -15,6 +16,9 @@ function parseArguments(argv) {
     } else if (argv[index] === '--path') {
       paths.push(argv[index + 1] || '');
       index += 1;
+    } else if (argv[index] === '--report') {
+      report = argv[index + 1] || '';
+      index += 1;
     } else {
       throw new Error('Invalid fake credential scan arguments.');
     }
@@ -22,7 +26,7 @@ function parseArguments(argv) {
   if (!/^[0-9a-f]{40}$/i.test(head) || paths.length === 0 || paths.some((item) => !item)) {
     throw new Error('Fake credential scan requires an exact Head and at least one path.');
   }
-  return { head: head.toLowerCase(), paths };
+  return { head: head.toLowerCase(), paths, report };
 }
 
 function deriveFakeCredential(head) {
@@ -52,7 +56,7 @@ function fileContainsAny(filePath, patterns) {
   }
 }
 
-function scanPath(targetPath, patterns) {
+function scanPath(targetPath, patterns, rootPath, rootIndex) {
   const resolved = path.resolve(targetPath);
   if (!fs.existsSync(resolved)) {
     throw new Error('A required fake credential scan path is missing.');
@@ -64,30 +68,46 @@ function scanPath(targetPath, patterns) {
   if (metadata.isDirectory()) {
     for (const name of fs.readdirSync(resolved)) {
       if (!SKIPPED_DIRECTORIES.has(name)) {
-        scanPath(path.join(resolved, name), patterns);
+        scanPath(path.join(resolved, name), patterns, rootPath, rootIndex);
       }
     }
     return;
   }
   if (metadata.isFile() && fileContainsAny(resolved, patterns)) {
-    throw new Error('Fake credential plaintext was found in scanned output.');
+    const error = new Error('Fake credential plaintext was found in scanned output.');
+    error.scanMatch = {
+      rootIndex,
+      relativePath: path.relative(rootPath, resolved).split(path.sep).join('/'),
+    };
+    throw error;
   }
 }
 
-function main() {
-  const { head, paths } = parseArguments(process.argv.slice(2));
+function main({ head, paths }) {
   const fake = deriveFakeCredential(head);
   const patterns = [Buffer.from(fake, 'utf8'), Buffer.from(fake, 'utf16le')];
-  for (const targetPath of paths) {
-    scanPath(targetPath, patterns);
+  for (const [rootIndex, targetPath] of paths.entries()) {
+    const rootPath = path.resolve(targetPath);
+    scanPath(rootPath, patterns, rootPath, rootIndex);
   }
   process.stdout.write('R3_7_WINDOWS_FAKE_CREDENTIAL_SCAN=PASS\n');
   process.stdout.write(`R3_7_WINDOWS_FAKE_CREDENTIAL_SCAN_HEAD=${head}\n`);
 }
 
+let reportPath = '';
 try {
-  main();
-} catch (_error) {
+  const parsed = parseArguments(process.argv.slice(2));
+  reportPath = parsed.report;
+  main(parsed);
+} catch (error) {
+  if (reportPath && error && error.scanMatch) {
+    fs.writeFileSync(reportPath, `${JSON.stringify({
+      schemaVersion: 1,
+      result: 'FAIL',
+      rootIndex: error.scanMatch.rootIndex,
+      relativePath: error.scanMatch.relativePath,
+    }, null, 2)}\n`, { encoding: 'utf8', flag: 'wx' });
+  }
   process.stderr.write('R3_7_WINDOWS_FAKE_CREDENTIAL_SCAN=FAIL\n');
   process.exitCode = 1;
 }
