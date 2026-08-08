@@ -1013,9 +1013,17 @@ $acceptanceLocalAppData = Join-Path $acceptanceRoot 'localappdata'
 $desktopPackageMetadataPath = Join-Path $repoRoot 'apps/dsa-desktop/package.json'
 $desktopPackageMetadata = Get-Content -LiteralPath $desktopPackageMetadataPath -Raw |
   ConvertFrom-Json
-$desktopApplicationName = [string]$desktopPackageMetadata.productName
+$desktopApplicationName = ''
+$desktopProductNameProperty = `
+  $desktopPackageMetadata.PSObject.Properties['productName']
+if ($null -ne $desktopProductNameProperty) {
+  $desktopApplicationName = [string]$desktopProductNameProperty.Value
+}
 if ([string]::IsNullOrWhiteSpace($desktopApplicationName)) {
-  $desktopApplicationName = [string]$desktopPackageMetadata.name
+  $desktopNameProperty = $desktopPackageMetadata.PSObject.Properties['name']
+  if ($null -ne $desktopNameProperty) {
+    $desktopApplicationName = [string]$desktopNameProperty.Value
+  }
 }
 if ([string]::IsNullOrWhiteSpace($desktopApplicationName) -or
     [IO.Path]::GetFileName($desktopApplicationName) -ne $desktopApplicationName -or

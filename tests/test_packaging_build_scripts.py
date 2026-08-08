@@ -707,8 +707,10 @@ def test_windows_installed_configuration_acceptance_is_complete_and_ordered() ->
     assert "pp02-r37-[0-9a-f]{64}" in verifier
     assert "authorizationMatched" in verifier
     assert "credentials_excluded" in verifier
-    assert "$desktopPackageMetadata.productName" in verifier
-    assert "$desktopPackageMetadata.name" in verifier
+    assert "$desktopPackageMetadata.PSObject.Properties['productName']" in verifier
+    assert "$desktopPackageMetadata.PSObject.Properties['name']" in verifier
+    assert "$desktopPackageMetadata.productName" not in verifier
+    assert "$desktopPackageMetadata.name" not in verifier
     assert (
         "$acceptanceUserData = Join-Path $acceptanceAppData $desktopApplicationName"
         in verifier
