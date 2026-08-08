@@ -851,6 +851,45 @@ def test_fake_credential_scanner_detects_utf8_and_never_prints_the_value(tmp_pat
         "errorCode": "ENOENT",
     }
 
+    empty_root = tmp_path / "empty-root"
+    empty_root.mkdir()
+    (empty_root / "LOCK").touch()
+    busy_lock_preload = tmp_path / "busy-lock-preload.cjs"
+    busy_lock_preload.write_text(
+        """
+const fs = require('node:fs');
+const originalOpenSync = fs.openSync;
+fs.openSync = function (filePath, ...args) {
+  if (String(filePath).endsWith('LOCK')) {
+    const error = new Error('Synthetic locked zero-byte file.');
+    error.code = 'EBUSY';
+    throw error;
+  }
+  return originalOpenSync.call(this, filePath, ...args);
+};
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    busy_lock_env = os.environ.copy()
+    busy_lock_env["NODE_OPTIONS"] = f"--require={busy_lock_preload}"
+    empty_result = subprocess.run(
+        [
+            "node",
+            str(REPO_ROOT / "scripts" / "scan-windows-fake-credential.js"),
+            "--head",
+            head,
+            "--path",
+            str(empty_root),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+        env=busy_lock_env,
+    )
+    assert empty_result.returncode == 0
+    assert "R3_7_WINDOWS_FAKE_CREDENTIAL_SCAN=PASS" in empty_result.stdout
+
 
 def _write_fake_macos_signature_tools(fake_bin: Path) -> None:
     fake_bin.mkdir()

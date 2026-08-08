@@ -80,6 +80,10 @@ function scanPath(targetPath, patterns, rootPath, rootIndex) {
       }
       return;
     }
+    // An exclusively locked zero-byte file cannot contain either plaintext pattern.
+    if (metadata.isFile() && metadata.size === 0) {
+      return;
+    }
     if (metadata.isFile() && fileContainsAny(resolved, patterns)) {
       const error = new Error('Fake credential plaintext was found in scanned output.');
       error.scanMatch = scanContext;
