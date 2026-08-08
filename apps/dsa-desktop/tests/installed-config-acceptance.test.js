@@ -102,6 +102,10 @@ test('installed smoke failure preserves only sanitized diagnostic evidence', () 
   );
   assert.doesNotMatch(verifierSource, /smoke-request-body/);
   assert.doesNotMatch(verifierSource, /smoke-authorization/);
+  assert.match(
+    verifierSource,
+    /\$mockProcess\.WaitForExit\(\)\s+\$mockProcess\.Refresh\(\)\s+\$mockExitCode = \$mockProcess\.ExitCode/,
+  );
 
   const serverSource = fs.readFileSync(
     path.join(__dirname, 'installed-config-smoke-server.js'),

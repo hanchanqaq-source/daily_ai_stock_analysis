@@ -1612,8 +1612,10 @@ try {
     Stop-StartedProcessTree -Process $mockProcess
     throw 'Installed configuration mock did not stop after its accepted request.'
   }
+  $mockProcess.WaitForExit()
   $mockProcess.Refresh()
-  if ($mockProcess.ExitCode -ne 0) {
+  $mockExitCode = $mockProcess.ExitCode
+  if ($null -eq $mockExitCode -or [int]$mockExitCode -ne 0) {
     foreach ($mockDiagnostic in @(
       [ordered]@{
         Source = $acceptanceMockStdout
