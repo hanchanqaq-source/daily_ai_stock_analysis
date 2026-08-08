@@ -819,11 +819,37 @@ def test_fake_credential_scanner_detects_utf8_and_never_prints_the_value(tmp_pat
     report_payload = json.loads(report.read_text(encoding="utf-8"))
     assert report_payload == {
         "schemaVersion": 1,
-        "result": "FAIL",
+        "result": "MATCH",
         "rootIndex": 0,
         "relativePath": "candidate.bin",
+        "errorCode": "plaintext_match",
     }
     assert fake not in report.read_text(encoding="utf-8")
+
+    error_report = tmp_path / "scan-error-report.json"
+    missing_result = subprocess.run(
+        [
+            "node",
+            str(REPO_ROOT / "scripts" / "scan-windows-fake-credential.js"),
+            "--head",
+            head,
+            "--path",
+            str(tmp_path / "missing"),
+            "--report",
+            str(error_report),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert missing_result.returncode != 0
+    assert json.loads(error_report.read_text(encoding="utf-8")) == {
+        "schemaVersion": 1,
+        "result": "ERROR",
+        "rootIndex": 0,
+        "relativePath": ".",
+        "errorCode": "ENOENT",
+    }
 
 
 def _write_fake_macos_signature_tools(fake_bin: Path) -> None:

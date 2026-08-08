@@ -34,6 +34,11 @@ function deriveFakeCredential(head) {
   return `pp02-r37-${digest}`;
 }
 
+function safeErrorToken(value, fallback) {
+  const text = String(value || '');
+  return /^[A-Za-z0-9_.:-]{1,96}$/.test(text) ? text : fallback;
+}
+
 function fileContainsAny(filePath, patterns) {
   const descriptor = fs.openSync(filePath, 'r');
   const buffer = Buffer.allocUnsafe(CHUNK_BYTES);
@@ -58,27 +63,32 @@ function fileContainsAny(filePath, patterns) {
 
 function scanPath(targetPath, patterns, rootPath, rootIndex) {
   const resolved = path.resolve(targetPath);
-  if (!fs.existsSync(resolved)) {
-    throw new Error('A required fake credential scan path is missing.');
-  }
-  const metadata = fs.lstatSync(resolved);
-  if (metadata.isSymbolicLink()) {
-    return;
-  }
-  if (metadata.isDirectory()) {
-    for (const name of fs.readdirSync(resolved)) {
-      if (!SKIPPED_DIRECTORIES.has(name)) {
-        scanPath(path.join(resolved, name), patterns, rootPath, rootIndex);
-      }
+  const scanContext = {
+    rootIndex,
+    relativePath: path.relative(rootPath, resolved).split(path.sep).join('/') || '.',
+  };
+  try {
+    const metadata = fs.lstatSync(resolved);
+    if (metadata.isSymbolicLink()) {
+      return;
     }
-    return;
-  }
-  if (metadata.isFile() && fileContainsAny(resolved, patterns)) {
-    const error = new Error('Fake credential plaintext was found in scanned output.');
-    error.scanMatch = {
-      rootIndex,
-      relativePath: path.relative(rootPath, resolved).split(path.sep).join('/'),
-    };
+    if (metadata.isDirectory()) {
+      for (const name of fs.readdirSync(resolved)) {
+        if (!SKIPPED_DIRECTORIES.has(name)) {
+          scanPath(path.join(resolved, name), patterns, rootPath, rootIndex);
+        }
+      }
+      return;
+    }
+    if (metadata.isFile() && fileContainsAny(resolved, patterns)) {
+      const error = new Error('Fake credential plaintext was found in scanned output.');
+      error.scanMatch = scanContext;
+      throw error;
+    }
+  } catch (error) {
+    if (!error.scanMatch && !error.scanContext) {
+      error.scanContext = scanContext;
+    }
     throw error;
   }
 }
@@ -100,13 +110,23 @@ try {
   reportPath = parsed.report;
   main(parsed);
 } catch (error) {
-  if (reportPath && error && error.scanMatch) {
-    fs.writeFileSync(reportPath, `${JSON.stringify({
-      schemaVersion: 1,
-      result: 'FAIL',
-      rootIndex: error.scanMatch.rootIndex,
-      relativePath: error.scanMatch.relativePath,
-    }, null, 2)}\n`, { encoding: 'utf8', flag: 'wx' });
+  if (reportPath && error) {
+    const context = error.scanMatch || error.scanContext || {};
+    const result = error.scanMatch ? 'MATCH' : 'ERROR';
+    const errorCode = error.scanMatch
+      ? 'plaintext_match'
+      : safeErrorToken(error.safeCode || error.code || error.name, 'unknown');
+    try {
+      fs.writeFileSync(reportPath, `${JSON.stringify({
+        schemaVersion: 1,
+        result,
+        rootIndex: Number.isInteger(context.rootIndex) ? context.rootIndex : null,
+        relativePath: context.relativePath || '<unavailable>',
+        errorCode,
+      }, null, 2)}\n`, { encoding: 'utf8', flag: 'wx' });
+    } catch (_reportError) {
+      // The scanner still fails closed when its optional diagnostic cannot be written.
+    }
   }
   process.stderr.write('R3_7_WINDOWS_FAKE_CREDENTIAL_SCAN=FAIL\n');
   process.exitCode = 1;
