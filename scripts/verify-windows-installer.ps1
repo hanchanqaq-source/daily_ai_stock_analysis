@@ -1552,7 +1552,48 @@ try {
   if (-not [bool]$smokeResult.success -or
       [string]$smokeResult.status.backend_id -ne 'litellm' -or
       [string]$smokeResult.status.health_status -ne 'passed') {
-    throw 'Installed generation backend smoke request did not pass.'
+    $mockProcess.Refresh()
+    $smokeDiagnostic = [ordered]@{
+      schema_version = 1
+      success = [bool]$smokeResult.success
+      mode = [string]$smokeResult.mode
+      message = [string]$smokeResult.message
+      receipt_exists = Test-Path -LiteralPath $acceptanceReceiptPath -PathType Leaf
+      mock_process_has_exited = [bool]$mockProcess.HasExited
+      status = [ordered]@{
+        backend_id = [string]$smokeResult.status.backend_id
+        available = [bool]$smokeResult.status.available
+        health_status = [string]$smokeResult.status.health_status
+        last_error_code = [string]$smokeResult.status.last_error_code
+        last_error_message = [string]$smokeResult.status.last_error_message
+      }
+    }
+    Set-ProtectedDiagnosticContent `
+      -Path (Join-Path $diagnosticRoot 'smoke-response-sanitized.json') `
+      -Text ($smokeDiagnostic | ConvertTo-Json -Depth 5)
+    foreach ($mockDiagnostic in @(
+      [ordered]@{
+        Source = $acceptanceMockStdout
+        Name = 'mock-stdout-sanitized.log'
+      },
+      [ordered]@{
+        Source = $acceptanceMockStderr
+        Name = 'mock-stderr-sanitized.log'
+      }
+    )) {
+      $mockDiagnosticText = ''
+      if (Test-Path -LiteralPath $mockDiagnostic.Source -PathType Leaf) {
+        $mockDiagnosticText = Get-Content `
+          -LiteralPath $mockDiagnostic.Source `
+          -Raw `
+          -ErrorAction Stop
+      }
+      Set-ProtectedDiagnosticContent `
+        -Path (Join-Path $diagnosticRoot $mockDiagnostic.Name) `
+        -Text $mockDiagnosticText
+    }
+    $smokeFailureCode = [string]$smokeResult.status.last_error_code
+    throw "Installed generation backend smoke request did not pass (code=$smokeFailureCode)."
   }
   if (-not (Test-Path -LiteralPath $acceptanceReceiptPath -PathType Leaf)) {
     throw 'Installed generation backend smoke request did not preserve a receipt.'

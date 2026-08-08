@@ -145,6 +145,10 @@ try {
     '/api/v1/system/config/generation-backends/smoke-test',
     '/api/v1/system/full-data-backup/export',
     'WINDOWS_INSTALLED_USER_DATA_ISOLATION=PASS',
+    'smoke-response-sanitized.json',
+    'mock-stdout-sanitized.log',
+    'mock-stderr-sanitized.log',
+    'receipt_exists',
     'WINDOWS_INSTALLED_CONFIG_MASKED_RESTART=PASS',
     'WINDOWS_INSTALLED_CONFIG_LEAKAGE_SCAN=PASS'
   )) {

@@ -733,6 +733,13 @@ def test_windows_installed_configuration_acceptance_is_complete_and_ordered() ->
     assert "node $fakeCredentialScanner" in verifier
     assert "--path $acceptanceRoot" in verifier
     assert "--path $diagnosticRoot" in verifier
+    for diagnostic_marker in (
+        "smoke-response-sanitized.json",
+        "mock-stdout-sanitized.log",
+        "mock-stderr-sanitized.log",
+        "receipt_exists",
+    ):
+        assert diagnostic_marker in verifier
     assert "WINDOWS_INSTALLED_CONFIG_ACCEPTANCE_CONTRACT=PASS" in contract
 
 

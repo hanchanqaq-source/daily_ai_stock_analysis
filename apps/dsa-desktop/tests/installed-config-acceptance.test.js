@@ -86,6 +86,20 @@ test('installed lifecycle pins Electron userData to a verifier-owned path', () =
   assert.match(verifierSource, /WINDOWS_INSTALLED_USER_DATA_ISOLATION=PASS/);
 });
 
+test('installed smoke failure preserves only sanitized diagnostic evidence', () => {
+  const verifierSource = fs.readFileSync(
+    path.join(__dirname, '../../../scripts/verify-windows-installer.ps1'),
+    'utf8',
+  );
+
+  assert.match(verifierSource, /smoke-response-sanitized\.json/);
+  assert.match(verifierSource, /mock-stdout-sanitized\.log/);
+  assert.match(verifierSource, /mock-stderr-sanitized\.log/);
+  assert.match(verifierSource, /receipt_exists/);
+  assert.doesNotMatch(verifierSource, /smoke-request-body/);
+  assert.doesNotMatch(verifierSource, /smoke-authorization/);
+});
+
 test('loopback server rejects a wrong key and records only a safe successful receipt', async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pp02-config-smoke-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
