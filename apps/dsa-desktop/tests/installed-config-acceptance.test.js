@@ -115,6 +115,14 @@ test('installed smoke failure preserves only sanitized diagnostic evidence', () 
   assert.match(verifierSource, /mock_exit_code=/);
   assert.match(verifierSource, /stdout_marker_matched=/);
   assert.match(verifierSource, /stderr_whitespace_only=/);
+  assert.match(
+    verifierSource,
+    /\$null -ne \$mockExitCode -and\s+\[int\]\$mockExitCode -ne 0/,
+  );
+  assert.doesNotMatch(
+    verifierSource,
+    /\$null -eq \$mockExitCode -or\s+\[int\]\$mockExitCode -ne 0/,
+  );
   assert.doesNotMatch(verifierSource, /mock_stdout_content=/);
   assert.doesNotMatch(verifierSource, /mock_stderr_content=/);
 
